@@ -11,7 +11,7 @@
 (function () {
   // آدرس ورکر پروکسی را اینجا بگذار (مثلاً https://onella-mini-proxy.<user>.workers.dev)؛
   // خالی = فقط دادهٔ مستقیم (کریپتو کامل + قیمت فارکس).
-  var PROXY_URL = '';
+  var PROXY_URL = 'https://pixelminiapp.mahanjafari039.workers.dev';
 
   var tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
   var lang = 'en';
