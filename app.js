@@ -1,5 +1,5 @@
 'use strict';
-/* Onella Telegram Mini App v1.0.0 — منطق مینی‌اپ (صفحهٔ استاتیک؛ بدون سرور).
+/* Onella Telegram Mini App v1.0.1 — منطق مینی‌اپ (صفحهٔ استاتیک؛ بدون سرور).
    چارت = چارت بومی خود اونلا (chart-style.js + native-chart.js — همان فایل‌های اپ،
    فقط UI اپ حذف شده). تحلیل = همان موتور محلی ربات (analysis-src.js).
    خبر = همان RSS ربات (news-src.js). داده:
@@ -120,21 +120,48 @@
   }
 
   /* ---- داده: کریپتو (مستقیم Binance) ---- */
+  var CG_IDS = { BTCUSDT: 'bitcoin', ETHUSDT: 'ethereum', SOLUSDT: 'solana', BNBUSDT: 'binancecoin', XRPUSDT: 'ripple', DOGEUSDT: 'dogecoin' }; // v1.0.1: برای fallback قیمت/کندل کریپتو از ایران
   async function binanceTicker(sym) {
     var j = await fetchJSON('https://data-api.binance.vision/api/v3/ticker/24hr?symbol=' + encodeURIComponent(sym), 8000);
-    if (!j || !(+j.lastPrice > 0)) return null;
-    return { price: +j.lastPrice, changePct: +j.priceChangePercent, high: +j.highPrice, low: +j.lowPrice, volume: +j.volume, currency: 'USDT' };
+    if (j && +j.lastPrice > 0) {
+      return { price: +j.lastPrice, changePct: +j.priceChangePercent, high: +j.highPrice, low: +j.lowPrice, volume: +j.volume, currency: 'USDT' };
+    }
+    // v1.0.1: Binance از IP ایران بلاک است — fallback به CoinGecko (قیمت + تغییر ۲۴س + حجم ۲۴س).
+    var id = CG_IDS[sym];
+    if (!id) return null;
+    var g = await fetchJSON('https://api.coingecko.com/api/v3/simple/price?ids=' + id + '&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_24hr_high=true&include_24hr_low=true', 8000);
+    var c = g && g[id];
+    if (!c || !(c.usd > 0)) return null;
+    return { price: c.usd, changePct: (typeof c.usd_24h_change === 'number' ? c.usd_24h_change : null),
+      high: (typeof c.usd_24h_high === 'number' ? c.usd_24h_high : null),
+      low: (typeof c.usd_24h_low === 'number' ? c.usd_24h_low : null),
+      volume: (typeof c.usd_24h_vol === 'number' ? c.usd_24h_vol : null), currency: 'USD' };
   }
   async function binanceKlines(sym, interval, limit) {
     var j = await fetchJSON('https://data-api.binance.vision/api/v3/klines?symbol=' + encodeURIComponent(sym) + '&interval=' + interval + '&limit=' + (limit || 200), 10000);
-    if (!Array.isArray(j)) return null;
-    var out = [];
-    for (var i = 0; i < j.length; i++) {
-      var k = j[i];
-      if (!Array.isArray(k) || k.length < 11) continue;
-      out.push({ t: +k[0], o: +k[1], h: +k[2], l: +k[3], c: +k[4], v: +k[5] });
+    if (Array.isArray(j)) {
+      var out = [];
+      for (var i = 0; i < j.length; i++) {
+        var k = j[i];
+        if (!Array.isArray(k) || k.length < 11) continue;
+        out.push({ t: +k[0], o: +k[1], h: +k[2], l: +k[3], c: +k[4], v: +k[5] });
+      }
+      if (out.length >= 2) return out;
     }
-    return out.length >= 2 ? out : null;
+    // v1.0.1: Binance از IP ایران بلاک است — fallback به CoinGecko OHLC (کندل ۴ ساعته؛
+    // فقط برای تایم‌فریم ۴ ساعته و روزانه قابل استفاده است — برای 15m/1h همان ۴ ساعته را نشان می‌دهیم).
+    var id = CG_IDS[sym];
+    if (!id) return null;
+    var days = interval === '1d' ? 30 : 7;
+    var o = await fetchJSON('https://api.coingecko.com/api/v3/coins/' + id + '/ohlc?vs_currency=usd&days=' + days, 10000);
+    if (!Array.isArray(o)) return null;
+    var out2 = [];
+    for (var i2 = 0; i2 < o.length; i2++) {
+      var r = o[i2];
+      if (!Array.isArray(r) || r.length < 5) continue;
+      out2.push({ t: +r[0], o: +r[1], h: +r[2], l: +r[3], c: +r[4], v: 0 });
+    }
+    return out2.length >= 2 ? out2 : null;
   }
   /* ---- داده: Yahoo (فقط با پروکسی — مرورگر مستقیم بلاک است) ---- */
   async function yahooChart(sym, range, interval) {
@@ -179,7 +206,7 @@
     return { price: rates[k], changePct: null, high: null, low: null, open: null, prevClose: null, volume: null, currency: 'Toman' };
   }
   /* ---- داده: بنیادی کریپتو (مستقیم CoinGecko) ---- */
-  var CG_IDS = { BTCUSDT: 'bitcoin', ETHUSDT: 'ethereum', SOLUSDT: 'solana', BNBUSDT: 'binancecoin', XRPUSDT: 'ripple', DOGEUSDT: 'dogecoin' };
+
   async function coingeckoFund(sym) {
     var id = CG_IDS[sym];
     if (!id) return null;
@@ -320,6 +347,15 @@
     var candles = null;
     if (q.provider === 'binance') {
       candles = await binanceKlines(q.symbol, state.tf, 200);
+      if (candles && candles.length >= 2) {
+        // v1.0.1: اگر کندل‌ها از CoinGecko آمدند، فاصله‌شان ۴ ساعت است — تایم‌فریم واقعی را ثبت کن
+        // تا دکمهٔ تایم‌فریم و شمارش معکوس کندل، همان ۴ ساعته را نشان بدهند (نه 1h).
+        var gap = candles.length > 1 ? candles[1].t - candles[0].t : 0;
+        if (gap >= 3.5 * 3600 * 1000 && gap <= 4.5 * 3600 * 1000 && state.tf !== '4h' && state.tf !== '1d') {
+          // renderChartShell از state.tf دکمهٔ درست را روشن می‌کند.
+          state.tf = '4h'; window.tf = '4h';
+        }
+      }
     } else if (q.provider === 'yahoo') {
       var range = { '15m': '5d', '1h': '1mo', '4h': '3mo', '1d': '1y' }[state.tf] || '1mo';
       var interval = state.tf;
@@ -331,6 +367,7 @@
     }
     if (my !== state.loading) return;
     state.candles = candles;
+    if (state.tab === 'analysis') renderAnalysis();
     if (!candles) {
       $('tabChart').innerHTML = '<div class="na">' + esc(T('برای این نماد کندل نیست.', 'No candles for this symbol.')) + '</div>';
       return;
@@ -389,8 +426,13 @@
   /* ---- تحلیل (همان موتور ربات؛ DOM به‌جای HTML تلگرام) ---- */
   function renderAnalysis() {
     var el = $('tabAnalysis');
-    if (!state.candles || state.candles.length < 35) {
-      el.innerHTML = '<div class="na">' + esc(state.candles ? T('برای تحلیل حداقل ۳۵ کندل لازم است.', 'At least 35 candles are needed for analysis.') : T('برای این نماد کندل نیست.', 'No candles for this symbol.')) + '</div>';
+    if (!state.candles) {
+      // کندل‌ها هنوز در راه‌اند (loadCandles آسنکرون است) — نه «نیست»، «در حال بارگذاری» است.
+      el.innerHTML = '<div class="muted">' + esc(T('در حال بارگذاری…', 'Loading…')) + '</div>';
+      return;
+    }
+    if (state.candles.length < 35) {
+      el.innerHTML = '<div class="na">' + esc(T('برای تحلیل حداقل ۳۵ کندل لازم است.', 'At least 35 candles are needed for analysis.')) + '</div>';
       return;
     }
     var A = window.OnellaAnalysis;
