@@ -12,28 +12,6 @@
   // آدرس ورکر پروکسی را اینجا بگذار (مثلاً https://onella-mini-proxy.<user>.workers.dev)؛
   // خالی = فقط دادهٔ مستقیم (کریپتو کامل + قیمت فارکس).
   var PROXY_URL = 'https://pixelminiapp.mahanjafari039.workers.dev';
-  /* ---- v1.0.3-diag: جعبهٔ دیباگ روی صفحه (موقت — برای پیدا کردن گیر «در حال بارگذاری») ---- */
-  var DBG_Q = [];
-  function dbg(msg) {
-    try {
-      var line = new Date().toISOString().slice(11, 19) + ' ' + msg;
-      if (typeof console !== 'undefined' && console.log) console.log('[mini-diag] ' + line);
-      DBG_Q.push(line);
-      var box = (typeof document !== 'undefined') ? document.getElementById('dbgBox') : null;
-      if (!box && typeof document !== 'undefined' && document.body) {
-        box = document.createElement('div');
-        box.id = 'dbgBox';
-        box.style.cssText = 'font:11px/1.5 monospace;white-space:pre-wrap;word-break:break-word;background:#1a1a1a;color:#7CFC00;border-bottom:2px solid #f06a15;padding:6px 8px;max-height:150px;overflow:auto;direction:ltr;text-align:left;';
-        box.textContent = 'DIAG v1.0.3 — PROXY_URL=' + (PROXY_URL || '(empty)');
-        document.body.insertBefore(box, document.body.firstChild);
-      }
-      if (box) box.textContent = 'DIAG v1.0.3 — PROXY_URL=' + (PROXY_URL || '(empty)') + '\n' + DBG_Q.slice(-25).join('\n');
-    } catch (e) {}
-  }
-  if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
-    window.addEventListener('error', function (ev) { dbg('WINDOW ERROR: ' + (ev && ev.message) + ' @' + (ev && ev.filename) + ':' + (ev && ev.lineno)); });
-  }
-  dbg('app.js loaded, PROXY_URL=' + (PROXY_URL || '(empty)') + ', fetch=' + (typeof fetch));
 
   var tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
   var lang = 'en';
@@ -374,7 +352,6 @@
     return '<div class="row"><span>' + esc(label) + '</span><b>' + value + '</b></div>';
   }
   function openSymbol(q) {
-    dbg('openSymbol ' + (q && q.provider) + ' ' + (q && q.symbol));
     state.quote = q;
     state.tab = 'chart';
     state.candles = null; state.quoteRes = null;
@@ -384,19 +361,19 @@
     show('symbol');
     $('symTitle').textContent = q.display;
     $('priceBox').innerHTML = '<div class="muted">' + esc(T('در حال بارگذاری…', 'Loading…')) + '</div>';
-    $('tabChart').innerHTML = '';
-    $('tabAnalysis').innerHTML = '';
-    $('tabFund').innerHTML = '';
-    $('tabNews').innerHTML = '';
+    $('tab-chart').innerHTML = '';
+    $('tab-analysis').innerHTML = '';
+    $('tab-fund').innerHTML = '';
+    $('tab-news').innerHTML = '';
     setTab('chart');
-    // v1.0.3-diag: اگر loadSymbol به هر دلیلی خطا داد، گیر «در حال بارگذاری» نماند + خطا لاگ شود.
+    // v1.0.3: اگر loadSymbol به هر دلیلی خطا داد، صفحه روی «در حال بارگذاری» گیر نکند.
     try {
       var _lp = loadSymbol();
       if (_lp && _lp.catch) _lp.catch(function (e) {
-        dbg('loadSymbol THREW: ' + (e && (e.message || e)));
-        try { state.candlesDone = true; renderPriceBox(false, false); $('tabChart').innerHTML = '<div class="na">خطا: ' + esc(String(e && e.message || e)) + '</div>'; naTabs(); } catch (e2) { dbg('unstick failed: ' + (e2 && e2.message)); }
+        try { console.error('[mini] loadSymbol failed', e); } catch (e0) {}
+        try { state.candlesDone = true; renderPriceBox(false, false); $('tab-chart').innerHTML = '<div class="na">خطا: ' + esc(String(e && e.message || e)) + '</div>'; naTabs(); } catch (e2) {}
       });
-    } catch (e) { dbg('openSymbol loadSymbol sync THROW: ' + (e && e.message)); }
+    } catch (e) { try { console.error('[mini] openSymbol failed', e); } catch (e0) {} }
   }
   function setTab(tab) {
     state.tab = tab;
@@ -419,7 +396,6 @@
   // با دکمهٔ «دلار | تومان» عوض می‌شود، نه خودکار. اگر قیمت جهانی نیامد، باکس «در دسترس نیست»
   // می‌شود ولی دکمهٔ تومان (اگر قیمت ایرانی رسید) هنوز هست تا کاربر خودش انتخاب کند.
   function renderPriceBox(needProxy, iranBlocked) {
-    dbg('renderPriceBox: mode=' + state.priceMode + ' usd=' + (state.priceUsd ? state.priceUsd.price : 'null') + ' iran=' + (state.priceIran ? state.priceIran.price : 'null'));
     var q = state.quote;
     var p = state.priceMode === 'iran' ? state.priceIran : state.priceUsd;
     var canSwitch = !!(state.priceUsd && state.priceIran);
@@ -455,9 +431,9 @@
   function naTabs(msgKey) {
     // v1.0.2: وقتی قیمت/کندل نیامد، تب‌ها روی «در حال بارگذاری» گیر نکنند.
     var m = '<div class="na">' + esc(T('فعلاً در دسترس نیست.', 'Not available right now.')) + '</div>';
-    $('tabAnalysis').innerHTML = m;
-    $('tabFund').innerHTML = m;
-    $('tabNews').innerHTML = m;
+    $('tab-analysis').innerHTML = m;
+    $('tab-fund').innerHTML = m;
+    $('tab-news').innerHTML = m;
   }
 
   async function loadSymbol() {
@@ -480,12 +456,11 @@
     }
     else if (q.provider === 'iran-rate') { price = await iranRate(q.symbol); if (!price) needProxy = true; state.priceUsd = price; }
     else if (q.provider === 'iran-stock') { iranBlocked = true; }
-    dbg('loadSymbol fetched: provider=' + q.provider + ' price=' + (price ? price.price + ' ' + (price.currency || '') : 'null') + ' needProxy=' + needProxy + ' iranBlocked=' + iranBlocked);
     if (my !== state.loading) return;
     if (!price) {
       state.candlesDone = true; // کندلی در راه نیست — تب تحلیل «در حال بارگذاری» نماند.
       renderPriceBox(needProxy, iranBlocked);
-      $('tabChart').innerHTML = '<div class="na">' + esc(T('برای این نماد کندل نیست.', 'No candles for this symbol.')) + '</div>';
+      $('tab-chart').innerHTML = '<div class="na">' + esc(T('برای این نماد کندل نیست.', 'No candles for this symbol.')) + '</div>';
       naTabs();
       return;
     }
@@ -523,17 +498,16 @@
     if (my !== state.loading) return;
     state.candles = candles;
     state.candlesDone = true;
-    dbg('loadCandles done: ' + (candles ? candles.length + ' candles, tf=' + state.tf : 'null'));
     if (state.tab === 'analysis') renderAnalysis();
     if (!candles) {
-      $('tabChart').innerHTML = '<div class="na">' + esc(T('برای این نماد کندل نیست.', 'No candles for this symbol.')) + '</div>';
+      $('tab-chart').innerHTML = '<div class="na">' + esc(T('برای این نماد کندل نیست.', 'No candles for this symbol.')) + '</div>';
       return;
     }
     // چارت اونلا: cs را می‌گیرد و draw می‌کند (همان draw اپ).
     window.cs = candles.slice();
     window.cur = -1;
     renderChartShell();
-    try { window.draw(); } catch (e) { $('tabChart').innerHTML = '<div class="na">' + esc(String(e && e.message || e)) + '</div>'; }
+    try { window.draw(); } catch (e) { $('tab-chart').innerHTML = '<div class="na">' + esc(String(e && e.message || e)) + '</div>'; }
     if (state.tab === 'analysis') renderAnalysis();
   }
   function aggregateCandles(csArr, n) {
@@ -550,7 +524,7 @@
       var cur2 = window.OnellaChartStyle.get().type;
       return '<button class="chip' + (cur2 === t ? ' on' : '') + '" data-type="' + t + '">' + esc(t) + '</button>';
     }).join('');
-    $('tabChart').innerHTML =
+    $('tab-chart').innerHTML =
       '<div id="px" class="px"></div>'
       + '<div class="chartwrap"><div id="nv" style="position:relative;height:260px"><canvas id="cc" style="width:100%;height:260px;display:block"></canvas></div></div>'
       + '<div id="tfRow" class="seg">' + Object.keys(TF).map(function (k) {
@@ -560,7 +534,7 @@
     document.querySelectorAll('#tfRow button').forEach(function (b) {
       b.addEventListener('click', function () { setTf(b.dataset.tf); });
     });
-    $('tabChart').querySelectorAll('[data-type]').forEach(function (b) {
+    $('tab-chart').querySelectorAll('[data-type]').forEach(function (b) {
       b.addEventListener('click', function () {
         try { window.OnellaChartStyle.set({ type: b.dataset.type }); } catch (e) {}
         renderChartShell();
@@ -582,7 +556,7 @@
 
   /* ---- تحلیل (همان موتور ربات؛ DOM به‌جای HTML تلگرام) ---- */
   function renderAnalysis() {
-    var el = $('tabAnalysis');
+    var el = $('tab-analysis');
     if (!state.candles) {
       // v1.0.2: اگر بارگذاری کندل تمام شد و کندلی نیست، «نیست» نشان بده — نه «در حال بارگذاری» برای همیشه.
       if (state.candlesDone) {
@@ -625,7 +599,7 @@
 
   /* ---- بنیادی ---- */
   function renderFund() {
-    var el = $('tabFund');
+    var el = $('tab-fund');
     var q = state.quote;
     if (!q) return;
     el.innerHTML = '<div class="muted">' + esc(T('در حال بارگذاری…', 'Loading…')) + '</div>';
@@ -677,7 +651,7 @@
 
   /* ---- خبر (همان RSS ربات؛ با پروکسی) ---- */
   function renderNews() {
-    var el = $('tabNews');
+    var el = $('tab-news');
     var q = state.quote;
     if (!q) return;
     el.innerHTML = '<div class="muted">' + esc(T('در حال بارگذاری…', 'Loading…')) + '</div>';
