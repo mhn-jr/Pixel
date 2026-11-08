@@ -3,16 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Onella Nelora — Mini App</title>
+<title>Onella Nelora Lite</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
   :root { color-scheme: dark; --bg: #05070c; --card: #0d1320; --line: #1c2740; --txt: #e6e9ef; --mut: #7c8aa0; --up: #2ecc8f; --dn: #ff5d6c; --acc: #f06a15; }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--txt); font-family: -apple-system, "Segoe UI", Tahoma, sans-serif; }
   header { padding: 12px 14px 6px; display: flex; align-items: center; gap: 10px; }
-  header h1 { font-size: 17px; margin: 0; display: flex; align-items: center; gap: 8px; }
+  header h1 { font-size: 17px; margin: 0; display: flex; align-items: center; gap: 8px; direction: ltr; }
   header h1 img.logo { height: 26px; width: 26px; border-radius: 50%; }
   header h1 span { color: var(--acc); }
+  header h1 span.lite { font-size: 11px; border: 1px solid var(--acc); border-radius: 999px; padding: 1px 7px; }
   #backBtn { background: none; border: 1px solid var(--line); color: var(--txt); border-radius: 8px; padding: 6px 10px; font-size: 13px; cursor: pointer; }
   main { padding: 6px 14px 24px; max-width: 560px; margin: 0 auto; }
   .mkt { margin-top: 14px; }
@@ -53,7 +54,7 @@
 <body>
 <header>
   <button id="backBtn" type="button" style="display:none">‹ بازگشت</button>
-  <h1><img class="logo" src="logo.png" alt="Onella Nelora"> Onella <span>Nelora</span></h1>
+  <h1><img class="logo" src="logo.png" alt="Onella Nelora Lite"> Onella <span>Nelora</span> <span class="lite">Lite</span></h1>
 </header>
 <main>
   <div id="view-catalog">
