@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Onella Nelora — Mini App</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root { color-scheme: dark; --bg: #05070c; --card: #0d1320; --line: #1c2740; --txt: #e6e9ef; --mut: #7c8aa0; --up: #2ecc8f; --dn: #ff5d6c; --acc: #f06a15; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--txt); font-family: -apple-system, "Segoe UI", Tahoma, sans-serif; }
+  header { padding: 12px 14px 6px; display: flex; align-items: center; gap: 10px; }
+  header h1 { font-size: 17px; margin: 0; }
+  header h1 span { color: var(--acc); }
+  #backBtn { background: none; border: 1px solid var(--line); color: var(--txt); border-radius: 8px; padding: 6px 10px; font-size: 13px; cursor: pointer; }
+  main { padding: 6px 14px 24px; max-width: 560px; margin: 0 auto; }
+  .mkt { margin-top: 14px; }
+  .mkt-h { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+  .syms { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .sym { background: var(--card); border: 1px solid var(--line); color: var(--txt); border-radius: 10px; padding: 12px 4px; font-size: 14px; cursor: pointer; }
+  .sym:active { border-color: var(--acc); }
+  .big { font-size: 28px; font-weight: 800; margin: 6px 0 2px; }
+  .unit { font-size: 14px; font-weight: 400; color: var(--mut); margin-inline-start: 4px; }
+  .sub { color: var(--mut); font-size: 13px; margin-bottom: 8px; }
+  .up { color: var(--up); } .dn { color: var(--dn); }
+  .rows { margin-top: 6px; }
+  .row { display: flex; justify-content: space-between; gap: 12px; padding: 9px 2px; border-bottom: 1px solid var(--line); font-size: 14px; }
+  .row span { color: var(--mut); }
+  .row b { font-weight: 600; text-align: end; }
+  .muted { color: var(--mut); font-size: 13px; padding: 12px 0; }
+  .na { color: var(--mut); font-size: 14px; padding: 16px 0; text-align: center; }
+  .hint { color: #ffb347; font-size: 12px; padding: 6px 0; }
+  .warn { color: #ffb347; font-size: 12px; padding: 10px 0; }
+  .tabs { display: flex; gap: 6px; margin: 14px 0 4px; }
+  .tabs button { flex: 1; background: var(--card); border: 1px solid var(--line); color: var(--txt); border-radius: 9px; padding: 9px 2px; font-size: 13px; cursor: pointer; }
+  .tabs button.on { border-color: var(--acc); color: var(--acc); }
+  .seg { display: flex; gap: 6px; margin: 10px 0 4px; flex-wrap: wrap; }
+  .seg button { background: var(--card); border: 1px solid var(--line); color: var(--txt); border-radius: 8px; padding: 6px 10px; font-size: 12px; cursor: pointer; }
+  .seg button.on { border-color: var(--acc); color: var(--acc); }
+  .chip { text-transform: capitalize; }
+  .px { font-size: 14px; padding: 6px 2px; min-height: 24px; }
+  .px b { margin-inline-start: 6px; }
+  .chartwrap { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .news-item { padding: 12px 2px; border-bottom: 1px solid var(--line); }
+  .news-tag { font-size: 12px; margin-bottom: 4px; }
+  .news-title { font-size: 14px; line-height: 1.6; }
+  .news-time { color: var(--mut); font-size: 11px; margin-top: 4px; }
+  .imp { font-size: 11px; }
+  .imp.high { color: #ff5d6c; } .imp.med { color: #ffb347; } .imp.low { color: var(--mut); }
+</style>
+</head>
+<body>
+<header>
+  <button id="backBtn" type="button" style="display:none">‹ بازگشت</button>
+  <h1>🔥 Onella <span>Nelora</span></h1>
+</header>
+<main>
+  <div id="view-catalog">
+    <div id="catalogTitle" class="mkt-h">کاتولوگ</div>
+    <div id="catalog"></div>
+  </div>
+  <div id="view-symbol" style="display:none">
+    <h2 id="symTitle" style="font-size:18px;margin:4px 0 2px"></h2>
+    <div id="priceBox"></div>
+    <div class="tabs">
+      <button id="tabBtn-chart" type="button" class="on">چارت</button>
+      <button id="tabBtn-analysis" type="button">تحلیل</button>
+      <button id="tabBtn-fund" type="button">بنیادی</button>
+      <button id="tabBtn-news" type="button">خبر</button>
+    </div>
+    <div id="tab-chart"></div>
+    <div id="tab-analysis" style="display:none"></div>
+    <div id="tab-fund" style="display:none"></div>
+    <div id="tab-news" style="display:none"></div>
+  </div>
+</main>
+<script src="display-src.js"></script>
+<script src="chart-style.js"></script>
+<script src="chart-tools.js"></script>
+<script src="native-chart.js"></script>
+<script src="analysis-src.js"></script>
+<script src="news-src.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
