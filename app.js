@@ -4,7 +4,8 @@
    فقط UI اپ حذف شده). تحلیل = همان موتور محلی ربات (analysis-src.js).
    خبر = همان RSS ربات (news-src.js). داده:
      مستقیم (CORS دارد): Binance (کریپتو)، CoinGecko (بنیادی کریپتو)، Frankfurter (قیمت فارکس)
-     با پروکسی (PROXY_URL — ورکر Cloudflare): Yahoo (سهام/فارکس/کالا/شاخص)، Google News، Nerkhsanj
+     با پروکسی (PROXY_URL — ورکر Cloudflare): Yahoo (سهام/فارکس/کالا/شاخص)، Google News، Nerkhsanj،
+  و کریپتو (Binance/CoinGecko + صرافی ایرانی) وقتی گوشی/PC مستقیم نمی‌رسد
      بدون پروکسی، آن بازارها «در دسترس نیست» می‌گیرند — هرگز عدد ساختگی نمی‌آید.
    سهام ایران (TSETMC) حتی با پروکسی هم نمی‌آید (از IP خارجی بلاک است) — مسیرش ربات روی PC است. */
 (function () {
@@ -118,18 +119,16 @@
     if (!PROXY_URL) return null;
     return PROXY_URL.replace(/\/$/, '') + '/' + kind + '?u=' + encodeURIComponent(target);
   }
+  // v1.0.2: گرفتن JSON از ورکر؛ بدون PROXY_URL یعنی null (همان رفتار قبلی، بدون پروکسی).
+  async function viaWorker(kind, url, ms) {
+    var u = proxyUrl(kind, url);
+    if (!u) return null;
+    return fetchJSON(u, ms || 10000);
+  }
 
   /* ---- داده: کریپتو (مستقیم Binance) ---- */
   var CG_IDS = { BTCUSDT: 'bitcoin', ETHUSDT: 'ethereum', SOLUSDT: 'solana', BNBUSDT: 'binancecoin', XRPUSDT: 'ripple', DOGEUSDT: 'dogecoin' }; // v1.0.1: برای fallback قیمت/کندل کریپتو از ایران
-  async function binanceTicker(sym) {
-    var j = await fetchJSON('https://data-api.binance.vision/api/v3/ticker/24hr?symbol=' + encodeURIComponent(sym), 8000);
-    if (j && +j.lastPrice > 0) {
-      return { price: +j.lastPrice, changePct: +j.priceChangePercent, high: +j.highPrice, low: +j.lowPrice, volume: +j.volume, currency: 'USDT' };
-    }
-    // v1.0.1: Binance از IP ایران بلاک است — fallback به CoinGecko (قیمت + تغییر ۲۴س + حجم ۲۴س).
-    var id = CG_IDS[sym];
-    if (!id) return null;
-    var g = await fetchJSON('https://api.coingecko.com/api/v3/simple/price?ids=' + id + '&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_24hr_high=true&include_24hr_low=true', 8000);
+  function parseCgTicker(g, id) {
     var c = g && g[id];
     if (!c || !(c.usd > 0)) return null;
     return { price: c.usd, changePct: (typeof c.usd_24h_change === 'number' ? c.usd_24h_change : null),
@@ -137,31 +136,107 @@
       low: (typeof c.usd_24h_low === 'number' ? c.usd_24h_low : null),
       volume: (typeof c.usd_24h_vol === 'number' ? c.usd_24h_vol : null), currency: 'USD' };
   }
-  async function binanceKlines(sym, interval, limit) {
-    var j = await fetchJSON('https://data-api.binance.vision/api/v3/klines?symbol=' + encodeURIComponent(sym) + '&interval=' + interval + '&limit=' + (limit || 200), 10000);
-    if (Array.isArray(j)) {
-      var out = [];
-      for (var i = 0; i < j.length; i++) {
-        var k = j[i];
-        if (!Array.isArray(k) || k.length < 11) continue;
-        out.push({ t: +k[0], o: +k[1], h: +k[2], l: +k[3], c: +k[4], v: +k[5] });
-      }
-      if (out.length >= 2) return out;
+  function parseBinanceTicker(j) {
+    if (!j || !(+j.lastPrice > 0)) return null;
+    return { price: +j.lastPrice, changePct: +j.priceChangePercent, high: +j.highPrice, low: +j.lowPrice, volume: +j.volume, currency: 'USDT' };
+  }
+  async function binanceTicker(sym) {
+    var bUrl = 'https://data-api.binance.vision/api/v3/ticker/24hr?symbol=' + encodeURIComponent(sym);
+    var r = parseBinanceTicker(await fetchJSON(bUrl, 8000));
+    if (r) return r;
+    // v1.0.1: Binance از IP ایران بلاک است — fallback به CoinGecko (قیمت + تغییر ۲۴س + حجم ۲۴س).
+    var id = CG_IDS[sym];
+    var cgUrl = id ? 'https://api.coingecko.com/api/v3/simple/price?ids=' + id + '&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_24hr_high=true&include_24hr_low=true' : null;
+    if (cgUrl) {
+      var cg = parseCgTicker(await fetchJSON(cgUrl, 8000), id);
+      if (cg) return cg;
     }
+    // v1.0.2: مستقیم نشد — از ورکر (Cloudflare)؛ ورکر از IP خودش به Binance/CoinGecko می‌رسد.
+    r = parseBinanceTicker(await viaWorker('binance', bUrl, 10000));
+    if (r) return r;
+    if (cgUrl) {
+      var cgw = parseCgTicker(await viaWorker('coingecko', cgUrl, 10000), id);
+      if (cgw) return cgw;
+    }
+    // v1.0.2: قیمت جهانی نیامد — null. قیمت ایرانی «خودکار» جایگزین نمی‌شود؛
+    // انتخاب دومِ کاربر است (loadSymbol جداگانه می‌گیرد و با دکمهٔ «دلار | تومان» نشان می‌دهد).
+    return null;
+  }
+  // v1.0.2: قیمت کریپتو از صرافی ایرانی — Exir بعد Wallex بعد Nobitex.
+  // واحد: Exir و Wallex «تومان» مستقیم‌اند (پروب ۲۰۲۶-۱۱-۰۹: BTC اکسیر ۲۰٬۳۲۰٬۷۰۰٬۰۰۰، والکس ۲۰٬۱۶۴٬۰۲۷٬۱۸۴)؛
+  // فقط Nobitex ریالی است (÷۱۰ = تومان). اگر ورکر نوبیتکس را نگیرد (بلاک IP خارجی)، زنجیره همان‌جا تمام می‌شود.
+  var IRAN_BASE = { BTCUSDT: 'btc', ETHUSDT: 'eth', SOLUSDT: 'sol', BNBUSDT: 'bnb', XRPUSDT: 'xrp', DOGEUSDT: 'doge' };
+  var WALLEX_SYM = { BTCUSDT: 'BTCTMN', ETHUSDT: 'ETHTMN', SOLUSDT: 'SOLTMN', BNBUSDT: 'BNBTMN', XRPUSDT: 'XRPTMN', DOGEUSDT: 'DOGETMN' };
+  async function iranCryptoPrice(sym) {
+    var base = IRAN_BASE[sym];
+    if (!base) return null;
+    var ej = await viaWorker('iran', 'https://api.exir.io/v2/tickers', 10000);
+    var t = ej && ej[base + '-irt'];
+    if (t && +t.last > 0) {
+      var ch = (typeof t.open === 'number' && t.open > 0) ? ((+t.last - t.open) / t.open) * 100 : null;
+      return { price: +t.last, changePct: ch,
+        high: (typeof t.high === 'number' ? t.high : null),
+        low: (typeof t.low === 'number' ? t.low : null),
+        volume: null, currency: 'Toman', iran: true };
+    }
+    var wj = await viaWorker('iran', 'https://api.wallex.ir/v1/markets', 10000);
+    var ws = wj && wj.result && wj.result.symbols && wj.result.symbols[WALLEX_SYM[sym]];
+    var wst = ws && ws.stats;
+    if (wst && +wst.lastPrice > 0) {
+      return { price: +wst.lastPrice, changePct: (typeof wst['24h_ch'] === 'number' ? wst['24h_ch'] : null),
+        high: null, low: null, volume: null, currency: 'Toman', iran: true };
+    }
+    var nj = await viaWorker('iran', 'https://api.nobitex.ir/market/stats?srcCurrency=' + base + '&dstCurrency=irt', 10000);
+    var ns = nj && nj.stats && nj.stats[base + '-irt'];
+    if (ns && +ns.latest > 0) {
+      return { price: +ns.latest / 10, changePct: (typeof ns.dayChange === 'number' ? ns.dayChange : null),
+        high: (typeof ns.dayHigh === 'number' ? +ns.dayHigh / 10 : null),
+        low: (typeof ns.dayLow === 'number' ? +ns.dayLow / 10 : null),
+        volume: null, currency: 'Toman', iran: true };
+    }
+    return null;
+  }
+  function parseBinanceKlines(j) {
+    if (!Array.isArray(j)) return null;
+    var out = [];
+    for (var i = 0; i < j.length; i++) {
+      var k = j[i];
+      if (!Array.isArray(k) || k.length < 11) continue;
+      out.push({ t: +k[0], o: +k[1], h: +k[2], l: +k[3], c: +k[4], v: +k[5] });
+    }
+    return out.length >= 2 ? out : null;
+  }
+  function parseCgOhlc(o) {
+    if (!Array.isArray(o)) return null;
+    var out = [];
+    for (var i = 0; i < o.length; i++) {
+      var r = o[i];
+      if (!Array.isArray(r) || r.length < 5) continue;
+      out.push({ t: +r[0], o: +r[1], h: +r[2], l: +r[3], c: +r[4], v: 0 });
+    }
+    return out.length >= 2 ? out : null;
+  }
+  async function binanceKlines(sym, interval, limit) {
+    var bUrl = 'https://data-api.binance.vision/api/v3/klines?symbol=' + encodeURIComponent(sym) + '&interval=' + interval + '&limit=' + (limit || 200);
+    var out = parseBinanceKlines(await fetchJSON(bUrl, 10000));
+    if (out) return out;
     // v1.0.1: Binance از IP ایران بلاک است — fallback به CoinGecko OHLC (کندل ۴ ساعته؛
     // فقط برای تایم‌فریم ۴ ساعته و روزانه قابل استفاده است — برای 15m/1h همان ۴ ساعته را نشان می‌دهیم).
     var id = CG_IDS[sym];
-    if (!id) return null;
     var days = interval === '1d' ? 30 : 7;
-    var o = await fetchJSON('https://api.coingecko.com/api/v3/coins/' + id + '/ohlc?vs_currency=usd&days=' + days, 10000);
-    if (!Array.isArray(o)) return null;
-    var out2 = [];
-    for (var i2 = 0; i2 < o.length; i2++) {
-      var r = o[i2];
-      if (!Array.isArray(r) || r.length < 5) continue;
-      out2.push({ t: +r[0], o: +r[1], h: +r[2], l: +r[3], c: +r[4], v: 0 });
+    var cgUrl = id ? 'https://api.coingecko.com/api/v3/coins/' + id + '/ohlc?vs_currency=usd&days=' + days : null;
+    if (cgUrl) {
+      var o = parseCgOhlc(await fetchJSON(cgUrl, 10000));
+      if (o) return o;
     }
-    return out2.length >= 2 ? out2 : null;
+    // v1.0.2: مستقیم نشد — از ورکر (Binance بعد CoinGecko).
+    out = parseBinanceKlines(await viaWorker('binance', bUrl, 12000));
+    if (out) return out;
+    if (cgUrl) {
+      var ow = parseCgOhlc(await viaWorker('coingecko', cgUrl, 12000));
+      if (ow) return ow;
+    }
+    return null;
   }
   /* ---- داده: Yahoo (فقط با پروکسی — مرورگر مستقیم بلاک است) ---- */
   async function yahooChart(sym, range, interval) {
@@ -210,7 +285,9 @@
   async function coingeckoFund(sym) {
     var id = CG_IDS[sym];
     if (!id) return null;
-    var j = await fetchJSON('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=' + id + '&price_change_percentage=24h,7d,30d', 10000);
+    var fundUrl = 'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=' + id + '&price_change_percentage=24h,7d,30d';
+    var j = await fetchJSON(fundUrl, 10000);
+    if (!Array.isArray(j) || !j[0]) j = await viaWorker('coingecko', fundUrl, 12000); // v1.0.2: مستقیم نشد — از ورکر.
     if (!Array.isArray(j) || !j[0]) return null;
     var c = j[0];
     return { name: c.name, rank: c.market_cap_rank, marketCap: c.market_cap, fdv: c.fully_diluted_valuation, volume24: c.total_volume,
@@ -219,7 +296,7 @@
   }
 
   /* ---- وضعیت ---- */
-  var state = { view: 'catalog', market: null, quote: null, tf: '1h', tab: 'chart', candles: null, quoteRes: null, loading: 0 };
+  var state = { view: 'catalog', market: null, quote: null, tf: '1h', tab: 'chart', candles: null, quoteRes: null, loading: 0, priceUsd: null, priceIran: null, priceMode: 'usd', candlesDone: false };
 
   /* ---- سیم‌کشی چارت اونلا (chart-style + native-chart) ---- */
   window.__ov = window.__ov || {};
@@ -278,6 +355,7 @@
     state.quote = q;
     state.tab = 'chart';
     state.candles = null; state.quoteRes = null;
+    state.priceUsd = null; state.priceIran = null; state.priceMode = 'usd'; state.candlesDone = false;
     window.pair.sym = q.symbol; window.pair.base = q.label; window.pair.kind = (q.provider === 'binance') ? 'crypto' : 'other';
     window.tf = state.tf;
     show('symbol');
@@ -307,34 +385,79 @@
     loadCandles();
   }
 
+  // v1.0.2: قیمت دلاری پیش‌فرض است؛ قیمت ایرانی (تومان) انتخاب دومِ کاربر است —
+  // با دکمهٔ «دلار | تومان» عوض می‌شود، نه خودکار. اگر قیمت جهانی نیامد، باکس «در دسترس نیست»
+  // می‌شود ولی دکمهٔ تومان (اگر قیمت ایرانی رسید) هنوز هست تا کاربر خودش انتخاب کند.
+  function renderPriceBox(needProxy, iranBlocked) {
+    var q = state.quote;
+    var p = state.priceMode === 'iran' ? state.priceIran : state.priceUsd;
+    var canSwitch = !!(state.priceUsd && state.priceIran);
+    var iranOnly = !state.priceUsd && !!state.priceIran;
+    if (!p) {
+      $('priceBox').innerHTML = '<div class="na">' + esc(T('فعلاً در دسترس نیست.', 'Not available right now.')) + '</div>'
+        + (iranBlocked ? '<div class="hint">' + esc(T('سهام ایران به ربات روی PC نیاز دارد — از IP خارجی بلاک است.', 'Iran stocks need the bot on your PC — they are blocked from foreign IPs.')) + '</div>'
+        : (needProxy ? '<div class="hint">' + esc(T('به پروکسی نیاز دارد — PROXY_URL را در app.js بگذار (README را ببین).', 'Needs the proxy — set PROXY_URL in app.js (see README).')) + '</div>' : ''))
+        + (iranOnly ? '<div class="seg"><button type="button" data-mode="iran">' + esc(T('قیمت ایران (تومان)', 'Iran price (Toman)')) + '</button></div>' : '');
+      bindPriceMode();
+      return;
+    }
+    var unit = ' ' + (p.currency || '');
+    var ch = (typeof p.changePct === 'number') ? ' <span class="' + (p.changePct >= 0 ? 'up' : 'dn') + '">' + fmtPct(p.changePct) + '</span>' : '';
+    $('priceBox').innerHTML = '<div class="big">' + fmt(p.price) + '<span class="unit">' + esc(unit) + '</span></div>'
+      + '<div class="sub">' + esc(T('تغییر ۲۴ ساعت', '24h change')) + ': ' + ch + '</div>'
+      + ((p.high != null) ? row(T('سقف ۲۴ ساعت', 'High 24h'), fmt(p.high)) : '')
+      + ((p.low != null) ? row(T('کف ۲۴ ساعت', 'Low 24h'), fmt(p.low)) : '')
+      + ((p.volume != null) ? row(T('حجم ۲۴ ساعت', 'Volume 24h'), fmt(p.volume)) : '')
+      + (canSwitch ? '<div class="seg"><button type="button" data-mode="usd"' + (state.priceMode === 'usd' ? ' class="on"' : '') + '>' + esc(T('دلار', 'USD')) + '</button>'
+        + '<button type="button" data-mode="iran"' + (state.priceMode === 'iran' ? ' class="on"' : '') + '>' + esc(T('تومان', 'Toman')) + '</button></div>' : '');
+    bindPriceMode();
+  }
+  function bindPriceMode() {
+    var btns = $('priceBox').querySelectorAll('[data-mode]');
+    btns.forEach(function (b) {
+      b.addEventListener('click', function () {
+        state.priceMode = b.dataset.mode;
+        renderPriceBox(false, false);
+      });
+    });
+  }
+  function naTabs(msgKey) {
+    // v1.0.2: وقتی قیمت/کندل نیامد، تب‌ها روی «در حال بارگذاری» گیر نکنند.
+    var m = '<div class="na">' + esc(T('فعلاً در دسترس نیست.', 'Not available right now.')) + '</div>';
+    $('tabAnalysis').innerHTML = m;
+    $('tabFund').innerHTML = m;
+    $('tabNews').innerHTML = m;
+  }
+
   async function loadSymbol() {
     var q = state.quote;
     var my = ++state.loading;
-    // قیمت
+    // قیمت — دلاری و ایرانی موازی گرفته می‌شوند؛ دلاری پیش‌فرض است، ایرانی انتخاب دوم.
     var price = null, needProxy = false, iranBlocked = false;
-    if (q.provider === 'binance') price = await binanceTicker(q.symbol);
+    if (q.provider === 'binance') {
+      var both = await Promise.all([binanceTicker(q.symbol), iranCryptoPrice(q.symbol)]);
+      price = both[0];
+      state.priceUsd = both[0];
+      state.priceIran = both[1];
+      state.priceMode = 'usd';
+    }
     else if (q.provider === 'yahoo') {
       if (FX_PAIRS[q.symbol]) price = await frankfurterPrice(q.symbol);
       if (!price) { var yq = await yahooQuote(q.symbol); if (yq) { price = yq; state.quoteRes = yq; } else needProxy = true; }
       else { var yq2 = await yahooQuote(q.symbol); if (yq2) state.quoteRes = yq2; }
+      state.priceUsd = price;
     }
-    else if (q.provider === 'iran-rate') { price = await iranRate(q.symbol); if (!price) needProxy = true; }
+    else if (q.provider === 'iran-rate') { price = await iranRate(q.symbol); if (!price) needProxy = true; state.priceUsd = price; }
     else if (q.provider === 'iran-stock') { iranBlocked = true; }
     if (my !== state.loading) return;
     if (!price) {
-      $('priceBox').innerHTML = '<div class="na">' + esc(T('فعلاً در دسترس نیست.', 'Not available right now.')) + '</div>'
-        + (iranBlocked ? '<div class="hint">' + esc(T('سهام ایران به ربات روی PC نیاز دارد — از IP خارجی بلاک است.', 'Iran stocks need the bot on your PC — they are blocked from foreign IPs.')) + '</div>'
-        : (needProxy ? '<div class="hint">' + esc(T('به پروکسی نیاز دارد — PROXY_URL را در app.js بگذار (README را ببین).', 'Needs the proxy — set PROXY_URL in app.js (see README).')) + '</div>' : ''));
+      state.candlesDone = true; // کندلی در راه نیست — تب تحلیل «در حال بارگذاری» نماند.
+      renderPriceBox(needProxy, iranBlocked);
       $('tabChart').innerHTML = '<div class="na">' + esc(T('برای این نماد کندل نیست.', 'No candles for this symbol.')) + '</div>';
+      naTabs();
       return;
     }
-    var unit = q.provider === 'binance' ? ' USDT' : (q.provider === 'iran-rate' ? (lang === 'fa' ? ' تومان' : ' Toman') : (price.currency ? ' ' + price.currency : ''));
-    var ch = (typeof price.changePct === 'number') ? ' <span class="' + (price.changePct >= 0 ? 'up' : 'dn') + '">' + fmtPct(price.changePct) + '</span>' : '';
-    $('priceBox').innerHTML = '<div class="big">' + fmt(price.price) + '<span class="unit">' + esc(unit) + '</span></div>'
-      + '<div class="sub">' + esc(T('تغییر ۲۴ ساعت', '24h change')) + ': ' + ch + '</div>'
-      + ((price.high != null) ? row(T('سقف ۲۴ ساعت', 'High 24h'), fmt(price.high)) : '')
-      + ((price.low != null) ? row(T('کف ۲۴ ساعت', 'Low 24h'), fmt(price.low)) : '')
-      + ((price.volume != null) ? row(T('حجم ۲۴ ساعت', 'Volume 24h'), fmt(price.volume)) : '');
+    renderPriceBox(needProxy, iranBlocked);
     loadCandles();
     renderFund();
     renderNews();
@@ -367,6 +490,7 @@
     }
     if (my !== state.loading) return;
     state.candles = candles;
+    state.candlesDone = true;
     if (state.tab === 'analysis') renderAnalysis();
     if (!candles) {
       $('tabChart').innerHTML = '<div class="na">' + esc(T('برای این نماد کندل نیست.', 'No candles for this symbol.')) + '</div>';
@@ -427,8 +551,12 @@
   function renderAnalysis() {
     var el = $('tabAnalysis');
     if (!state.candles) {
-      // کندل‌ها هنوز در راه‌اند (loadCandles آسنکرون است) — نه «نیست»، «در حال بارگذاری» است.
-      el.innerHTML = '<div class="muted">' + esc(T('در حال بارگذاری…', 'Loading…')) + '</div>';
+      // v1.0.2: اگر بارگذاری کندل تمام شد و کندلی نیست، «نیست» نشان بده — نه «در حال بارگذاری» برای همیشه.
+      if (state.candlesDone) {
+        el.innerHTML = '<div class="na">' + esc(T('برای این نماد کندل نیست.', 'No candles for this symbol.')) + '</div>';
+      } else {
+        el.innerHTML = '<div class="muted">' + esc(T('در حال بارگذاری…', 'Loading…')) + '</div>';
+      }
       return;
     }
     if (state.candles.length < 35) {
@@ -572,7 +700,7 @@
     show('catalog');
   }
   /* برای تست از کنسول مرورگر: window.__miniApp.openSymbol({provider:'binance',symbol:'BTCUSDT',display:'BTC/USDT',label:'BTC'}) */
-  window.__miniApp = { openSymbol: openSymbol, setTf: setTf, setTab: setTab, state: state };
+  window.__miniApp = { openSymbol: openSymbol, setTf: setTf, setTab: setTab, state: state, renderPriceBox: renderPriceBox };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 })();
