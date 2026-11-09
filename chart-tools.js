@@ -1,10 +1,69 @@
-/* Mini App: این فایل همان 01-12-chart-tool-readout.js اپ است؛ ابزارها (fib/sr/ma/bb/tl/pv)
-   در مینی‌اپ خاموش‌اند (on خالی) — drawTools هیچ خط اضافه‌ای نمی‌کشد و draw نمی‌شکند.
-   analyzeCS/ema/onellaDrawAdvancedTools فقط برای همان ابزارهاست و اینجا stub شده‌اند. */
+/* Mini App: این فایل همان 01-12-chart-tool-readout.js اپ است.
+   v1.2.0 — ابزارها (fib/sr/ma/bb/tl/pv) حالا واقعی‌اند: ema سری واقعی
+   برمی‌گرداند و analyzeCS از روی خود cs حساب می‌کند (SMA، سقف/کف ۲۰ و ۵۰
+   کندل اخیر برای R/S، بولینگر، ATR وایلدر و MACD). on خالی = همه خاموش؛
+   app.js با دکمه‌های ابزار (fib/sr/tl/bb/pv) آن‌ها را روشن/خاموش می‌کند.
+   analyzeCS/ema/onellaDrawAdvancedTools فقط برای همان ابزارهاست. */
 var on = {};
-if (typeof window.ema !== 'function') window.ema = function (cl, n) { return []; };
+if (typeof window.ema !== 'function') window.ema = function (cl, n) { return emaSeriesLocal(cl, n); };
+function emaSeriesLocal(cl, n) {
+  if (!Array.isArray(cl) || cl.length < 1 || !(n > 0)) return [];
+  var k = 2 / (n + 1), out = [cl[0]];
+  for (var i = 1; i < cl.length; i++) out.push(cl[i] * k + out[i - 1] * (1 - k));
+  return out;
+}
 var ema = window.ema;
-if (typeof window.analyzeCS !== 'function') window.analyzeCS = function () { return { l: 0, R1: 0, R2: 0, S1: 0, S2: 0, s20: 0, s50: 0, pb: 0.5, bw: 0 }; };
+if (typeof window.analyzeCS !== 'function') window.analyzeCS = function () { return analyzeCSLocal(); };
+function analyzeCSLocal() {
+  var z = { l: 0, R1: 0, R2: 0, S1: 0, S2: 0, s20: 0, s50: 0, pb: 0.5, bw: 0, atr: 0, hist: 0 };
+  try {
+    if (!Array.isArray(cs) || cs.length < 2) return z;
+    var closes = cs.map(function (c) { return +c.c; }).filter(Number.isFinite);
+    var last = closes[closes.length - 1];
+    var smaN = function (n) {
+      if (closes.length < n) return 0;
+      var s = 0;
+      for (var i = closes.length - n; i < closes.length; i++) s += closes[i];
+      return s / n;
+    };
+    var win = function (n, f) {
+      var w = cs.slice(-n);
+      return f.apply(null, w.map(function (c) { return f === Math.max ? c.h : c.l; }));
+    };
+    var hi20 = win(20, Math.max), lo20 = win(20, Math.min);
+    var hi50 = cs.length >= 50 ? win(50, Math.max) : hi20;
+    var lo50 = cs.length >= 50 ? win(50, Math.min) : lo20;
+    var m20 = smaN(20), sd = 0;
+    if (closes.length >= 20) {
+      var w20 = closes.slice(-20), m = 0, i;
+      for (i = 0; i < 20; i++) m += w20[i];
+      m /= 20;
+      var v = 0;
+      for (i = 0; i < 20; i++) v += (w20[i] - m) * (w20[i] - m);
+      sd = Math.sqrt(v / 20);
+    }
+    var up = m20 + 2 * sd, dn = m20 - 2 * sd;
+    var atrV = 0;
+    if (cs.length >= 15) {
+      var s2 = 0, n2 = Math.min(14, cs.length - 1);
+      for (var j = cs.length - n2; j < cs.length; j++) {
+        var c = cs[j], p = cs[j - 1];
+        s2 += Math.max(c.h - c.l, Math.abs(c.h - p.c), Math.abs(c.l - p.c));
+      }
+      atrV = s2 / n2;
+    }
+    var e12 = emaSeriesLocal(closes, 12), e26 = emaSeriesLocal(closes, 26), hist = 0;
+    if (e12.length && e26.length) {
+      var line = e12.map(function (x, i) { return x - e26[i]; });
+      var sig = emaSeriesLocal(line, 9);
+      if (sig.length) hist = line[line.length - 1] - sig[sig.length - 1];
+    }
+    z = { l: last, R1: hi20, R2: hi50, S1: lo20, S2: lo50, s20: m20, s50: smaN(50),
+      pb: (up > dn) ? (last - dn) / (up - dn) : 0.5, bw: (m20 > 0) ? (up - dn) / m20 : 0,
+      atr: atrV, hist: hist };
+  } catch (e) {}
+  return z;
+}
 var analyzeCS = window.analyzeCS;
 if (typeof window.onellaDrawAdvancedTools !== 'function') window.onellaDrawAdvancedTools = function () {};
 var onellaDrawAdvancedTools = window.onellaDrawAdvancedTools;

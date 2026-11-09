@@ -86,6 +86,62 @@
   #tab-chart:fullscreen, #tab-chart.fs { background: var(--bg); padding: 12px; }
   #tab-chart:fullscreen #nv, #tab-chart.fs #nv { height: calc(100dvh - 200px) !important; }
   #tab-chart:fullscreen #cc, #tab-chart.fs #cc { height: 100% !important; }
+  /* v1.2.0 — دو تب اصلی (چارت / داشبورد) + مودال سرچ + گیج + داشبورد */
+  main { padding-bottom: 84px; }
+  #mainTabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: flex; gap: 8px; padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); background: rgba(5,7,12,.96); border-top: 1px solid var(--line); }
+  #mainTabs button { flex: 1; background: var(--card); border: 1px solid var(--line); color: var(--txt); border-radius: 12px; padding: 11px 4px; font-size: 14px; font-weight: 700; cursor: pointer; }
+  #mainTabs button.on { border-color: var(--acc); color: var(--acc); }
+  .dash-h { font-size: 16px; font-weight: 800; margin: 8px 0 10px; display: flex; align-items: center; justify-content: space-between; }
+  .dash-h button { background: var(--card); border: 1px solid var(--line); color: var(--txt); border-radius: 9px; padding: 6px 12px; font-size: 14px; cursor: pointer; }
+  .dash-sec { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+  .dash-sec h3 { margin: 0 0 10px; font-size: 14px; }
+  .heat-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13px; }
+  .heat-row .heat-lb { width: 86px; flex: none; }
+  .heat-bar { flex: 1; height: 10px; border-radius: 999px; background: #1c2740; overflow: hidden; display: flex; }
+  .heat-bar .hb-up { background: var(--up); height: 100%; }
+  .heat-bar .hb-dn { background: var(--dn); height: 100%; }
+  .heat-row .heat-v { width: 64px; flex: none; text-align: end; font-weight: 700; }
+  .mv-row { display: flex; align-items: center; gap: 10px; width: 100%; background: none; border: 0; border-bottom: 1px solid var(--line); color: var(--txt); padding: 9px 2px; font-size: 14px; cursor: pointer; text-align: start; }
+  .mv-row:last-child { border-bottom: 0; }
+  .mv-lb { font-weight: 700; }
+  .mv-ds { color: var(--mut); font-size: 12px; }
+  .mv-px { margin-inline-start: auto; text-align: end; }
+  .mv-px b { display: block; }
+  .mv-px span { font-size: 12px; font-weight: 700; }
+  .gauge { display: flex; align-items: center; gap: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin: 10px 0 4px; }
+  .gauge svg { flex: none; }
+  .gauge .g-txt { font-size: 14px; font-weight: 700; }
+  .gauge .g-sub { font-size: 12px; color: var(--mut); margin-top: 3px; line-height: 1.5; }
+  /* مودال سرچ (مثل اپ اصلی: تمام‌صفحه، تب بازار، باکس بزرگ، ردیف آیکون‌دار + ستاره) */
+  #searchModal { position: fixed; inset: 0; z-index: 60; background: var(--bg); display: none; flex-direction: column; }
+  #searchModal.open { display: flex; }
+  .sm-top { display: flex; align-items: center; justify-content: space-between; padding: 14px 14px 6px; }
+  .sm-top b { font-size: 16px; }
+  .sm-top button { background: var(--card); border: 1px solid var(--line); color: var(--txt); border-radius: 9px; padding: 7px 12px; font-size: 14px; cursor: pointer; }
+  .sm-tabs { display: flex; gap: 6px; overflow-x: auto; padding: 6px 14px; scrollbar-width: none; }
+  .sm-tabs::-webkit-scrollbar { display: none; }
+  .sm-tabs button { flex: none; background: var(--card); border: 1px solid var(--line); color: var(--txt); border-radius: 999px; padding: 7px 13px; font-size: 13px; cursor: pointer; }
+  .sm-tabs button.on { border-color: var(--acc); color: var(--acc); }
+  .sm-input { margin: 6px 14px 10px; }
+  .sm-body { flex: 1; overflow-y: auto; padding: 0 14px 24px; }
+  .sm-row { display: flex; align-items: center; gap: 10px; width: 100%; background: var(--card); border: 1px solid var(--line); color: var(--txt); border-radius: 12px; padding: 11px 12px; margin-bottom: 8px; font-size: 14px; cursor: pointer; text-align: start; }
+  .sm-row:active { border-color: var(--acc); }
+  .sm-row .srow-lb { font-weight: 700; font-size: 15px; }
+  .sm-row .srow-ds { color: var(--mut); font-size: 12px; margin-top: 2px; }
+  .sm-star { margin-inline-start: auto; background: none; border: 0; font-size: 20px; cursor: pointer; color: #f5b446; padding: 2px 6px; }
+  .sm-star.off { color: var(--mut); }
+  .chart-tools { display: flex; gap: 6px; margin: 8px 0 4px; flex-wrap: wrap; }
+  .chart-tools .tbtn.on { border-color: var(--acc); color: var(--acc); }
+  .tool-note { font-size: 12px; color: var(--mut); line-height: 1.6; padding: 6px 2px; }
+  .axis-btn { position: absolute; z-index: 5; background: #31415f; color: #fff; border: 0; border-radius: 8px; padding: 5px 9px; font-size: 12px; font-weight: 700; cursor: pointer; }
+  #tvAutoBtn { top: 8px; inset-inline-end: 8px; }
+  #tvLatestBtn { bottom: 8px; inset-inline-start: 8px; }
+  /* نوار انتخاب نماد (مثل اپ اصلی: ▼ BTC/USDT + آیکون + 🔍) */
+  #symBar { display: flex; align-items: center; gap: 8px; width: 100%; background: var(--card); border: 1px solid var(--acc); color: var(--txt); border-radius: 12px; padding: 10px 12px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 10px; text-align: start; }
+  #symBar .sym-bar-ic { display: inline-flex; }
+  #symBar .sym-bar-ic .oa-ic { width: 26px; height: 26px; }
+  #symBarTx { flex: 1; color: var(--acc); }
+  #symBar .sym-bar-search { font-size: 16px; }
 </style>
 </head>
 <body>
@@ -95,13 +151,16 @@
 </header>
 <main>
   <div id="view-catalog">
-    <label class="o-input"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.8-3.8"/></svg><input id="searchInput" type="search" autocomplete="off" placeholder="جستجو…"></label>
+    <label class="o-input" id="searchTrigger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.8-3.8"/></svg><input id="searchInput" type="search" autocomplete="off" placeholder="جستجو…" readonly></label>
+    <div class="sm-tabs" id="catalogTabs" style="padding:6px 0"></div>
     <div id="catalogTitle" class="mkt-h">کاتولوگ</div>
     <div id="catalog"></div>
     <div id="searchResults"></div>
   </div>
   <div id="view-symbol" style="display:none">
-    <h2 id="symTitle" style="font-size:18px;margin:4px 0 2px"></h2>
+    <div id="gaugeBox"></div>
+    <button id="symBar" type="button"><span class="sym-bar-ic" id="symBarIc"></span><span id="symBarTx">▼</span><span class="sym-bar-search">🔍</span></button>
+    <h2 id="symTitle" style="display:none"></h2>
     <div id="priceBox"></div>
     <div class="tabs">
       <button id="tabBtn-chart" type="button" class="on">چارت</button>
@@ -114,7 +173,24 @@
     <div id="tab-fund" style="display:none"></div>
     <div id="tab-news" style="display:none"></div>
   </div>
+  <div id="view-dash" style="display:none">
+    <div class="dash-h"><span id="dashTitle">داشبورد</span><button id="dashRefresh" type="button">↻</button></div>
+    <div id="dashHeat"></div>
+    <div id="dashMovers"></div>
+    <div id="dashNews"></div>
+    <div id="dashNote" class="warn"></div>
+  </div>
 </main>
+<nav id="mainTabs">
+  <button id="mainTab-chart" type="button" class="on">📊 چارت</button>
+  <button id="mainTab-dash" type="button">📋 داشبورد</button>
+</nav>
+<div id="searchModal" role="dialog" aria-modal="true" aria-label="search">
+  <div class="sm-top"><b id="smTitle">جستجو</b><button id="smClose" type="button" aria-label="close">✕</button></div>
+  <div class="sm-tabs" id="smTabs"></div>
+  <label class="o-input sm-input"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.8-3.8"/></svg><input id="smInput" type="search" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="جستجو…"></label>
+  <div class="sm-body" id="smBody"></div>
+</div>
 <script src="display-src.js"></script>
 <script src="chart-style.js"></script>
 <script src="chart-tools.js"></script>

@@ -1,13 +1,22 @@
 'use strict';
-/* Onella Nelora Lite v1.1.0 — منطق مینی‌اپ (صفحهٔ استاتیک؛ بدون سرور).
+/* Onella Nelora Lite v1.2.0 — منطق مینی‌اپ (صفحهٔ استاتیک؛ بدون سرور).
+   دیزاین = کپیِ دیدنیِ خود اپ Onella Nelora (نه فقط الهام): همان توکن‌ها،
+   همان چیدمان صفحهٔ چارت (گیج بالا، تب‌های بازار، نوار انتخاب نماد، تایم‌فریم
+   بالای چارت)، همان مودال سرچ (تب بازار + باکس بزرگ + ردیف آیکون‌دار + ستاره).
    چارت = چارت بومی خود اونلا (chart-style.js + native-chart.js — همان فایل‌های اپ،
    فقط UI اپ حذف شده). تحلیل = همان موتور محلی ربات (analysis-src.js).
    خبر = همان RSS ربات (news-src.js). آیکون = asset-icons.js (پورت js/114 اپ).
+   دو تب اصلی پایین صفحه: چارت (کاتولوگ + نماد) و داشبورد (حرارت بازار،
+   ۵ صعودی/۵ نزولی، اخبار مهم با نماد + درصد تاثیر تخمینی).
+   ژست‌های چارت به سبک TradingView (js/06 اپ): اسکرول روی محور قیمت = زوم
+   عمودی مقیاس قیمت، کشیدن روی محور قیمت = کش‌آمدن/فشرده‌شدن مقیاس، کشیدن
+   عمودی روی چارت = جابه‌جایی قیمت، دوبار لمس محور قیمت = مقیاس خودکار،
+   اسکرول روی چارت = زوم افقی حول نشانگر، دکمهٔ A = مقیاس خودکار، ⏭ = آخرین کندل.
    داده:
-     مستقیم (CORS دارد): Binance (کریپتو)، CoinGecko (بنیادی کریپتو)، Frankfurter (قیمت فارکس)
-     با پروکسی (PROXY_URL — ورکر Cloudflare): Yahoo (سهام/فارکس/کالا/شاخص)، Google News، Nerkhsanj،
-     کریپتو (Binance/CoinGecko/OKX + صرافی ایرانی) وقتی گوشی/PC مستقیم نمی‌رسد،
-     مفید (بورس/فرابورس ایران — کندل + قیمت پایانی؛ TSETMC از IP خارجی بلاک است و اینجا نمی‌آید).
+     مستقیم (CORS دارد): Binance (کریپتو)، CoinGecko (بنیادی/بازار کریپتو)، Frankfurter (قیمت فارکس)
+     با پروکسی (PROXY_URL — ورکر Cloudflare): Yahoo (سهام/فارکس/کالا/شاخص/ETF + چندنمادی)،
+     Google News، Nerkhsanj، کریپتو (Binance/CoinGecko/OKX + صرافی ایرانی) وقتی گوشی/PC مستقیم نمی‌رسد،
+     مفید (بورس/فرابورس ایران — کندل + قیمت پایانی + چندنمادی داشبورد؛ TSETMC از IP خارجی بلاک است و اینجا نمی‌آید).
    بدون پروکسی، آن بازارها «در دسترس نیست» می‌گیرند — هرگز عدد ساختگی نمی‌آید.
    زنده (کریپتو): WebSocket کندل Binance (wss://data-stream.binance.vision)؛ اگر WS نرسید،
    پولینگ REST (هر ۲ ثانیه برای 1s، هر ۱۰ ثانیه برای بقیه) از همان زنجیرهٔ قیمت/کندل.
@@ -35,7 +44,13 @@
       trend: 'Trend', rsi: 'RSI (14)', bollinger: 'Bollinger (20, 2σ)', support: 'Support', resistance: 'Resistance', atr: 'ATR (14)',
       change: 'Change', bandWidth: 'Band width', range20: '20-candle range', pos20: 'Position in 20-range', volumeRatio: 'Volume vs avg',
       onlyAnalysis: 'Analysis only — not a signal, not a prediction, not trading advice.',
-      impactEst: 'Impact is a keyword estimate, not certain.', openInBot: 'Open in bot', chooseMarket: 'Choose a market:', chooseSymbol: 'Choose a symbol:' },
+      impactEst: 'Impact is a keyword estimate, not certain.', openInBot: 'Open in bot', chooseMarket: 'Choose a market:', chooseSymbol: 'Choose a symbol:',
+      chartTab: 'Chart', dashTab: 'Dashboard', dashboard: 'Dashboard', marketHeat: 'Market heat', topGainers: 'Top 5 gainers', topLosers: 'Top 5 losers',
+      importantNews: 'Important news', searchIn: 'Search in', watchlist: 'Watchlist', noFavs: 'No starred symbols yet — tap ☆ on any symbol.',
+      impactPct: 'Impact', impactEstPct: 'Impact % is an estimate from headline keywords, not measured.', refresh: 'Refresh',
+      evidence: 'Evidence confluence', bullish: 'Bullish', bearish: 'Bearish', neutral: 'Neutral',
+      autoScale: 'Auto scale', latest: 'Latest candle', tools: 'Tools', fib: 'Fibonacci', sr: 'Support / Resistance', tl: 'Trendline', bb: 'Bollinger', pv: 'Pivot',
+      noChangeData: 'No daily-change data for this market in the source.', needsWorker120: 'Needs the new Worker (v1.2.0) — redeploy worker.js on Cloudflare.' },
     fa: { catalog: 'کاتولوگ', back: '‹ بازگشت', price: 'قیمت', change24: 'تغییر ۲۴ ساعت', high: 'سقف ۲۴ ساعت', low: 'کف ۲۴ ساعت', volume: 'حجم ۲۴ ساعت',
       chart: 'چارت', analysis: 'تحلیل', fundamentals: 'بنیادی', news: 'خبر', impactNews: 'خبرهای مهم و تاثیرگذار',
       notAvailable: 'فعلاً در دسترس نیست.', needProxy: 'به پروکسی نیاز دارد — PROXY_URL را در app.js بگذار (README را ببین).',
@@ -44,7 +59,13 @@
       trend: 'روند', rsi: 'RSI (14)', bollinger: 'بولینگر (۲۰، ۲σ)', support: 'حمایت', resistance: 'مقاومت', atr: 'ATR (14)',
       change: 'تغییر', bandWidth: 'پهنای باند', range20: 'دامنهٔ نوسان ۲۰ کندل', pos20: 'جای قیمت در بازهٔ ۲۰ کندل', volumeRatio: 'حجم نسبت به میانگین',
       onlyAnalysis: 'فقط تحلیل است — نه سیگنال، نه پیش‌بینی، نه توصیهٔ معامله.',
-      impactEst: 'تاثیر از روی کلیدواژهٔ تیتر تخمین زده شده؛ قطعی نیست.', openInBot: 'باز کردن در ربات', chooseMarket: 'بازار را انتخاب کن:', chooseSymbol: 'نماد را انتخاب کن:' }
+      impactEst: 'تاثیر از روی کلیدواژهٔ تیتر تخمین زده شده؛ قطعی نیست.', openInBot: 'باز کردن در ربات', chooseMarket: 'بازار را انتخاب کن:', chooseSymbol: 'نماد را انتخاب کن:',
+      chartTab: 'چارت', dashTab: 'داشبورد', dashboard: 'داشبورد', marketHeat: 'حرارت بازار', topGainers: '۵ نماد صعودی', topLosers: '۵ نماد نزولی',
+      importantNews: 'اخبار مهم', searchIn: 'جستجو در', watchlist: 'واچ‌لیست', noFavs: 'هنوز نمادی ستاره‌دار نکردی — روی ☆ هر نماد بزن.',
+      impactPct: 'تاثیر', impactEstPct: 'درصد تاثیر از روی کلیدواژهٔ تیتر تخمین زده شده؛ اندازه‌گیری واقعی نیست.', refresh: 'تازه‌کردن',
+      evidence: 'همگرایی شواهد', bullish: 'صعودی', bearish: 'نزولی', neutral: 'خنثی',
+      autoScale: 'مقیاس خودکار', latest: 'آخرین کندل', tools: 'ابزار', fib: 'فیبوناچی', sr: 'حمایت/مقاومت', tl: 'خط روند', bb: 'بولینگر', pv: 'پیوت',
+      noChangeData: 'برای این بازار تغییر روزانه در منبع نیست.', needsWorker120: 'ورکر جدید (v1.2.0) لازم است — worker.js را در کلودفلیر دوباره دیپلوی کن.' }
   };
   var T = function (k) { return (L[lang] && L[lang][k]) || L.en[k] || k; };
   var $ = function (id) { return document.getElementById(id); };
@@ -84,6 +105,22 @@
       { label: 'XOM', provider: 'yahoo', symbol: 'XOM', display: 'XOM', kw: 'اکسون' },
       { label: 'BAC', provider: 'yahoo', symbol: 'BAC', display: 'BAC', kw: 'بنک آمریکا' },
       { label: 'UNH', provider: 'yahoo', symbol: 'UNH', display: 'UNH', kw: 'یونایتد' } ] },
+    etf: { label: 'ETF', fa: 'ETF', quotes: [
+      { label: 'SPY', provider: 'yahoo', symbol: 'SPY', display: 'SPY', kw: 'اس اند پی' },
+      { label: 'QQQ', provider: 'yahoo', symbol: 'QQQ', display: 'QQQ', kw: 'نزدک' },
+      { label: 'DIA', provider: 'yahoo', symbol: 'DIA', display: 'DIA', kw: 'داو' },
+      { label: 'IWM', provider: 'yahoo', symbol: 'IWM', display: 'IWM', kw: 'راسل' },
+      { label: 'VTI', provider: 'yahoo', symbol: 'VTI', display: 'VTI', kw: 'کل بازار' },
+      { label: 'GLD', provider: 'yahoo', symbol: 'GLD', display: 'GLD', kw: 'طلا' },
+      { label: 'SLV', provider: 'yahoo', symbol: 'SLV', display: 'SLV', kw: 'نقره' },
+      { label: 'USO', provider: 'yahoo', symbol: 'USO', display: 'USO', kw: 'نفت' },
+      { label: 'TLT', provider: 'yahoo', symbol: 'TLT', display: 'TLT', kw: 'اوراق' },
+      { label: 'SCHD', provider: 'yahoo', symbol: 'SCHD', display: 'SCHD', kw: 'سود تقسیمی' },
+      { label: 'XLK', provider: 'yahoo', symbol: 'XLK', display: 'XLK', kw: 'فناوری' },
+      { label: 'XLF', provider: 'yahoo', symbol: 'XLF', display: 'XLF', kw: 'مالی' },
+      { label: 'ARKK', provider: 'yahoo', symbol: 'ARKK', display: 'ARKK', kw: 'آرک نوآوری' },
+      { label: 'VWO', provider: 'yahoo', symbol: 'VWO', display: 'VWO', kw: 'بازار نوظهور' },
+      { label: 'EEM', provider: 'yahoo', symbol: 'EEM', display: 'EEM', kw: 'بازار نوظهور' } ] },
     forex: { label: 'Forex', fa: 'فارکس', quotes: [
       { label: 'EUR/USD', provider: 'yahoo', symbol: 'EURUSD=X', display: 'EUR/USD' },
       { label: 'GBP/USD', provider: 'yahoo', symbol: 'GBPUSD=X', display: 'GBP/USD' },
@@ -181,18 +218,19 @@
       { label: 'غدیس', provider: 'mofid', symbol: 'غدیس', display: 'غدیس (ریال)' },
       { label: 'کرمان', provider: 'mofid', symbol: 'کرمان', display: 'کرمان (ریال)' } ] }
   };
-  /* تایم‌فریم‌ها — هر provider به‌اندازهٔ توانش (v1.1.0: 1s فقط کریپتو). */
-  var TF_ALL = ['1s', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '1M'];
+  /* تایم‌فریم‌ها — هر provider به‌اندازهٔ توانش (v1.2.0: 1m و 3m اضافه شد؛ 3m برای Yahoo/مفید از تجمیع ۱ دقیقه‌ای ساخته می‌شود). */
+  var TF_ALL = ['1s', '1m', '3m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '1M'];
   var TFS = {
     binance: TF_ALL,
-    yahoo: ['5m', '15m', '30m', '1h', '4h', '1d', '1w', '1M'],
-    mofid: ['5m', '15m', '30m', '1h', '1d', '1w'],
+    yahoo: ['1m', '3m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '1M'],
+    mofid: ['1m', '3m', '5m', '15m', '30m', '1h', '1d', '1w'],
     'iran-rate': []
   };
   /* آیکون SVG بازارها (خطی، ۲۴×۲۴، مثل ناوبری اپ اصلی). */
   var MARKET_SVG = {
     crypto: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 6.5v11M8.8 9.2h5.4M8.8 14.8h5.4"/></svg>',
     stocks: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 20v-6M11 20V6M17 20v-9"/><path d="M3 20h18"/></svg>',
+    etf: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg>',
     forex: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13M13 4l4 4-4 4M20 16H7M11 12l-4 4 4 4"/></svg>',
     commodities: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17.5l2.5-7h11l2.5 7z"/><path d="M9 10.5l1-3h4l1 3"/></svg>',
     iran: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="7" width="18" height="10" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6.5 9.5h.01M17.5 14.5h.01"/></svg>',
@@ -339,7 +377,7 @@
     }
     return out.length >= 2 ? out : null;
   }
-  var OKX_BAR = { '1s': '1s', '5m': '5m', '15m': '15m', '30m': '30m', '1h': '1H', '4h': '4H', '1d': '1D', '1w': '1W', '1M': '1M' };
+  var OKX_BAR = { '1s': '1s', '1m': '1m', '3m': '3m', '5m': '5m', '15m': '15m', '30m': '30m', '1h': '1H', '4h': '4H', '1d': '1D', '1w': '1W', '1M': '1M' };
   async function okxCandles(sym, interval, limit) {
     var bar = OKX_BAR[interval];
     if (!bar) return null;
@@ -373,7 +411,7 @@
     return okxCandles(sym, interval, limit);
   }
   /* ---- داده: Yahoo (فقط با پروکسی — مرورگر مستقیم بلاک است) ---- */
-  var YAHOO_TF = { '5m': ['5d', '5m'], '15m': ['5d', '15m'], '30m': ['1mo', '30m'], '1h': ['1mo', '1h'], '4h': ['3mo', '1h'], '1d': ['1y', '1d'], '1w': ['2y', '1wk'], '1M': ['5y', '1mo'] };
+  var YAHOO_TF = { '1m': ['1d', '1m'], '3m': ['1d', '1m'], '5m': ['5d', '5m'], '15m': ['5d', '15m'], '30m': ['1mo', '30m'], '1h': ['1mo', '1h'], '4h': ['3mo', '1h'], '1d': ['1y', '1d'], '1w': ['2y', '1wk'], '1M': ['5y', '1mo'] };
   async function yahooChart(sym, range, interval) {
     var u = proxyUrl('yahoo-chart', 'https://query2.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(sym) + '?range=' + range + '&interval=' + interval);
     if (!u) return null;
@@ -433,7 +471,7 @@
      قیمت = آخرین قیمت پایانی (تیک زنده ندارد)؛ کندل = UDF مفید.
      ISIN از فهرست stockTickers خود مفید می‌آید (ورکر ردیف CommonStock با ISIN معتبر را
      برمی‌گزیند — ردیف «محصول»/«شاخص صنعت» با همان نماد کنار گذاشته می‌شود). */
-  var MOFID_RES = { '5m': '5', '15m': '15', '30m': '30', '1h': '60', '1d': '1D', '1w': '1W' };
+  var MOFID_RES = { '1m': '1', '3m': '1', '5m': '5', '15m': '15', '30m': '30', '1h': '60', '1d': '1D', '1w': '1W' };
   var mofidCache = {};
   async function mofidResolve(symbol) {
     if (mofidCache[symbol]) return mofidCache[symbol];
@@ -488,7 +526,29 @@
   }
 
   /* ---- وضعیت ---- */
-  var state = { view: 'catalog', market: null, quote: null, tf: '1h', tab: 'chart', candles: null, quoteRes: null, loading: 0, priceUsd: null, priceIran: null, priceMode: 'usd', candlesDone: false, searchQ: '', liveMode: null, mofidAsOf: null };
+  var state = { view: 'catalog', mainTab: 'chart', catalogMarket: 'crypto', market: null, quote: null, tf: '1h', tab: 'chart', candles: null, quoteRes: null, loading: 0, priceUsd: null, priceIran: null, priceMode: 'usd', candlesDone: false, searchQ: '', liveMode: null, mofidAsOf: null };
+
+  /* ---- واچ‌لیست (ستاره) — localStorage؛ کلید provider|symbol ---- */
+  var FAV_KEY = 'miniapp_favs';
+  function favKey(q) { return q.provider + '|' + q.symbol; }
+  function loadFavs() {
+    try { var a = JSON.parse(localStorage.getItem(FAV_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; }
+  }
+  function isFav(q) { return loadFavs().indexOf(favKey(q)) !== -1; }
+  function toggleFav(q) {
+    var a = loadFavs(), k = favKey(q), i = a.indexOf(k);
+    if (i === -1) a.push(k); else a.splice(i, 1);
+    try { localStorage.setItem(FAV_KEY, JSON.stringify(a)); } catch (e) {}
+    return i === -1;
+  }
+  /* جستجوی نماد از روی provider+symbol (برای باز کردن از داشبورد/مودال). */
+  var QUOTE_LOOKUP = {};
+  Object.keys(MARKETS).forEach(function (k) {
+    MARKETS[k].quotes.forEach(function (q) { QUOTE_LOOKUP[q.provider + '|' + q.symbol] = q; });
+  });
+  function lookupQuote(provider, symbol) { return QUOTE_LOOKUP[provider + '|' + symbol] || null; }
+  /* ترتیب تب‌های بازار (مثل اپ اصلی + ایران). */
+  var MARKET_ORDER = ['crypto', 'stocks', 'etf', 'forex', 'commodities', 'iran', 'indices', 'boorse', 'farabourse'];
 
   /* ---- سیم‌کشی چارت اونلا (chart-style + native-chart) ---- */
   window.__ov = window.__ov || {};
@@ -521,23 +581,57 @@
   function show(view) {
     state.view = view;
     stopLive();
-    $('view-catalog').style.display = view === 'catalog' ? '' : 'none';
-    $('view-symbol').style.display = view === 'symbol' ? '' : 'none';
-    $('backBtn').style.display = view === 'symbol' ? '' : 'none';
-    if (view === 'catalog') { if (state.searchQ) renderSearch(state.searchQ); else renderCatalog(); }
+    var chartTab = state.mainTab === 'chart';
+    $('view-catalog').style.display = (chartTab && view === 'catalog') ? '' : 'none';
+    $('view-symbol').style.display = (chartTab && view === 'symbol') ? '' : 'none';
+    $('view-dash').style.display = chartTab ? 'none' : '';
+    $('backBtn').style.display = (chartTab && view === 'symbol') ? '' : 'none';
+    if (chartTab && view === 'catalog') { if (state.searchQ) renderSearch(state.searchQ); else renderCatalog(); }
     if (tg) { try { tg.expand(); } catch (e) {} }
   }
+  function showMainTab(tab) {
+    state.mainTab = tab;
+    $('mainTab-chart').classList.toggle('on', tab === 'chart');
+    $('mainTab-dash').classList.toggle('on', tab === 'dash');
+    if (tab === 'dash') { stopLive(); loadDash(false); }
+    show(state.view);
+  }
+  /* v1.2.0 — کاتولوگ تب‌دار (مثل اپ اصلی): یک بازار در هر لحظه + واچ‌لیست. */
   function renderCatalog() {
     $('catalogTitle').textContent = T('کاتولوگ', 'Catalog');
-    var html = '';
-    Object.keys(MARKETS).forEach(function (k) {
-      var m = MARKETS[k];
-      html += '<div class="mkt"><div class="mkt-h"><span class="mkt-ic">' + (MARKET_SVG[k] || '') + '</span>' + esc(marketLabel(k)) + '</div><div class="syms">';
-      m.quotes.forEach(function (q) {
-        html += '<button class="sym" data-provider="' + q.provider + '" data-symbol="' + esc(q.symbol) + '"><span class="sym-ic">' + iconHtml(q) + '</span><span class="sym-lb">' + esc(q.label) + '</span></button>';
-      });
-      html += '</div></div>';
+    var tabsHtml = '';
+    MARKET_ORDER.forEach(function (k) {
+      tabsHtml += '<button type="button" data-mkt="' + k + '"' + (state.catalogMarket === k ? ' class="on"' : '') + '>' + esc(marketLabel(k)) + '</button>';
     });
+    tabsHtml += '<button type="button" data-mkt="wl"' + (state.catalogMarket === 'wl' ? ' class="on"' : '') + '>⭐ ' + esc(T('واچ‌لیست', 'Watchlist')) + '</button>';
+    $('catalogTabs').innerHTML = tabsHtml;
+    $('catalogTabs').querySelectorAll('button').forEach(function (b) {
+      b.addEventListener('click', function () { state.catalogMarket = b.dataset.mkt; renderCatalog(); });
+    });
+    var html = '';
+    if (state.catalogMarket === 'wl') {
+      var favs = loadFavs().map(function (k) { return QUOTE_LOOKUP[k]; }).filter(Boolean);
+      if (!favs.length) {
+        html = '<div class="na">' + esc(T('هنوز نمادی ستاره‌دار نکردی — روی ☆ هر نماد بزن.', 'No starred symbols yet — tap ☆ on any symbol.')) + '</div>';
+      } else {
+        html = '<div class="mkt"><div class="srows">';
+        favs.forEach(function (q) {
+          html += '<button class="srow" data-provider="' + q.provider + '" data-symbol="' + esc(q.symbol) + '"><span class="sym-ic">' + iconHtml(q) + '</span><span class="srow-lb">' + esc(q.label) + '</span><span class="srow-ds">' + esc(q.display) + '</span></button>';
+        });
+        html += '</div></div>';
+      }
+      $('catalog').innerHTML = html;
+      bindSymbolButtons($('catalog'));
+      $('searchResults').innerHTML = '';
+      return;
+    }
+    var m = MARKETS[state.catalogMarket];
+    if (!m) { state.catalogMarket = 'crypto'; renderCatalog(); return; }
+    html = '<div class="mkt"><div class="mkt-h"><span class="mkt-ic">' + (MARKET_SVG[state.catalogMarket] || '') + '</span>' + esc(marketLabel(state.catalogMarket)) + '</div><div class="syms">';
+    m.quotes.forEach(function (q) {
+      html += '<button class="sym" data-provider="' + q.provider + '" data-symbol="' + esc(q.symbol) + '"><span class="sym-ic">' + iconHtml(q) + '</span><span class="sym-lb">' + esc(q.label) + '</span></button>';
+    });
+    html += '</div></div>';
     $('catalog').innerHTML = html;
     $('searchResults').innerHTML = '';
     bindSymbolButtons($('catalog'));
@@ -578,6 +672,104 @@
     bindSymbolButtons($('searchResults'));
   }
 
+  /* ---- مودال سرچ (v1.2.0 — کپیِ سرچ اپ اصلی: تب بازار + باکس بزرگ + ردیف آیکون‌دار + ستاره) ---- */
+  var sm = { market: 'crypto', q: '' };
+  var SM_PLACEHOLDER = {
+    crypto: { fa: 'جستجوی ارز دیجیتال: BTC، SOL، PEPE ...', en: 'Search crypto: BTC, SOL, PEPE ...' },
+    stocks: { fa: 'جستجوی سهام: AAPL، TSLA ...', en: 'Search stocks: AAPL, TSLA ...' },
+    etf: { fa: 'جستجوی ETF: SPY، QQQ ...', en: 'Search ETFs: SPY, QQQ ...' },
+    forex: { fa: 'جستجوی جفت‌ارز: EUR/USD ...', en: 'Search forex: EUR/USD ...' },
+    commodities: { fa: 'جستجوی کالا: طلا، نفت ...', en: 'Search commodities: gold, oil ...' },
+    iran: { fa: 'جستجوی نرخ ایران: دلار، طلا ...', en: 'Search Iran rates: dollar, gold ...' },
+    indices: { fa: 'جستجوی شاخص: S&P 500 ...', en: 'Search indices: S&P 500 ...' },
+    boorse: { fa: 'جستجوی بورس: فولاد، فملی ...', en: 'Search TSE: Foolad ...' },
+    farabourse: { fa: 'جستجوی فرابورس: آریا ...', en: 'Search Farabourse: Aria ...' },
+    wl: { fa: 'جستجو در واچ‌لیست…', en: 'Search watchlist…' }
+  };
+  function smPlaceholder() {
+    var p = SM_PLACEHOLDER[sm.market] || SM_PLACEHOLDER.crypto;
+    return lang === 'fa' ? p.fa : p.en;
+  }
+  function openSearchModal(market) {
+    if (market && (MARKETS[market] || market === 'wl')) sm.market = market;
+    else if (state.quote) {
+      var cur = null;
+      Object.keys(MARKETS).forEach(function (k) { MARKETS[k].quotes.forEach(function (q) { if (q === state.quote) cur = k; }); });
+      if (cur) sm.market = cur;
+    }
+    $('smInput').value = '';
+    sm.q = '';
+    renderSmTabs();
+    renderSmBody();
+    $('searchModal').classList.add('open');
+    setTimeout(function () { try { $('smInput').focus(); } catch (e) {} }, 50);
+  }
+  function closeSearchModal() { $('searchModal').classList.remove('open'); }
+  function renderSmTabs() {
+    var html = '';
+    MARKET_ORDER.forEach(function (k) {
+      html += '<button type="button" data-mkt="' + k + '"' + (sm.market === k ? ' class="on"' : '') + '>' + esc(marketLabel(k)) + '</button>';
+    });
+    html += '<button type="button" data-mkt="wl"' + (sm.market === 'wl' ? ' class="on"' : '') + '>⭐ ' + esc(T('واچ‌لیست', 'Watchlist')) + '</button>';
+    $('smTabs').innerHTML = html;
+    $('smTabs').querySelectorAll('button').forEach(function (b) {
+      b.addEventListener('click', function () { sm.market = b.dataset.mkt; renderSmTabs(); renderSmBody(); });
+    });
+    $('smTitle').textContent = T('جستجو در ', 'Search in ') + (sm.market === 'wl' ? T('واچ‌لیست', 'Watchlist') : marketLabel(sm.market));
+    $('smInput').placeholder = smPlaceholder();
+  }
+  function smRowsFor(market, nq) {
+    var list = [];
+    if (market === 'wl') {
+      list = loadFavs().map(function (k) { return QUOTE_LOOKUP[k]; }).filter(Boolean);
+    } else {
+      var m = MARKETS[market];
+      if (!m) return [];
+      list = m.quotes.slice();
+    }
+    if (!nq) return list;
+    return list.filter(function (x) {
+      var hay = normQ(x.label + ' ' + x.display + ' ' + x.symbol + ' ' + (x.kw || '') + ' ' + (x.fa || ''));
+      return hay.indexOf(nq) !== -1;
+    });
+  }
+  function renderSmBody() {
+    var nq = normQ(sm.q);
+    var list = smRowsFor(sm.market, nq);
+    var html = '';
+    if (!list.length) {
+      html = '<div class="na">' + esc(sm.market === 'wl' ? T('هنوز نمادی ستاره‌دار نکردی — روی ☆ هر نماد بزن.', 'No starred symbols yet — tap ☆ on any symbol.') : T('چیزی پیدا نشد.', 'Nothing found.')) + '</div>';
+    } else {
+      list.slice(0, 30).forEach(function (x) {
+        var mk = '';
+        Object.keys(MARKETS).forEach(function (k) { if (MARKETS[k].quotes.indexOf(x) !== -1) mk = k; });
+        var sub = esc(x.display) + (mk ? ' · ' + esc(marketLabel(mk)) : '');
+        html += '<button class="sm-row" data-provider="' + x.provider + '" data-symbol="' + esc(x.symbol) + '"><span class="sym-ic">' + iconHtml(x) + '</span><span><span class="srow-lb">' + esc(x.label) + '</span><div class="srow-ds">' + sub + '</div></span><span class="sm-star' + (isFav(x) ? '' : ' off') + '" data-fav="' + x.provider + '|' + esc(x.symbol) + '">' + (isFav(x) ? '★' : '☆') + '</span></button>';
+      });
+    }
+    $('smBody').innerHTML = html;
+    $('smBody').querySelectorAll('.sm-star').forEach(function (s) {
+      s.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var parts = s.dataset.fav.split('|');
+        var q = lookupQuote(parts[0], parts[1]);
+        if (!q) return;
+        var now = toggleFav(q);
+        s.textContent = now ? '★' : '☆';
+        s.classList.toggle('off', !now);
+        if (sm.market === 'wl') renderSmBody();
+      });
+    });
+    $('smBody').querySelectorAll('.sm-row').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var q = lookupQuote(b.dataset.provider, b.dataset.symbol);
+        if (!q) return;
+        closeSearchModal();
+        openSymbol(q);
+      });
+    });
+  }
+
   /* ---- رندر: نماد ---- */
   function row(label, value) {
     return '<div class="row"><span>' + esc(label) + '</span><b>' + value + '</b></div>';
@@ -592,11 +784,14 @@
     // تایم‌فریم فعلی اگر برای این provider نیست (مثلاً 1s برای سهام) → 1h.
     var tfs = TFS[q.provider] || [];
     if (tfs.indexOf(state.tf) === -1) state.tf = '1h';
-    try { window.__ov.st = 7; window.__ov.pan = 0; } catch (e) {}
+    try { window.__ov.st = 7; window.__ov.pan = 0; window.__ov.pm = null; } catch (e) {}
     window.pair.sym = q.symbol; window.pair.base = q.label; window.pair.kind = (q.provider === 'binance') ? 'crypto' : 'other';
     window.tf = state.tf;
     show('symbol');
     $('symTitle').innerHTML = '<span class="sym-title-ic">' + iconHtml(q) + '</span>' + esc(q.display);
+    $('symBarIc').innerHTML = iconHtml(q);
+    $('symBarTx').textContent = '▼ ' + q.display;
+    $('gaugeBox').innerHTML = '';
     $('priceBox').innerHTML = '<div class="muted">' + esc(T('در حال بارگذاری…', 'Loading…')) + '</div>';
     $('tab-chart').innerHTML = '';
     $('tab-analysis').innerHTML = '';
@@ -629,7 +824,7 @@
     stopLive();
     var prevTf = state.tf;
     state.tf = t; window.tf = t;
-    try { window.__ov.st = 7; window.__ov.pan = 0; } catch (e) {}
+    try { window.__ov.st = 7; window.__ov.pan = 0; window.__ov.pm = null; } catch (e) {}
     document.querySelectorAll('#tfRow button').forEach(function (b) { b.classList.toggle('on', b.dataset.tf === t); });
     loadCandles(prevTf);
   }
@@ -757,9 +952,15 @@
       if (r && r.candles) {
         candles = r.candles;
         if (state.tf === '4h') candles = aggregateCandles(candles, 4); // Yahoo 4h ندارد — از ۴×۱h می‌سازیم (همان ربات)
+        if (state.tf === '3m') candles = aggregateCandles(candles, 3); // Yahoo 3m ندارد — از ۳×۱m می‌سازیم
       }
     } else if (q.provider === 'mofid') {
-      candles = await mofidCandles(q.symbol, state.tf);
+      if (state.tf === '3m') {
+        var m1 = await mofidCandles(q.symbol, '1m');
+        candles = m1 ? aggregateCandles(m1, 3) : null; // مفید 3m ندارد — از ۳×۱m می‌سازیم
+      } else {
+        candles = await mofidCandles(q.symbol, state.tf);
+      }
     }
     if (my !== state.loading) return;
     if (!candles) {
@@ -788,6 +989,8 @@
     window.cur = -1;
     renderChartShell();
     try { window.draw(); } catch (e) { $('tab-chart').innerHTML = '<div class="na">' + esc(String(e && e.message || e)) + '</div>'; }
+    renderGauge();
+    refreshAxisBtns();
     if (state.tab === 'analysis') renderAnalysis();
     if (q.provider === 'binance') startLive();
   }
@@ -798,6 +1001,112 @@
       out.push({ t: g[0].t, o: g[0].o, h: Math.max.apply(null, g.map(function (c) { return c.h; })), l: Math.min.apply(null, g.map(function (c) { return c.l; })), c: g[g.length - 1].c, v: g.reduce(function (a, c) { return a + (c.v || 0); }, 0) });
     }
     return out.length >= 2 ? out : null;
+  }
+
+  /* ---- مقیاس قیمت دستی (v1.2.0 — پورت js/06 اپ، به سبک TradingView) ----
+     pm = بازهٔ دستی قیمت در window.__ov.pm؛ draw() خود native-chart.js آن را می‌خواند.
+     در حالت لگاریتمی، جابه‌جایی/مقیاس روی ln(قیمت) انجام می‌شود. */
+  function pmPan(m, dy, G) {
+    var k = dy / (G.ph - G.vh);
+    if (G.log && m.lo > 0) { var a = Math.log(m.hi), b = Math.log(m.lo), d = k * (a - b); return { hi: Math.exp(a + d), lo: Math.exp(b + d) }; }
+    var dp = k * (m.hi - m.lo);
+    return { hi: m.hi + dp, lo: m.lo + dp };
+  }
+  function pmScale(m, f, G) {
+    if (G.log && m.lo > 0) { var a = Math.log(m.hi), b = Math.log(m.lo), c = (a + b) / 2, h = (a - b) / 2 * f; return { hi: Math.exp(c + h), lo: Math.exp(c - h) }; }
+    var c2 = (m.hi + m.lo) / 2, h2 = (m.hi - m.lo) / 2 * f;
+    return { hi: c2 + h2, lo: c2 - h2 };
+  }
+  function autoScale() {
+    try { window.__ov.pm = null; } catch (e) {}
+    var b = $('tvAutoBtn'); if (b) b.style.display = 'none';
+    try { window.draw(); window.head(); } catch (e) {}
+  }
+  function toLatest() {
+    try { window.__ov.pan = 0; } catch (e) {}
+    var b = $('tvLatestBtn'); if (b) b.style.display = 'none';
+    try { window.draw(); window.head(); } catch (e) {}
+  }
+  function refreshAxisBtns() {
+    var a = $('tvAutoBtn'), l = $('tvLatestBtn');
+    if (a) a.style.display = (window.__ov && window.__ov.pm) ? '' : 'none';
+    if (l) l.style.display = ((window.__ov && window.__ov.pan) || 0) >= 1 ? '' : 'none';
+  }
+
+  /* ---- گیج همگرایی شواهد (v1.2.0 — همان امتیازدهی js/01-13 اپ، بدون MTF) ----
+     رای‌ها: EMA20 ±۲، EMA20/50 ±۲، EMA200 ±۱، MACD ±۱، RSI ±۱، ساختار ±۲، حجم ±۱، شکست ±۲؛
+     امتیاز = ۵۰ + (bull−bear)/maxScore × ۴۵ (۰ تا ۱۰۰)؛ گرایش: ‎≥۷۰ صعودی، ‎≤۳۰ نزولی، وگرنه خنثی. */
+  function oaPivotSeriesLocal(period) {
+    period = period || 3;
+    var csArr = state.candles, hs = [], ls = [];
+    for (var i = period; i < csArr.length - period; i++) {
+      var hi = true, lo = true;
+      for (var j = 1; j <= period; j++) {
+        if (csArr[i].h <= csArr[i - j].h || csArr[i].h <= csArr[i + j].h) hi = false;
+        if (csArr[i].l >= csArr[i - j].l || csArr[i].l >= csArr[i + j].l) lo = false;
+      }
+      if (hi) hs.push({ i: i, p: csArr[i].h });
+      if (lo) ls.push({ i: i, p: csArr[i].l });
+    }
+    return { hs: hs, ls: ls };
+  }
+  function confluence() {
+    var csArr = state.candles;
+    if (!csArr || csArr.length < 35) return null;
+    var A = window.OnellaAnalysis;
+    if (!A) return null;
+    var a = A.analyze(csArr, A.marketOf(state.quote));
+    if (!a) return null;
+    var closes = csArr.map(function (c) { return c.c; });
+    var p = closes[closes.length - 1], clPrev = closes[closes.length - 2];
+    var piv = oaPivotSeriesLocal(3), hiP = piv.hs.slice(-4), loP = piv.ls.slice(-4);
+    var htrend = hiP.length >= 2 ? (hiP[hiP.length - 1].p > hiP[hiP.length - 2].p ? 'HH' : hiP[hiP.length - 1].p < hiP[hiP.length - 2].p ? 'LH' : 'EQ') : null;
+    var ltrend = loP.length >= 2 ? (loP[loP.length - 1].p > loP[loP.length - 2].p ? 'HL' : loP[loP.length - 1].p < loP[loP.length - 2].p ? 'LL' : 'EQ') : null;
+    var structure = (htrend === 'HH' && ltrend === 'HL') ? 'bull' : (htrend === 'LH' && ltrend === 'LL') ? 'bear' : 'mixed';
+    var cs2 = null;
+    try { cs2 = window.analyzeCS ? window.analyzeCS() : null; } catch (e) {}
+    var R1 = cs2 && cs2.R1 > 0 ? cs2.R1 : a.hi20, S1 = cs2 && cs2.S1 > 0 ? cs2.S1 : a.lo20;
+    var breakout = p > R1 && clPrev <= R1 ? 'up' : p < S1 && clPrev >= S1 ? 'down' : p > R1 ? 'up' : p < S1 ? 'down' : 'none';
+    var bull = 0, bear = 0, maxScore = 0, reasons = [];
+    function vote(v, why, w) {
+      if (v == null) return;
+      maxScore += w;
+      if (v > 0) { bull += v; reasons.push('+' + why); }
+      else if (v < 0) { bear += -v; reasons.push('-' + why); }
+    }
+    vote(a.e20 != null ? (p > a.e20 ? 2 : -2) : null, 'EMA20', 2);
+    vote(a.e20 != null && a.e50 != null ? (a.e20 > a.e50 ? 2 : -2) : null, 'EMA20/50', 2);
+    vote(a.e200 != null ? (p > a.e200 ? 1 : -1) : null, 'EMA200', 1);
+    vote(a.macd ? (a.macd.hist > 0 ? 1 : -1) : null, 'MACD', 1);
+    vote(a.rsi != null ? (a.rsi > 55 && a.rsi < 75 ? 1 : a.rsi < 45 ? -1 : 0) : null, 'RSI', 1);
+    vote(structure === 'bull' ? 2 : structure === 'bear' ? -2 : 0, 'Structure', 2);
+    vote(a.volRatio != null && a.volRatio > 1.35 ? (p > clPrev ? 1 : -1) : 0, 'Volume', 1);
+    vote(breakout === 'up' ? 2 : breakout === 'down' ? -2 : 0, 'Breakout', 2);
+    var score = maxScore > 0 ? Math.max(0, Math.min(100, Math.round(50 + ((bull - bear) / maxScore) * 45))) : 50;
+    var bias = score >= 70 ? 'up' : score <= 30 ? 'down' : 'neutral';
+    return { score: score, bias: bias, reasons: reasons };
+  }
+  function renderGauge() {
+    var box = $('gaugeBox');
+    if (!box) return;
+    var c = confluence();
+    if (!c) { box.innerHTML = ''; return; }
+    var biasTxt = c.bias === 'up' ? T('صعودی', 'Bullish') : c.bias === 'down' ? T('نزولی', 'Bearish') : T('خنثی', 'Neutral');
+    var col = c.bias === 'up' ? '#2ecc8f' : c.bias === 'down' ? '#ff5d6c' : '#ffb347';
+    var cx = 45, cy = 42, r = 34;
+    var ang = Math.PI * (1 - c.score / 100);
+    var nx = cx + r * Math.cos(ang), ny = cy - r * Math.sin(ang);
+    var ex = cx + r * Math.cos(ang), ey = cy - r * Math.sin(ang);
+    var largeArc = c.score > 50 ? 1 : 0;
+    var arc = 'M 11 42 A 34 34 0 ' + largeArc + ' 1 ' + ex.toFixed(1) + ' ' + ey.toFixed(1);
+    var sym = state.quote ? state.quote.display : '';
+    box.innerHTML = '<div class="gauge">'
+      + '<svg width="90" height="48" viewBox="0 0 90 48"><path d="M 11 42 A 34 34 0 0 1 79 42" fill="none" stroke="#1c2740" stroke-width="6" stroke-linecap="round"/>'
+      + (c.score > 0 ? '<path d="' + arc + '" fill="none" stroke="' + col + '" stroke-width="6" stroke-linecap="round"/>' : '')
+      + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx.toFixed(1) + '" y2="' + ny.toFixed(1) + '" stroke="#e6e9ef" stroke-width="2" stroke-linecap="round"/>'
+      + '<circle cx="' + cx + '" cy="' + cy + '" r="3" fill="#e6e9ef"/></svg>'
+      + '<div><div class="g-txt">' + esc(biasTxt) + ' · ' + esc(T('همگرایی شواهد', 'Evidence confluence')) + ' ' + c.score + '/100</div>'
+      + '<div class="g-sub">' + esc(sym) + (c.reasons.length ? ' · ' + esc(c.reasons.join(' ')) : '') + '</div></div></div>';
   }
 
   /* ---- چارت: نوار ابزار، زوم، تمام‌صفحه، ژست‌ها (v1.1.0) ---- */
@@ -840,9 +1149,14 @@
     var maOn = false, volOn = false;
     try { maOn = !!window.OnellaChartStyle.get().ma; volOn = !!window.OnellaChartStyle.get().vol; } catch (e) {}
     var tfs = TFS[state.quote.provider] || [];
+    var toolOn = window.on || {};
+    var TOOLS = [['fib', 'فیبوناچی', 'Fibonacci'], ['sr', 'حمایت/مقاومت', 'Support/Resistance'], ['tl', 'خط روند', 'Trendline'], ['bb', 'بولینگر', 'Bollinger'], ['pv', 'پیوت', 'Pivot']];
     $('tab-chart').innerHTML =
-      '<div id="px" class="px"></div>'
-      + '<div class="chartwrap" id="chartWrap"><div id="nv" style="position:relative;height:260px"><canvas id="cc" style="width:100%;height:260px;display:block"></canvas></div></div>'
+      '<div id="tfRow" class="seg">' + tfs.map(function (k) {
+          return '<button data-tf="' + k + '"' + (state.tf === k ? ' class="on"' : '') + '>' + k + '</button>';
+        }).join('') + '</div>'
+      + '<div id="px" class="px"></div>'
+      + '<div class="chartwrap" id="chartWrap"><div id="nv" style="position:relative;height:260px"><canvas id="cc" style="width:100%;height:260px;display:block"></canvas><button class="axis-btn" id="tvAutoBtn" type="button" style="display:none">A</button><button class="axis-btn" id="tvLatestBtn" type="button" style="display:none">⏭</button></div></div>'
       + '<div class="toolbar" id="chartToolbar">'
       + '<button class="tbtn" id="typeBtn" type="button">' + esc(chartTypeLabel(cur)) + '</button>'
       + '<button class="tbtn' + (maOn ? ' on' : '') + '" id="maBtn" type="button">MA20</button>'
@@ -851,9 +1165,10 @@
       + '<button class="tbtn" id="zoomInBtn" type="button">+</button>'
       + '<button class="tbtn" id="fsBtn" type="button">⛶</button>'
       + '</div>'
-      + '<div id="tfRow" class="seg">' + tfs.map(function (k) {
-          return '<button data-tf="' + k + '"' + (state.tf === k ? ' class="on"' : '') + '>' + k + '</button>';
-        }).join('') + '</div>';
+      + '<div class="chart-tools" id="chartTools">' + TOOLS.map(function (t) {
+          return '<button class="tbtn' + (toolOn[t[0]] ? ' on' : '') + '" data-tool="' + t[0] + '" type="button">' + esc(lang === 'fa' ? t[1] : t[2]) + '</button>';
+        }).join('') + '</div>'
+      + '<div class="tool-note" id="toolNote"></div>';
     document.querySelectorAll('#tfRow button').forEach(function (b) {
       b.addEventListener('click', function () { setTf(b.dataset.tf); });
     });
@@ -887,6 +1202,26 @@
     $('zoomInBtn').addEventListener('click', function () { zoomBy(1.4); });
     $('zoomOutBtn').addEventListener('click', function () { zoomBy(1 / 1.4); });
     $('fsBtn').addEventListener('click', function () { toggleFs(); });
+    $('tvAutoBtn').addEventListener('click', function () { autoScale(); });
+    $('tvLatestBtn').addEventListener('click', function () { toLatest(); });
+    // ابزارهای دستی روی چارت (fib/sr/tl/bb/pv — همان drawTools اپ؛ خوانش ابزار زیر چارت).
+    document.querySelectorAll('#chartTools .tbtn').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var id = b.dataset.tool;
+        var o = window.on || {};
+        o[id] = !o[id];
+        b.classList.toggle('on', !!o[id]);
+        var note = $('toolNote');
+        try {
+          if (o[id]) { if (note) note.textContent = (typeof toolNote === 'function') ? toolNote(id) : ''; }
+          else if (note) {
+            var other = TOOLS.map(function (t) { return t[0]; }).find(function (x) { return o[x]; });
+            note.textContent = other && typeof toolNote === 'function' ? toolNote(other) : '';
+          }
+        } catch (e) {}
+        try { window.draw(); } catch (e) {}
+      });
+    });
     document.addEventListener('fullscreenchange', function () {
       var on = !!document.fullscreenElement;
       var btn = $('fsBtn');
@@ -894,26 +1229,36 @@
       if (!on) cssFs(false);
       setTimeout(function () { try { window.draw(); window.head(); } catch (e) {} }, 120);
     });
-    // ژست‌ها روی کندل: پینچ (زوم)، چرخ موس (زوم)، کشیدن (جابه‌جایی)؛ هاور = کراس‌هِر اپ.
+    // ژست‌های TradingView (پورت js/06 اپ): اسکرول روی محور قیمت = زوم عمودی؛
+    // کشیدن روی محور قیمت = کش‌آمدن مقیاس؛ کشیدن عمودی روی چارت = جابه‌جایی قیمت؛
+    // دوبار لمس محور قیمت = مقیاس خودکار؛ اسکرول روی چارت = زوم افقی حول نشانگر.
     var cvs = $('cc');
-    var pointers = new Map(), pinchD = 0, pinchSt = 0, dragX = null, dragPan = 0, dragging = false;
-    function ptrPos(e) { var r = cvs.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top, w: r.width }; }
+    var pointers = new Map(), pinchD = 0, pinchSt = 0, dragX = null, dragY = null, dragPan = 0;
+    var pm0 = null, gMode = null, gVert = false, gMoved = false, gx0 = 0, gy0 = 0, gs0 = 7, gPan0 = 0, gLastTap = { t: 0, x: 0, y: 0 };
+    function ptrPos(e) { var r = cvs.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top, w: r.width, h: r.height }; }
+    function axisW() { var G = window.__geo || {}; return Math.max(56, G.pw || 46); }
+    function zoneOf(p) { if (p.y > p.h - 22) return 't'; if (p.x > p.w - axisW()) return 'p'; return 'c'; }
     cvs.addEventListener('pointerdown', function (e) {
       try { cvs.setPointerCapture(e.pointerId); } catch (err) {}
       pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      var p = ptrPos(e);
       if (pointers.size === 2) {
+        gMode = 'pinch'; gMoved = true;
         var pts = Array.from(pointers.values());
         pinchD = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
         pinchSt = (window.__ov && window.__ov.st) || 7;
-        dragging = false;
-      } else if (pointers.size === 1) {
-        dragX = e.clientX; dragPan = (window.__ov && window.__ov.pan) || 0; dragging = false;
+        return;
       }
+      gx0 = p.x; gy0 = p.y; gs0 = (window.__ov && window.__ov.st) || 7; gPan0 = (window.__ov && window.__ov.pan) || 0;
+      dragX = e.clientX; dragY = e.clientY; dragPan = gPan0; gMoved = false; gVert = false;
+      var G = window.__geo || {};
+      pm0 = (window.__ov && window.__ov.pm) ? { hi: window.__ov.pm.hi, lo: window.__ov.pm.lo } : (G.hi != null ? { hi: G.hi, lo: G.lo } : null);
+      gMode = zoneOf(p) === 'p' ? 'pscale' : 'pan';
     });
     cvs.addEventListener('pointermove', function (e) {
       var p = ptrPos(e);
       if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (pointers.size === 2) {
+      if (pointers.size === 2 && gMode === 'pinch') {
         var pts = Array.from(pointers.values());
         var d = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
         if (pinchD > 0 && d > 0) {
@@ -925,39 +1270,99 @@
         }
         return;
       }
-      if (pointers.size === 1 && dragX !== null) {
-        var dx = e.clientX - dragX;
-        if (Math.abs(dx) > 6) dragging = true;
-        if (dragging) {
+      if (pointers.size === 1 && gMode) {
+        var dx = e.clientX - dragX, dy = e.clientY - dragY;
+        if (!gMoved && Math.hypot(p.x - gx0, p.y - gy0) > 8) gMoved = true;
+        if (gMode === 'pscale' && pm0) {
           try {
-            var st = ((window.__ov || {}).st || 7);
-            var maxPan = Math.max(0, (window.cs ? window.cs.length : 0) - Math.floor(p.w / st));
             window.__ov = window.__ov || {};
-            window.__ov.pan = Math.max(0, Math.min(maxPan, dragPan + dx / st));
-            window.draw(); window.head();
+            window.__ov.pm = pmScale(pm0, Math.exp(dy / 170), window.__geo || {});
+            window.draw(); window.head(); refreshAxisBtns();
+          } catch (err) {}
+          return;
+        }
+        if (gMode === 'pan') {
+          if (!gVert && gMoved && Math.abs(dy) > 14 && Math.abs(dy) > 1.6 * Math.abs(dx)) gVert = true;
+          try {
+            window.__ov = window.__ov || {};
+            if (gVert && pm0 && (window.__geo || {}).ph) {
+              window.__ov.pm = pmPan(pm0, dy, window.__geo);
+            } else {
+              var st = ((window.__ov || {}).st || 7);
+              var maxPan = Math.max(0, (window.cs ? window.cs.length : 0) - Math.floor(p.w / st));
+              window.__ov.pan = Math.max(0, Math.min(maxPan, dragPan + dx / st));
+            }
+            window.draw(); window.head(); refreshAxisBtns();
           } catch (err) {}
           return;
         }
       }
       // کراس‌هِر: همان pointermove اپ (native-chart.js).
-      var st2 = ((window.__ov || {}).st || 7);
-      var n = Math.min(cs.length, Math.floor((p.w - 46) / st2));
-      var i = Math.floor(p.x / st2);
-      window.cur = (i >= 0 && i < n) ? i : -1;
-      try { window.head(); window.draw(); } catch (err) {}
+      if (pointers.size === 0) {
+        var st2 = ((window.__ov || {}).st || 7);
+        var n = Math.min(cs.length, Math.floor((p.w - 46) / st2));
+        var i = Math.floor(p.x / st2);
+        window.cur = (i >= 0 && i < n) ? i : -1;
+        try { window.head(); window.draw(); } catch (err) {}
+      }
     });
     function ptrEnd(e) {
+      var wasMode = gMode;
       pointers.delete(e.pointerId);
       if (pointers.size < 2) pinchD = 0;
-      if (pointers.size === 0) { dragX = null; dragging = false; }
+      if (pointers.size === 0) {
+        dragX = null; dragY = null;
+        if (!gMoved && wasMode) {
+          var now = Date.now(), p = ptrPos(e), z = zoneOf(p);
+          if (now - gLastTap.t < 330 && Math.hypot(p.x - gLastTap.x, p.y - gLastTap.y) < 30) {
+            gLastTap.t = 0;
+            if (z === 'p') autoScale();
+            else if (z === 't') { try { window.__ov.st = 7; window.__ov.pan = 0; window.draw(); window.head(); } catch (err) {} }
+            else { autoScale(); toLatest(); }
+          } else gLastTap = { t: now, x: p.x, y: p.y };
+        }
+        gMode = null;
+      }
     }
     cvs.addEventListener('pointerup', ptrEnd);
     cvs.addEventListener('pointercancel', ptrEnd);
     cvs.addEventListener('pointerleave', function () { if (pointers.size === 0) { window.cur = -1; try { window.head(); window.draw(); } catch (err) {} } });
     cvs.addEventListener('wheel', function (e) {
       try { e.preventDefault(); } catch (err) {}
-      zoomBy(e.deltaY < 0 ? 1.25 : 0.8);
+      var G = window.__geo || {}, r = cvs.getBoundingClientRect(), x = e.clientX - r.left;
+      if (x > r.width - axisW() && G.hi != null) {
+        // اسکرول روی محور قیمت = زوم عمودی مقیاس قیمت (مثل TradingView)
+        try {
+          window.__ov = window.__ov || {};
+          window.__ov.pm = pmScale(window.__ov.pm || { hi: G.hi, lo: G.lo }, e.deltaY < 0 ? 0.9 : 1.1, G);
+          window.draw(); window.head(); refreshAxisBtns();
+        } catch (err) {}
+        return;
+      }
+      // اسکرول روی چارت = زوم افقی حول نشانگر (کندل زیر ماوس ثابت می‌ماند)
+      try {
+        var dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+        var f = Math.exp(-Math.max(-120, Math.min(120, dy)) * 0.0016);
+        var st0 = (window.__ov && window.__ov.st) || G.st || 7;
+        var st2 = Math.min(40, Math.max(2, st0 * f));
+        var len = (typeof cs !== 'undefined' && cs) ? cs.length : 0;
+        if (len && G.st && G.off != null) {
+          var ip = G.off + (x - G.st / 2) / G.st;
+          var cwid = (G.W || cvs.clientWidth) - (G.pw || 46);
+          var n2 = Math.floor(cwid / st2);
+          window.__ov = window.__ov || {};
+          window.__ov.st = st2;
+          var maxPan = Math.max(0, len - Math.floor(cwid / st2));
+          window.__ov.pan = Math.max(0, Math.min(maxPan, len - n2 - (ip - (x - st2 / 2) / st2)));
+        } else { window.__ov = window.__ov || {}; window.__ov.st = st2; }
+        window.draw(); window.head(); refreshAxisBtns();
+      } catch (err) {}
     }, { passive: false });
+    cvs.addEventListener('dblclick', function (e) {
+      var p = ptrPos(e), z = zoneOf(p);
+      if (z === 'p') autoScale();
+      else { autoScale(); toLatest(); }
+    });
     try { window.head(); } catch (e) {}
   }
 
@@ -1201,11 +1606,166 @@
     return fetch(u, opts);
   }
 
+  /* ---- داشبورد (v1.2.0) ----
+     حرارت بازار = سهم نمادهای مثبت + میانگین تغییر روزانهٔ هر بازار (از دادهٔ واقعی همان روز).
+     ۵ صعودی/۵ نزولی = بزرگ‌ترین تغییرهای روزانهٔ ۲۴ ساعته در کل کاتولوگ (کریپتو از CoinGecko،
+     سهام/ETF/فارکس/کالا/شاخص از Yahoo چندنمادی، بورس/فرابورس از مفید چندنمادی).
+     نرخ‌های ایران تغییر روزانه ندارند (live.json فقط قیمت لحظه‌ای دارد) — در داشبورد نمی‌آیند.
+     درصد تاثیر خبر = نگاشت سطح کلیدواژه‌ای ربات (بالا ۸۵٪ / متوسط ۶۰٪ / کم ۳۵٪) + ۱۰٪ اگر
+     نماد در تیتر باشد (سقف ۹۵٪) — تخمین است، نه اندازه‌گیری واقعی. */
+  var dashCache = { at: 0, data: null };
+  var CG_MARKET_IDS = ['bitcoin', 'ethereum', 'solana', 'binancecoin', 'ripple', 'dogecoin', 'cardano', 'tron', 'avalanche-2', 'chainlink', 'polkadot', 'litecoin', 'bitcoin-cash', 'near', 'toncoin'];
+  async function cgMarkets() {
+    var u = 'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=' + CG_MARKET_IDS.join(',') + '&price_change_percentage=24h';
+    var j = await fetchJSON(u, 10000);
+    if (!Array.isArray(j) || !j.length) j = await viaWorker('coingecko', u, 12000);
+    if (!Array.isArray(j)) return [];
+    return j.filter(function (c) { return c && typeof c.current_price === 'number' && c.current_price > 0; }).map(function (c) {
+      return { id: c.id, price: c.current_price, changePct: (typeof c.price_change_percentage_24h === 'number' ? c.price_change_percentage_24h : null), volume: c.total_volume || null, marketCap: c.market_cap || null };
+    });
+  }
+  async function yahooMulti(symbols) {
+    if (!PROXY_URL || !symbols.length) return [];
+    var j = await fetchJSON(PROXY_URL.replace(/\/$/, '') + '/yahoo-multi?symbols=' + encodeURIComponent(symbols.join(',')), 15000);
+    return (j && Array.isArray(j.quotes)) ? j.quotes : [];
+  }
+  async function mofidBulk(symbols) {
+    if (!PROXY_URL || !symbols.length) return [];
+    var j = await fetchJSON(PROXY_URL.replace(/\/$/, '') + '/mofid?kind=bulk&symbols=' + encodeURIComponent(symbols.join(',')), 20000);
+    return (j && Array.isArray(j.quotes)) ? j.quotes : [];
+  }
+  function impactPctFor(newsObj, level, title) {
+    var base = level === 'high' ? 85 : level === 'medium' ? 60 : 35;
+    var tag = null;
+    try { tag = newsObj ? newsObj.detectSymbolTag(title) : null; } catch (e) {}
+    return Math.min(95, base + (tag ? 10 : 0));
+  }
+  async function loadDash(force) {
+    var now = Date.now();
+    if (!force && dashCache.data && now - dashCache.at < 60000) { renderDash(dashCache.data); return; }
+    $('dashHeat').innerHTML = '<div class="dash-sec"><div class="muted">' + esc(T('در حال بارگذاری…', 'Loading…')) + '</div></div>';
+    $('dashMovers').innerHTML = '';
+    $('dashNews').innerHTML = '';
+    $('dashNote').textContent = '';
+    var yahooSyms = [];
+    ['stocks', 'etf', 'forex', 'commodities', 'indices'].forEach(function (k) {
+      MARKETS[k].quotes.forEach(function (q) { yahooSyms.push(q.symbol); });
+    });
+    var mofidSyms = [];
+    ['boorse', 'farabourse'].forEach(function (k) {
+      MARKETS[k].quotes.forEach(function (q) { mofidSyms.push(q.symbol); });
+    });
+    var results = await Promise.all([
+      cgMarkets().catch(function () { return []; }),
+      yahooMulti(yahooSyms).catch(function () { return []; }),
+      mofidBulk(mofidSyms).catch(function () { return []; })
+    ]);
+    var cg = results[0], yq = results[1], mq = results[2];
+    var rows = [];
+    var cgById = {};
+    cg.forEach(function (c) { cgById[c.id] = c; });
+    MARKETS.crypto.quotes.forEach(function (q) {
+      var c = cgById[CG_IDS[q.symbol]];
+      if (c && typeof c.changePct === 'number') rows.push({ quote: q, market: 'crypto', price: c.price, changePct: c.changePct, currency: 'USD' });
+    });
+    var yBySym = {};
+    yq.forEach(function (r) { if (r && r.symbol) yBySym[r.symbol] = r; });
+    ['stocks', 'etf', 'forex', 'commodities', 'indices'].forEach(function (k) {
+      MARKETS[k].quotes.forEach(function (q) {
+        var r = yBySym[q.symbol];
+        if (r && typeof r.changePct === 'number') rows.push({ quote: q, market: k, price: r.price, changePct: r.changePct, currency: r.currency || 'USD' });
+      });
+    });
+    var mBySym = {};
+    mq.forEach(function (r) { if (r && r.symbol) mBySym[r.symbol] = r; });
+    ['boorse', 'farabourse'].forEach(function (k) {
+      MARKETS[k].quotes.forEach(function (q) {
+        var r = mBySym[q.symbol];
+        if (r && typeof r.changePct === 'number') rows.push({ quote: q, market: k, price: r.price, changePct: r.changePct, currency: 'Rial' });
+      });
+    });
+    var newsItems = [];
+    try {
+      var N0 = window.OnellaNews.createNews({ fetchImpl: proxyFetch });
+      newsItems = await N0.impactfulNews(lang, 8);
+    } catch (e) { newsItems = []; }
+    var data = { rows: rows, news: newsItems, yahooOk: yq.length > 0, mofidOk: mq.length > 0, cgOk: cg.length > 0, at: now };
+    dashCache = { at: now, data: data };
+    renderDash(data);
+  }
+  function renderDash(data) {
+    var byMarket = {};
+    data.rows.forEach(function (r) {
+      if (!byMarket[r.market]) byMarket[r.market] = { up: 0, total: 0, sum: 0 };
+      byMarket[r.market].total++;
+      byMarket[r.market].sum += r.changePct;
+      if (r.changePct > 0) byMarket[r.market].up++;
+    });
+    var allChg = data.rows.map(function (r) { return r.changePct; });
+    var avgAll = allChg.length ? allChg.reduce(function (a, b) { return a + b; }, 0) / allChg.length : null;
+    var tempTxt = avgAll == null ? '—' : avgAll > 2 ? T('داغ', 'Hot') : avgAll > 0.5 ? T('گرم', 'Warm') : avgAll < -2 ? T('سرد', 'Cold') : avgAll < -0.5 ? T('خنک', 'Cool') : T('خنثی', 'Neutral');
+    var heatHtml = '<div class="dash-sec"><h3>🔥 ' + esc(T('حرارت بازار', 'Market heat')) + '</h3>';
+    if (avgAll != null) {
+      heatHtml += '<div class="heat-row"><span class="heat-lb">' + esc(T('دمای بازار', 'Market temp')) + '</span><span class="heat-v ' + (avgAll >= 0 ? 'up' : 'dn') + '">' + esc(tempTxt) + ' ' + fmtPct(avgAll) + '</span></div>';
+    }
+    MARKET_ORDER.forEach(function (k) {
+      var b = byMarket[k];
+      if (!b) return;
+      var upPct = Math.round((b.up / b.total) * 100);
+      var avg = b.sum / b.total;
+      heatHtml += '<div class="heat-row"><span class="heat-lb">' + esc(marketLabel(k)) + '</span>'
+        + '<span class="heat-bar"><span class="hb-up" style="width:' + upPct + '%"></span><span class="hb-dn" style="width:' + (100 - upPct) + '%"></span></span>'
+        + '<span class="heat-v ' + (avg >= 0 ? 'up' : 'dn') + '">' + fmtPct(avg) + '</span></div>';
+    });
+    if (!data.rows.length) heatHtml += '<div class="na">' + esc(T('فعلاً در دسترس نیست.', 'Not available right now.')) + '</div>';
+    heatHtml += '</div>';
+    $('dashHeat').innerHTML = heatHtml;
+    var sorted = data.rows.slice().sort(function (a, b) { return b.changePct - a.changePct; });
+    var up5 = sorted.slice(0, 5), dn5 = sorted.slice(-5).reverse();
+    function moverRow(r) {
+      return '<button class="mv-row" data-provider="' + r.quote.provider + '" data-symbol="' + esc(r.quote.symbol) + '"><span class="sym-ic">' + iconHtml(r.quote) + '</span><span><span class="mv-lb">' + esc(r.quote.label) + '</span><div class="mv-ds">' + esc(r.quote.display) + ' · ' + esc(marketLabel(r.market)) + '</div></span><span class="mv-px"><b>' + fmt(r.price) + ' ' + esc(r.currency) + '</b><span class="' + (r.changePct >= 0 ? 'up' : 'dn') + '">' + fmtPct(r.changePct) + '</span></span></button>';
+    }
+    var mvHtml = '<div class="dash-sec"><h3>📈 ' + esc(T('۵ نماد صعودی', 'Top 5 gainers')) + '</h3>' + (up5.length ? up5.map(moverRow).join('') : '<div class="na">' + esc(T('فعلاً در دسترس نیست.', 'Not available right now.')) + '</div>') + '</div>'
+      + '<div class="dash-sec"><h3>📉 ' + esc(T('۵ نماد نزولی', 'Top 5 losers')) + '</h3>' + (dn5.length ? dn5.map(moverRow).join('') : '<div class="na">' + esc(T('فعلاً در دسترس نیست.', 'Not available right now.')) + '</div>') + '</div>';
+    $('dashMovers').innerHTML = mvHtml;
+    $('dashMovers').querySelectorAll('.mv-row').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var q = lookupQuote(b.dataset.provider, b.dataset.symbol);
+        if (q) { showMainTab('chart'); openSymbol(q); }
+      });
+    });
+    var N = null;
+    try { N = window.OnellaNews.createNews({ fetchImpl: proxyFetch }); } catch (e) {}
+    var newsHtml = '<div class="dash-sec"><h3>📰 ' + esc(T('اخبار مهم', 'Important news')) + '</h3>';
+    if (!data.news || !data.news.length) {
+      newsHtml += '<div class="na">' + esc(T('خبری پیدا نشد.', 'No news found.')) + '</div>';
+    } else {
+      data.news.forEach(function (it) {
+        var tag = lang === 'fa' ? 'بازار' : 'Market', lv = 'low';
+        try { tag = (N && N.detectSymbolTag(it.title)) || tag; lv = N ? N.impactOf(it.title) : 'low'; } catch (e) {}
+        var pct = impactPctFor(N, lv, it.title);
+        var cls = lv === 'high' ? 'high' : lv === 'medium' ? 'med' : 'low';
+        newsHtml += '<div class="news-item"><div class="news-tag">[' + esc(tag) + '] <span class="imp ' + cls + '">' + esc(T('تاثیر', 'Impact')) + ' ٪' + pct + '</span></div>'
+          + '<div class="news-title">' + esc(it.title) + '</div>'
+          + (it.time ? '<div class="news-time">' + new Date(it.time).toUTCString().slice(5, 22) + ' UTC</div>' : '')
+          + '</div>';
+      });
+      newsHtml += '<div class="warn">' + esc(T('درصد تاثیر از روی کلیدواژهٔ تیتر تخمین زده شده؛ اندازه‌گیری واقعی نیست.', 'Impact % is an estimate from headline keywords, not measured.')) + '</div>';
+    }
+    newsHtml += '</div>';
+    $('dashNews').innerHTML = newsHtml;
+    var notes = [];
+    if (!data.yahooOk) notes.push(T('سهام/ETF/فارکس/کالا/شاخص: ورکر جدید (v1.2.0) لازم است.', 'Stocks/ETF/Forex/Commodities/Indices: new Worker (v1.2.0) needed.'));
+    if (!data.mofidOk) notes.push(T('بورس/فرابورس: ورکر جدید (v1.2.0) لازم است.', 'Bourse/Farabourse: new Worker (v1.2.0) needed.'));
+    notes.push(T('نرخ‌های ایران: تغییر روزانه در منبع نیست.', 'Iran rates: no daily-change data in the source.'));
+    $('dashNote').textContent = notes.join(' ');
+  }
+
   /* ---- شروع ---- */
   function init() {
     if (tg) {
       try { tg.ready(); tg.expand(); } catch (e) {}
-      try { tg.BackButton.onClick(function () { show('catalog'); }); } catch (e) {}
+      try { tg.BackButton.onClick(function () { if (state.mainTab === 'dash') showMainTab('chart'); else show('catalog'); }); } catch (e) {}
     }
     $('backBtn').addEventListener('click', function () { show('catalog'); });
     ['chart', 'analysis', 'fund', 'news'].forEach(function (t) {
@@ -1216,16 +1776,29 @@
     $('tabBtn-fund').textContent = T('بنیادی', 'Fundamentals');
     $('tabBtn-news').textContent = T('خبر', 'News');
     $('backBtn').textContent = T('‹ بازگشت', '‹ Back');
+    $('mainTab-chart').textContent = '📊 ' + T('چارت', 'Chart');
+    $('mainTab-dash').textContent = '📋 ' + T('داشبورد', 'Dashboard');
+    $('mainTab-chart').addEventListener('click', function () { showMainTab('chart'); });
+    $('mainTab-dash').addEventListener('click', function () { showMainTab('dash'); });
+    $('dashTitle').textContent = T('داشبورد', 'Dashboard');
+    $('dashRefresh').addEventListener('click', function () { loadDash(true); });
     var si = $('searchInput');
     if (si) {
       si.placeholder = T('نماد یا بازار را جستجو کن…', 'Search symbols or markets…');
-      si.addEventListener('input', function () { renderSearch(si.value); });
     }
+    $('searchTrigger').addEventListener('click', function () { openSearchModal(state.catalogMarket); });
+    $('symBar').addEventListener('click', function () { openSearchModal(); });
+    $('smClose').addEventListener('click', function () { closeSearchModal(); });
+    $('smInput').addEventListener('input', function () { sm.q = $('smInput').value; renderSmBody(); });
     window.addEventListener('beforeunload', function () { stopLive(); });
     show('catalog');
   }
   /* برای تست از کنسول مرورگر: window.__miniApp.openSymbol({provider:'binance',symbol:'BTCUSDT',display:'BTC/USDT',label:'BTC'}) */
-  window.__miniApp = { openSymbol: openSymbol, setTf: setTf, setTab: setTab, state: state, renderPriceBox: renderPriceBox, renderSearch: renderSearch, renderCatalog: renderCatalog, zoomBy: zoomBy, toggleFs: toggleFs, startLive: startLive, stopLive: stopLive, MARKETS: MARKETS, TFS: TFS };
+  window.__miniApp = { openSymbol: openSymbol, setTf: setTf, setTab: setTab, state: state, renderPriceBox: renderPriceBox, renderSearch: renderSearch, renderCatalog: renderCatalog, zoomBy: zoomBy, toggleFs: toggleFs, startLive: startLive, stopLive: stopLive, MARKETS: MARKETS, TFS: TFS,
+    showMainTab: showMainTab, openSearchModal: openSearchModal, closeSearchModal: closeSearchModal, renderSmBody: renderSmBody, renderSmTabs: renderSmTabs, sm: sm,
+    loadDash: loadDash, renderDash: renderDash, confluence: confluence, renderGauge: renderGauge,
+    pmScale: pmScale, pmPan: pmPan, autoScale: autoScale, toLatest: toLatest, refreshAxisBtns: refreshAxisBtns,
+    toggleFav: toggleFav, isFav: isFav, lookupQuote: lookupQuote, yahooMulti: yahooMulti, mofidBulk: mofidBulk, cgMarkets: cgMarkets, impactPctFor: impactPctFor };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 })();

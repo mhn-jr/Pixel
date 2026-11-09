@@ -42,7 +42,7 @@ function dataStateBadge(x){
   }
   return "";
 }
-function head(){if(!cs.length)return;const W=$("cc").clientWidth,sourceEnd=(window.onellaReplay&&window.onellaReplay.active)?Math.max(1,Math.min(window.onellaReplay.end,cs.length)):cs.length,source=cs.slice(0,sourceEnd),n=Math.min(source.length,Math.floor((W-46)/7)),i=cur>=0&&cur<n?source.length-n+cur:source.length-1,c=source[i],p=source[i-1]||c,ch=(c.c-p.c)/p.c*100;
+function head(){if(!cs.length)return;const W=$("cc").clientWidth,stH=((window.__ov||{}).st||7),sourceEnd=(window.onellaReplay&&window.onellaReplay.active)?Math.max(1,Math.min(window.onellaReplay.end,cs.length)):cs.length,source=cs.slice(0,sourceEnd),n=Math.min(source.length,Math.floor((W-46)/stH)),i=cur>=0&&cur<n?source.length-n+cur:source.length-1,c=source[i],p=source[i-1]||c,ch=(c.c-p.c)/p.c*100;
  $("px").innerHTML=marketPairName()+"<b>"+fmt(c.c)+"</b><span style='color:"+(window.OnellaChartStyle&&OnellaChartStyle.pc?OnellaChartStyle.pc(ch>=0?"#2ecc8f":"#ff5d6c"):(ch>=0?"#2ecc8f":"#ff5d6c"))+"'>"+(ch>=0?"+":"")+ch.toFixed(2)+"%</span>"+dataStateBadge()}
 function draw(){const cv=$("cc");if(!cv.clientWidth||!cv.clientHeight)return;const D=Math.min(devicePixelRatio||1,2),W=cv.clientWidth,H=cv.clientHeight;cv.width=W*D;cv.height=H*D;const g=cv.getContext("2d");g.setTransform(D,0,0,D,0,0);
  if(!cs.length)return;
