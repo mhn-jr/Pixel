@@ -124,6 +124,12 @@
   .al-in { display: block; width: 100%; box-sizing: border-box; margin-top: 5px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; color: var(--txt); font-size: 15px; font-family: inherit; padding: 10px 12px; outline: none; }
   .al-in:focus { border-color: var(--acc); }
   .al-note { color: var(--mut); font-size: 12px; line-height: 1.7; margin-bottom: 10px; }
+  /* v1.10.0 — گزینهٔ «پیام تلگرام» در دیالوگ آلرت + نشان اشتراک در لیست. */
+  .al-ck { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; margin-bottom: 6px; cursor: pointer; }
+  .al-ck input { width: 18px; height: 18px; accent-color: var(--acc); flex: none; }
+  .al-ck input:disabled + span { color: var(--mut); }
+  .al-tgnote { color: var(--mut); font-size: 12px; line-height: 1.7; margin-bottom: 10px; }
+  .al-tg { color: var(--acc); font-weight: 800; }
   .al-err { color: var(--dn); font-size: 13px; margin-bottom: 10px; }
   .al-actions { display: flex; gap: 8px; margin-bottom: 14px; }
   .al-actions .tbtn { flex: 1; padding: 11px; font-size: 14px; }

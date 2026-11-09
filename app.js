@@ -1,5 +1,11 @@
 'use strict';
-/* Onella Nelora Lite v1.9.1 — منطق مینی‌اپ (صفحهٔ استاتیک؛ بدون سرور).
+/* Onella Nelora Lite v1.10.0 — منطق مینی‌اپ (صفحهٔ استاتیک؛ بدون سرور).
+   v1.10.0: (۱) سیستم کش آلرت — ذخیره در CloudStorage تلگرام (سرور تلگرام،
+   با بستن/باز کردن می‌ماند) + آینهٔ localStorage؛ علت: localStorage در WebView
+   تلگرام پاک می‌شد و آلرت ذخیره نمی‌شد؛ خطای ذخیره هم دیگر بی‌صدا نیست؛
+   (۲) آلرت مشترک با ربات — گزینهٔ «📲 پیام تلگرام» در دیالوگ آلرت (sendData):
+   آلرت به ربات می‌رسد، ربات نگهبانی می‌کند و وقتی قیمت برسد در چت پیام می‌دهد
+   (کامپیوتر روشن باشد)؛ کریپتو + سهام، ایران فعلاً فقط داخل مینی‌اپ.
    v1.9.1: (۱) دکمهٔ + روی محور قیمت (سبک تریدینگ‌ویو) + خط ردیابی قیمت — با حرکت
    روی محور، + دنبال قیمت می‌آید؛ زدن + منوی هشدار/خط افقی را باز می‌کند (long-press
    هم سر جایش هست)؛ (۲) گزینهٔ آخر نوار ابزار/تنظیمات دیگر زیر صفحه نمی‌ماند —
@@ -2156,7 +2162,9 @@
       + '<option value="86400000">' + esc(T('۱ روز', '1 day')) + '</option>'
       + '<option value="">' + esc(T('بدون انقضا', 'No expiration')) + '</option></select></label>'
       + '<label class="al-lb">' + esc(T('پیام', 'Message')) + '<input id="alMsg" class="al-in" autocomplete="off" maxlength="120"></label>'
-      + '<div class="al-note">' + esc(T('اعلان: درون‌برنامه (بنر + نشان). هشدار فقط وقتی مینی‌اپ باز است بررسی می‌شود؛ وقتی بسته است نمی‌رسد.', 'Notifications: in-app (banner + badge). Alerts are only checked while the Mini App is open; nothing fires while it is closed.')) + '</div>'
+      + '<label class="al-ck"><input type="checkbox" id="alTelegram"><span>' + esc(T('📲 پیام تلگرام هنگام فعال‌شدن', '📲 Telegram message when it triggers')) + '</span></label>'
+      + '<div class="al-tgnote" id="alTgNote"></div>'
+      + '<div class="al-note">' + esc(T('اعلان درون‌برنامه (بنر + نشان) فقط وقتی مینی‌اپ باز است می‌رسد. با «پیام تلگرام» ربات هم وقتی قیمت برسد در چت پیام می‌دهد (کامپیوتر روشن باشد).', 'In-app notification (banner + badge) only arrives while the Mini App is open. With “Telegram message”, the bot also messages you in chat when the price gets there (while the PC is on).')) + '</div>'
       + '<div class="al-err" id="alErr" style="display:none"></div>'
       + '<div class="al-actions"><button class="tbtn on" id="alCreate" type="button">' + esc(T('ایجاد هشدار', 'Create alert')) + '</button><button class="tbtn" id="alCancel" type="button">' + esc(T('انصراف', 'Cancel')) + '</button></div>'
       + '<div class="al-list-h">' + esc(T('هشدارهای این نماد', 'Alerts for this symbol')) + '</div>'
@@ -2188,8 +2196,24 @@
     $('alRepeat').value = 'once';
     $('alExp').value = '2592000000';
     try { $('alMsg').value = window.OnellaAlerts ? window.OnellaAlerts.defaultMsg({ sym: q.symbol, label: q.display, cond: 'cross', price: (p != null ? p : 0) }, lang) : ''; } catch (e) { $('alMsg').value = ''; }
+    /* v1.10.0 — گزینهٔ «پیام تلگرام»: فقط وقتی sendData هست (مینی‌اپ از دکمهٔ
+       ربات باز شده) و نماد قابل‌نگهبانی ربات است (کریپتو/سهام؛ ایران فعلاً نه). */
+    var canTg = !!(tg && typeof tg.sendData === 'function');
+    var shareable = q.provider === 'binance' || q.provider === 'yahoo';
+    var cb = $('alTelegram'), nt = $('alTgNote');
+    if (cb) { cb.checked = canTg && shareable; cb.disabled = !(canTg && shareable); }
+    if (nt) {
+      nt.textContent = !canTg
+        ? T('برای پیام تلگرام، مینی‌اپ را از دکمهٔ ربات باز کن.', 'To get Telegram messages, open the Mini App from the bot button.')
+        : !shareable
+          ? T('پیام تلگرام فعلاً فقط برای کریپتو و سهام است؛ برای نمادهای ایران فقط داخل مینی‌اپ.', 'Telegram messages work for crypto and stocks for now; for Iran symbols, in-app only.')
+          : T('وقتی قیمت برسد، ربات در تلگرام پیام می‌دهد (نیازمند روشن بودن کامپیوتر و عضویت در کانال‌ها).', 'When the price gets there, the bot messages you on Telegram (needs the PC on and channel membership).');
+    }
     $('alErr').style.display = 'none';
     renderAlertList();
+    if (window.OnellaAlerts && window.OnellaAlerts.ready) {
+      window.OnellaAlerts.ready.then(function () { try { renderAlertList(); refreshAlertBadge(); } catch (e) {} }).catch(function () {});
+    }
     m.style.display = 'flex';
   }
   function renderAlertList() {
@@ -2197,6 +2221,7 @@
     if (!el || !state.quote) return;
     var q = state.quote, A = window.OnellaAlerts;
     if (!A) { el.innerHTML = ''; return; }
+    var canShare = (q.provider === 'binance' || q.provider === 'yahoo') && !!(tg && typeof tg.sendData === 'function');
     var all = A.list(q.symbol);
     function expTxt(a) {
       if (!a.expiresAt) return '';
@@ -2208,11 +2233,18 @@
       if (kind === 'fired' && a.firedAt) {
         try { fired = ' • ' + T('فعال شد ', 'Fired ') + new Date(a.firedAt).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }); } catch (e) {}
       }
+      var tgBadge = a.shared ? ' <span class="al-tg">📲</span>' : '';
       var btns = '';
-      if (kind === 'active') btns = '<button class="tbtn" data-act="off" data-id="' + a.id + '" type="button">' + esc(T('خاموش', 'Off')) + '</button>';
-      else btns = '<button class="tbtn" data-act="on" data-id="' + a.id + '" type="button">' + esc(T('دوباره فعال', 'Re-enable')) + '</button>';
+      if (kind === 'active') {
+        btns = '<button class="tbtn" data-act="off" data-id="' + a.id + '" type="button">' + esc(T('خاموش', 'Off')) + '</button>';
+        if (canShare) {
+          btns += a.shared
+            ? '<button class="tbtn" data-act="unshare" data-id="' + a.id + '" type="button">📵</button>'
+            : '<button class="tbtn" data-act="share" data-id="' + a.id + '" type="button">📲</button>';
+        }
+      } else btns = '<button class="tbtn" data-act="on" data-id="' + a.id + '" type="button">' + esc(T('دوباره فعال', 'Re-enable')) + '</button>';
       btns += '<button class="tbtn" data-act="del" data-id="' + a.id + '" type="button">✕</button>';
-      return '<div class="al-row"><div class="al-row-tx"><b>' + esc(a.msg || '') + '</b><span>' + esc(sub + fired) + '</span></div><div class="al-row-bt">' + btns + '</div></div>';
+      return '<div class="al-row"><div class="al-row-tx"><b>' + esc(a.msg || '') + tgBadge + '</b><span>' + esc(sub + fired) + '</span></div><div class="al-row-bt">' + btns + '</div></div>';
     }
     var act = all.filter(function (a) { return a.active; });
     var fired = all.filter(function (a) { return !a.active && a.firedAt; });
@@ -2231,6 +2263,10 @@
         if (act2 === 'del') A.remove(id);
         else if (act2 === 'off') A.setActive(id, false);
         else if (act2 === 'on') A.setActive(id, true);
+        else if (act2 === 'share' || act2 === 'unshare') {
+          var sa = A.list().filter(function (x) { return x.id === id; })[0];
+          if (sa) { if (act2 === 'share') shareAlertToBot(sa); else unshareAlertToBot(sa); }
+        }
         renderAlertList(); refreshAlertBadge(); startAlertPoll();
         try { window.draw(); } catch (e) {}
       });
@@ -2253,9 +2289,59 @@
       });
     } catch (e) {}
     if (!a) { err.textContent = T('هشدار ساخته نشد — سقف ۵۰ هشدار فعال است.', 'Alert was not created — the 50 active-alert limit is reached.'); err.style.display = ''; return; }
+    var wantTg = false;
+    try { wantTg = !!($('alTelegram') && $('alTelegram').checked); } catch (e) {}
+    var be = null;
+    try { be = window.OnellaAlerts ? window.OnellaAlerts.backend() : null; } catch (e) {}
     $('alertModal').style.display = 'none';
     refreshAlertBadge(); startAlertPoll();
+    if (wantTg) shareAlertToBot(a);
+    else if (be && be.cloud && be.cloudError) showAlertNote(T('هشدار در گوشی ذخیره شد ولی در فضای ابری تلگرام نرفت — دفعهٔ بعد دوباره چک کن.', 'Alert saved on this phone but not to Telegram cloud — please check next time.'));
     try { window.draw(); } catch (e) {}
+  }
+  /* v1.10.0 — آلرت مشترک با ربات: sendData تلگرام (بدون سرور جدا — پیام
+     web_app_data مستقیم به ربات می‌رسد). shared را پیش از sendData می‌زنیم،
+     چون sendData ممکن است مینی‌اپ را ببندد؛ تایید در چت ربات می‌آید. */
+  function showAlertNote(text) {
+    ensureAlertUI();
+    var b = $('alertBanner');
+    if (!b) return;
+    b.innerHTML = '<span class="al-bmsg">' + esc(text || '') + '</span><button class="al-bx" id="alBannerX" type="button">✕</button>';
+    b.style.display = 'flex';
+    var x = $('alBannerX');
+    if (x) x.addEventListener('click', function () { b.style.display = 'none'; });
+    if (alertBannerTimer) { try { clearTimeout(alertBannerTimer); } catch (e) {} }
+    alertBannerTimer = setTimeout(function () { try { b.style.display = 'none'; } catch (e) {} }, 15000);
+  }
+  function shareAlertToBot(a) {
+    var A = window.OnellaAlerts;
+    if (!a || !A) return false;
+    if (!(tg && typeof tg.sendData === 'function')) {
+      showAlertNote(T('پیام تلگرام فرستاده نشد: مینی‌اپ را از دکمهٔ ربات باز کن.', 'Telegram message was not sent: open the Mini App from the bot button.'));
+      return false;
+    }
+    var payload = {
+      type: 'onella_alert_add', v: 1,
+      alert: { miniAppId: a.id, sym: a.sym, label: a.label, cond: a.cond, price: a.price, repeat: a.repeat, expiresAt: a.expiresAt, msg: a.msg }
+    };
+    A.setShared(a.id, true);
+    try { tg.sendData(JSON.stringify(payload)); } catch (e) {
+      A.setShared(a.id, false);
+      showAlertNote(T('پیام تلگرام فرستاده نشد — دوباره امتحان کن.', 'Telegram message was not sent — please try again.'));
+      return false;
+    }
+    renderAlertList(); refreshAlertBadge();
+    return true;
+  }
+  function unshareAlertToBot(a) {
+    var A = window.OnellaAlerts;
+    if (!a || !A) return false;
+    if (tg && typeof tg.sendData === 'function') {
+      try { tg.sendData(JSON.stringify({ type: 'onella_alert_del', v: 1, miniAppId: a.id })); } catch (e) {}
+    }
+    A.setShared(a.id, false);
+    renderAlertList(); refreshAlertBadge();
+    return true;
   }
   /* v1.9.1 — دکمه + روی محور قیمت (سبک تریدینگ‌ویو): با حرکت روی محور، + و یک
      خط‌چین نارنجیِ سراسری روی همان قیمت می‌نشینند؛ زدن + منوی هشدار/خط افقی را
@@ -3142,6 +3228,10 @@
     $('smClose').addEventListener('click', function () { closeSearchModal(); });
     $('smInput').addEventListener('input', function () { sm.q = $('smInput').value; renderSmBody(); });
     window.addEventListener('beforeunload', function () { stopLive(); });
+    /* v1.10.0 — وقتی کش آلرت (CloudStorage) خوانده شد، بج را تازه کن. */
+    if (window.OnellaAlerts && window.OnellaAlerts.ready) {
+      window.OnellaAlerts.ready.then(function () { try { refreshAlertBadge(); } catch (e) {} }).catch(function () {});
+    }
     show('catalog');
   }
   /* برای تست از کنسول مرورگر: window.__miniApp.openSymbol({provider:'binance',symbol:'BTCUSDT',display:'BTC/USDT',label:'BTC'}) */
