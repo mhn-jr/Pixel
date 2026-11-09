@@ -1,5 +1,5 @@
 'use strict';
-/* Onella Nelora Lite v1.5.0 — منطق مینی‌اپ (صفحهٔ استاتیک؛ بدون سرور).
+/* Onella Nelora Lite v1.6.0 — منطق مینی‌اپ (صفحهٔ استاتیک؛ بدون سرور).
    دیزاین = کپیِ دیدنیِ خود اپ Onella Nelora (نه فقط الهام): همان توکن‌ها،
    همان چیدمان صفحهٔ چارت (گیج بالا، تب‌های بازار، نوار انتخاب نماد، تایم‌فریم
    بالای چارت)، همان مودال سرچ (تب بازار + باکس بزرگ + ردیف آیکون‌دار + ستاره).
@@ -908,7 +908,7 @@
     state.quote = q;
     state.tab = 'chart';
     state.candles = null; state.quoteRes = null;
-    state.priceUsd = null; state.priceIran = null; state.priceMode = 'usd'; state.candlesDone = false;
+    state.priceUsd = null; state.priceIran = null; state.priceMode = storedPriceMode(); state.candlesDone = false;
     state.mofidAsOf = null; state.liveMode = null;
     // تایم‌فریم فعلی اگر برای این provider نیست (مثلاً 1s برای سهام) → 1h.
     var tfs = TFS[q.provider] || [];
@@ -957,10 +957,35 @@
     var prevTf = state.tf;
     state.tf = t; window.tf = t;
     try { window.__ov.st = 7; window.__ov.pan = 0; window.__ov.pm = null; } catch (e) {}
-    document.querySelectorAll('#tfRow button').forEach(function (b) { b.classList.toggle('on', b.dataset.tf === t); });
+    var tfBtn = $('tfBtn');
+    if (tfBtn) tfBtn.innerHTML = '<span class="tf-cur">' + esc(t) + '</span> ▾';
+    document.querySelectorAll('#tfPanel button').forEach(function (b) { b.classList.toggle('on', b.dataset.tf === t); });
+    var tfPanel = $('tfPanel');
+    if (tfPanel) tfPanel.classList.remove('open');
     loadCandles(prevTf);
   }
 
+  // v1.6.0 — حالت ارز (دلار/تومان) انتخاب کاربر است و می‌ماند: در localStorage ذخیره
+  // می‌شود؛ اولین تیک زنده آن را به دلار برنمی‌گرداند؛ چارت هم با همان انتخاب نشان
+  // داده می‌شود (کندل‌های دلاری × نرخ تومانِ روز — ضریب window.__dispMul).
+  function storedPriceMode() {
+    try { var m = localStorage.getItem('onella_cur_v1'); return (m === 'iran') ? 'iran' : 'usd'; } catch (e) { return 'usd'; }
+  }
+  function dispMul() {
+    if (state.priceMode === 'iran' && state.priceIran && state.priceUsd && state.priceUsd.price) {
+      var r = state.priceIran.price / state.priceUsd.price;
+      return (isFinite(r) && r > 0) ? r : 1;
+    }
+    return 1;
+  }
+  function applyDispMul() { try { window.__dispMul = dispMul(); } catch (e) { window.__dispMul = 1; } }
+  function setPriceMode(mode) {
+    state.priceMode = mode;
+    try { localStorage.setItem('onella_cur_v1', mode); } catch (e) {}
+    applyDispMul();
+    renderPriceBox(false, false);
+    try { window.draw(); window.head(); } catch (e) {}
+  }
   // v1.0.2: قیمت دلاری پیش‌فرض است؛ قیمت ایرانی (تومان) انتخاب دومِ کاربر است —
   // با دکمهٔ «دلار | تومان» عوض می‌شود، نه خودکار. اگر قیمت جهانی نیامد، باکس «در دسترس نیست»
   // می‌شود ولی دکمهٔ تومان (اگر قیمت ایرانی رسید) هنوز هست تا کاربر خودش انتخاب کند.
@@ -972,7 +997,7 @@
   }
   function renderPriceBox(needProxy, iranBlocked) {
     var q = state.quote;
-    var p = state.priceMode === 'iran' ? state.priceIran : state.priceUsd;
+    var p = (state.priceMode === 'iran' && state.priceIran) ? state.priceIran : state.priceUsd;
     var canSwitch = !!(state.priceUsd && state.priceIran);
     var iranOnly = !state.priceUsd && !!state.priceIran;
     if (!p) {
@@ -1001,17 +1026,17 @@
     try { return new Date(ms).toLocaleDateString('fa-IR'); } catch (e) { return new Date(ms).toISOString().slice(0, 10); }
   }
   // به‌روزرسانی سبک قیمت در حالت زنده (بدون بازسازی کل باکس).
+  // v1.6.0 — در حالت تومان، تیک زندهٔ دلاری (Binance) عدد باکس را به دلار برنمی‌گرداند.
   function updateLivePrice(price) {
     var big = document.querySelector('#priceBox .big-v');
-    if (big) big.textContent = fmt(price);
+    if (!big) return;
+    if (state.priceMode === 'iran' && state.priceIran) { big.textContent = fmt(state.priceIran.price); return; }
+    big.textContent = fmt(price);
   }
   function bindPriceMode() {
     var btns = $('priceBox').querySelectorAll('[data-mode]');
     btns.forEach(function (b) {
-      b.addEventListener('click', function () {
-        state.priceMode = b.dataset.mode;
-        renderPriceBox(false, false);
-      });
+      b.addEventListener('click', function () { setPriceMode(b.dataset.mode); });
     });
   }
   function naTabs(msgKey) {
@@ -1033,7 +1058,7 @@
       price = both[0];
       state.priceUsd = both[0];
       state.priceIran = both[1];
-      state.priceMode = 'usd';
+      applyDispMul(); // v1.6.0 — حالت ارز با آمدن قیمت‌ها ریست نمی‌شود.
     }
     else if (q.provider === 'yahoo') {
       if (FX_PAIRS[q.symbol]) price = await frankfurterPrice(q.symbol);
@@ -1100,7 +1125,9 @@
       // v1.1.0: اگر تایم‌فریم جدید کندل نداد و چارت قبلی هست، چارت می‌ماند و تایم‌فریم برمی‌گردد.
       if (hadCandles && prevTf) {
         state.tf = prevTf; window.tf = prevTf;
-        document.querySelectorAll('#tfRow button').forEach(function (b) { b.classList.toggle('on', b.dataset.tf === prevTf); });
+        var tfBtn2 = $('tfBtn');
+        if (tfBtn2) tfBtn2.innerHTML = '<span class="tf-cur">' + esc(prevTf) + '</span> ▾';
+        document.querySelectorAll('#tfPanel button').forEach(function (b) { b.classList.toggle('on', b.dataset.tf === prevTf); });
         $('tab-chart').querySelector('.tf-note') && $('tab-chart').querySelector('.tf-note').remove();
         var note = document.createElement('div');
         note.className = 'warn tf-note';
@@ -1280,7 +1307,7 @@
     if (!tc) return;
     tc.classList.toggle('fs', !!on);
     var btn = $('fsBtn');
-    if (btn) btn.textContent = on ? '✕' : '⛶';
+    if (btn) btn.innerHTML = on ? FS_ICONS.off : FS_ICONS.on;
     setTimeout(function () { try { window.draw(); window.head(); } catch (e) {} }, 120);
   }
   function renderChartShell() {
@@ -1321,6 +1348,12 @@
     var TRASH_ICON = IC('<path d="M5 7h14"></path><path d="M9 7V5h6v2"></path><path d="M8 7l1 12h6l1-12"></path><path d="M10 11v5"></path><path d="M14 11v5"></path>');
     var CLEAR_ICON = IC('<path d="M6 6l12 12"></path><path d="M18 6L6 18"></path>');
     var SET_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="#f06a15" stroke-width="1.8" stroke-linecap="round"><path d="M7 3v4"></path><path d="M7 15v6"></path><rect x="4.5" y="7" width="5" height="8" rx="1" fill="#f06a15" stroke="none"></rect><path d="M17 3v3"></path><path d="M17 14v7"></path><rect x="14.5" y="6" width="5" height="8" rx="1" fill="#f06a15" stroke="none"></rect></svg>';
+    /* v1.6.0 — تمام‌صفحه از نوار ابزار پایین چارت به گوشهٔ بالا-راست چارت رفت. */
+    var FS_ICONS = {
+      on: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V5a1 1 0 0 1 1-1h4"></path><path d="M20 9V5a1 1 0 0 0-1-1h-4"></path><path d="M4 15v4a1 1 0 0 0 1 1h4"></path><path d="M20 15v4a1 1 0 0 1-1 1h-4"></path></svg>',
+      off: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5a1 1 0 0 1-1 1H4"></path><path d="M15 4v5a1 1 0 0 0 1 1h4"></path><path d="M9 20v-5a1 1 0 0 0-1-1H4"></path><path d="M15 20v-5a1 1 0 0 1 1-1h4"></path></svg>'
+    };
+    /* v1.6.0 — تایم‌فریم: یک تب واحد (دکمهٔ تایم‌فریم فعلی + پنل بازشونده)، جای ردیف ۱۱ دکمه. */
     /* v1.5.0 — پنل تنظیمات چارت (مثل اپ اصلی): نوع چارت + رنگ کندل‌ها + کلیدها. */
     var SET_TYPES = [['candle', 'کندل', 'Candles'], ['hollow', 'توخالی', 'Hollow'], ['bars', 'بار OHLC', 'OHLC'], ['line', 'خطی', 'Line'], ['area', 'ناحیه‌ای', 'Area'], ['ha', 'هیکین‌آشی', 'Heikin Ashi']];
     var SET_TYPE_ICONS = {
@@ -1336,10 +1369,12 @@
     var st = { type: 'candle', vol: 1, ma: 1, grid: 1, last: 1, pct: 0, log: 0, lock: 0, rob: 0, cd: 1, pal: 'def' };
     try { var _st = window.OnellaChartStyle.get(); if (_st) st = _st; } catch (e) {}
     $('tab-chart').innerHTML =
-      '<div id="tfRow" class="seg">' + tfs.map(function (k) {
-          return '<button data-tf="' + k + '"' + (state.tf === k ? ' class="on"' : '') + '>' + k + '</button>';
-        }).join('') + '</div>'
+      '<div id="tfRow" class="tf-wrap"><button id="tfBtn" type="button" title="' + esc(T('تایم‌فریم', 'Timeframe')) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg><span class="tf-cur">' + esc(state.tf) + '</span> ▾</button>'
+      + '<div id="tfPanel" class="tf-panel">' + tfs.map(function (k) {
+          return '<button data-tf="' + k + '"' + (state.tf === k ? ' class="on"' : '') + ' type="button">' + k + '</button>';
+        }).join('') + '</div></div>'
       + '<div class="chartwrap" id="chartWrap"><div id="nv" style="position:relative;height:260px"><div id="px" class="px px-ov"></div><div id="lastPxTag" style="display:none"></div><div id="xhBox" class="xh-box" dir="ltr" style="display:none"></div><canvas id="cc" dir="ltr" style="width:100%;height:260px;display:block"></canvas><button class="axis-btn" id="tvAutoBtn" type="button" style="display:none">A</button><button class="axis-btn" id="tvLatestBtn" type="button" style="display:none">⏭</button><button class="tools-fab" id="toolsFab" type="button" title="' + esc(T('ابزارهای چارت', 'Chart tools')) + '">' + ICON.tools + '</button>'
+      + '<button class="fs-fab" id="fsBtn" type="button" title="' + esc(T('تمام‌صفحه', 'Fullscreen')) + '">' + FS_ICONS.on + '</button>'
       + '<button class="set-fab" id="setBtn" type="button" title="' + esc(T('تنظیمات چارت', 'Chart settings')) + '">' + SET_ICON + '</button>'
       + '<div class="tools-strip" id="toolsStrip"><div class="strip-group" id="chartTools">' + TOOLS.map(function (t) {
           return '<button class="tbtn' + (toolOn[t[0]] ? ' on' : '') + '" data-tool="' + t[0] + '" type="button" title="' + esc(lang === 'fa' ? t[1] : t[2]) + '">' + (TOOL_ICONS[t[0]] || esc(lang === 'fa' ? t[1] : t[2])) + '</button>';
@@ -1363,10 +1398,15 @@
       + '<button class="tbtn on" id="macdBtn" type="button">MACD</button>'
       + '<button class="tbtn" id="zoomOutBtn" type="button">−</button>'
       + '<button class="tbtn" id="zoomInBtn" type="button">+</button>'
-      + '<button class="tbtn" id="fsBtn" type="button">⛶</button>'
       + '</div>'
       + '</div>';
-    document.querySelectorAll('#tfRow button').forEach(function (b) {
+    // v1.6.0 — تب واحد تایم‌فریم: دکمه باز/بسته می‌کند، انتخاب از پنل.
+    $('tfBtn').addEventListener('click', function (e) { try { e.stopPropagation(); } catch (e2) {} var p = $('tfPanel'); if (p) p.classList.toggle('open'); });
+    document.addEventListener('click', function (e) {
+      var p = $('tfPanel');
+      if (p && p.classList.contains('open') && !(e.target && e.target.closest && e.target.closest('#tfRow'))) p.classList.remove('open');
+    });
+    document.querySelectorAll('#tfPanel button').forEach(function (b) {
       b.addEventListener('click', function () { setTf(b.dataset.tf); });
     });
     // سوییچ نوع چارت (چرخه‌ای، ۶ نوع اپ اصلی).
@@ -1495,7 +1535,7 @@
     document.addEventListener('fullscreenchange', function () {
       var on = !!document.fullscreenElement;
       var btn = $('fsBtn');
-      if (btn) btn.textContent = on ? '✕' : '⛶';
+      if (btn) btn.innerHTML = on ? FS_ICONS.off : FS_ICONS.on;
       if (!on) cssFs(false);
       setTimeout(function () { try { window.draw(); window.head(); } catch (e) {} }, 120);
     });
@@ -1718,7 +1758,7 @@
     var G = window.__geo;
     if (!cs || !cs.length || !G || typeof G.Y !== 'function') { tag.style.display = 'none'; return; }
     var W = G.W || 360, stH = (window.__ov && window.__ov.st) || 7;
-    var n = Math.min(cs.length, Math.floor((W - 46) / stH));
+    var n = Math.min(cs.length, Math.floor((W - (G.pw || 46)) / stH));
     var cur = window.cur;
     var i = (typeof cur === 'number' && cur >= 0 && cur < n) ? cs.length - n + cur : cs.length - 1;
     var c = cs[i];
@@ -1726,7 +1766,7 @@
     var y = G.Y(c.c);
     if (!Number.isFinite(y)) { tag.style.display = 'none'; return; }
     tag.style.top = Math.max(9, Math.min((G.ph || 240) - 9, y)) + 'px';
-    tag.textContent = fmt(c.c);
+    tag.textContent = (typeof window.__pfmt === 'function' ? window.__pfmt(c.c) : fmt(c.c));
     tag.className = (c.c >= c.o) ? '' : 'dn';
     tag.style.display = '';
   }
@@ -1792,10 +1832,22 @@
     var tk = await binanceTicker(state.quote.symbol);
     if (tk) {
       state.priceUsd = tk;
+      applyDispMul(); // v1.6.0 — مخرج نرخ تبدیل تومان با قیمت تازهٔ دلاری به‌روز می‌شود.
       updateLivePrice(tk.price);
       if (typeof tk.changePct === 'number') {
         // تغییر ۲۴س را تازه کن — renderPriceBox خودش بج زنده را هم می‌گذارد.
         renderPriceBox(false, false);
+      }
+      if (state.priceMode === 'iran') { try { window.draw(); window.head(); } catch (e) {} }
+    }
+    // v1.6.0 — قیمت تومان را هم تازه کن (هر ~۳۰ ثانیه) تا در حالت تومان، باکس و
+    // چارت با نرخ روز بمانند و نرخ تبدیل چارت کهنه نشود.
+    live.pollN = (live.pollN || 0) + 1;
+    if (live.pollN % 3 === 0 && state.quote && state.quote.symbol === live.sym) {
+      var ip = await iranCryptoPrice(state.quote.symbol);
+      if (ip && state.quote && state.quote.symbol === live.sym) {
+        state.priceIran = ip; applyDispMul();
+        if (state.priceMode === 'iran') { renderPriceBox(false, false); try { window.draw(); window.head(); } catch (e) {} }
       }
     }
   }
@@ -2329,11 +2381,12 @@
     ['chart', 'analysis', 'fund', 'news', 'depth'].forEach(function (t) {
       $('tabBtn-' + t).addEventListener('click', function () { setTab(t); });
     });
-    $('tabBtn-chart').textContent = T('چارت', 'Chart');
-    $('tabBtn-analysis').textContent = T('تحلیل', 'Analysis');
-    $('tabBtn-fund').textContent = T('بنیادی', 'Fundamentals');
-    $('tabBtn-news').textContent = T('خبر', 'News');
-    $('tabBtn-depth').textContent = T('عمق', 'Depth');
+    // v1.6.0 — تب‌های نماد آیکون‌دار شدند (چارت/تحلیل/بنیادی/خبر/عمق).
+    $('tabBtn-chart').innerHTML = ICON.chart + '<span>' + esc(T('چارت', 'Chart')) + '</span>';
+    $('tabBtn-analysis').innerHTML = ICON.activity + '<span>' + esc(T('تحلیل', 'Analysis')) + '</span>';
+    $('tabBtn-fund').innerHTML = ICON.fund + '<span>' + esc(T('بنیادی', 'Fundamentals')) + '</span>';
+    $('tabBtn-news').innerHTML = ICON.news + '<span>' + esc(T('خبر', 'News')) + '</span>';
+    $('tabBtn-depth').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"></path><path d="M3 13l9 5 9-5"></path></svg><span>' + esc(T('عمق', 'Depth')) + '</span>';
     $('backBtn').textContent = T('‹ بازگشت', '‹ Back');
     $('mainTab-chart').innerHTML = ICON.chart + esc(T('چارت', 'Chart'));
     $('mainTab-dash').innerHTML = ICON.dash + esc(T('داشبورد', 'Dashboard'));
@@ -2354,7 +2407,7 @@
     show('catalog');
   }
   /* برای تست از کنسول مرورگر: window.__miniApp.openSymbol({provider:'binance',symbol:'BTCUSDT',display:'BTC/USDT',label:'BTC'}) */
-  window.__miniApp = { openSymbol: openSymbol, setTf: setTf, setTab: setTab, state: state, renderPriceBox: renderPriceBox, renderSearch: renderSearch, renderCatalog: renderCatalog, zoomBy: zoomBy, toggleFs: toggleFs, startLive: startLive, stopLive: stopLive, MARKETS: MARKETS, TFS: TFS,
+  window.__miniApp = { openSymbol: openSymbol, setTf: setTf, setTab: setTab, state: state, renderPriceBox: renderPriceBox, setPriceMode: setPriceMode, updateLivePrice: updateLivePrice, renderSearch: renderSearch, renderCatalog: renderCatalog, zoomBy: zoomBy, toggleFs: toggleFs, startLive: startLive, stopLive: stopLive, MARKETS: MARKETS, TFS: TFS,
     showMainTab: showMainTab, openSearchModal: openSearchModal, closeSearchModal: closeSearchModal, renderSmBody: renderSmBody, renderSmTabs: renderSmTabs, sm: sm,
     loadDash: loadDash, renderDash: renderDash, confluence: confluence, renderGauge: renderGauge, renderDepth: renderDepth, fetchDepth: fetchDepth, stopDepthPoll: stopDepthPoll, positionLastPxTag: positionLastPxTag,
     yahooSearch: yahooSearch, mofidResolve: mofidResolve, rememberQuote: rememberQuote,

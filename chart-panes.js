@@ -59,7 +59,7 @@
     g.setTransform(D, 0, 0, D, 0, 0);
     return { g: g, W: W, H: H };
   }
-  function fmtNum(v) { try { return typeof fmt === 'function' ? fmt(v) : String(v); } catch (_) { return String(v); } }
+  function fmtNum(v) { try { var m = window.__dispMul; m = (typeof m === 'number' && isFinite(m) && m > 0) ? m : 1; return typeof fmt === 'function' ? fmt(v * m) : String(v); } catch (_) { return String(v); } }
   function drawLine(g, arr, off, n, X, Y, col, wd) {
     g.strokeStyle = col; g.lineWidth = wd || 1.4; g.beginPath();
     var started = false;

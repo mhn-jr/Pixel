@@ -35,11 +35,17 @@
   function fmtTick(p,step){var d=step>=1?0:Math.min(8,Math.max(0,-Math.floor(Math.log10(step)+1e-9)));
     return p.toLocaleString('en',{minimumFractionDigits:d,maximumFractionDigits:d})}
   function lastFmt(p){try{return typeof fmt==='function'?fmt(p):String(p)}catch(_){return String(p)}}
+  /* v1.6.0 — ضریب نمایش ارز (window.__dispMul؛ ۱ = دلار، نرخ تومان در حالت تومان):
+     برچسب‌های محور قیمت و برچسب قیمت زنده با همین ضریب نشان داده می‌شوند؛
+     حالت درصدی (pct) واحد ندارد و دست‌نخورده می‌ماند. */
+  function dmul(){var m=window.__dispMul;return (typeof m==='number'&&isFinite(m)&&m>0)?m:1}
+  function dTick(p,step){var m=dmul();return fmtTick(p*m,step*m)}
+  function dLast(p){return lastFmt(p*dmul())}
 
   /* ---- عرض پویای محور قیمت (حداقل ۴۶؛ لایه‌ها همه G.pw می‌خوانند) ---- */
   function pw(g,cs){var l=cs&&cs.length?cs[cs.length-1].c:0;g.font='10px sans-serif';
-    var w=Math.max(g.measureText(lastFmt(l*1.0001)).width,g.measureText(lastFmt(l)+'0').width);
-    return Math.max(46,Math.min(96,Math.ceil(w)+14))}
+    var w=Math.max(g.measureText(dLast(l*1.0001)).width,g.measureText(dLast(l)+'0').width);
+    return Math.max(46,Math.min(120,Math.ceil(w)+14))}
 
   /* ---- برچسب‌های محور زمان ---- */
   /* ===== v1.68: OnellaDate — تاریخ/ساعت بر پایه‌ی تنظیمات سیستم (زبان، منطقه‌ی زمانی، تقویم، ۱۲/۲۴ ساعته)؛ انتخاب دستی: میلادی/شمسی/قمری ===== */
@@ -124,7 +130,7 @@
     list.forEach(function(p){var y=Math.round(Y(p))+.5;if(y<4||y>pb)return;
       if(S.grid){g.strokeStyle='rgba(120,140,170,.13)';g.beginPath();g.moveTo(0,y);g.lineTo(cw,y);g.stroke()}
       g.fillStyle='#7c8aa0';
-      g.fillText(S.pct&&ref?(((p/ref-1)*100).toFixed(2)+'%'):fmtTick(p,Math.pow(10,Math.floor(Math.log10(p))-1)),cw+5,y+3.5)})}
+      g.fillText(S.pct&&ref?(((p/ref-1)*100).toFixed(2)+'%'):dTick(p,Math.pow(10,Math.floor(Math.log10(p))-1)),cw+5,y+3.5)})}
 
   /* ---- محور و شبکه (قبل از کندل‌ها) ---- */
   function axisBack(g,k){var hi=k.hi,lo=k.lo,ph=k.ph,vh=k.vh,pb=ph-vh,cw=k.cw,Y=k.Y;
@@ -135,7 +141,7 @@
     for(i=0;;i++){p=(p0+i)*step;if(p>hi)break;y=Math.round(Y(p))+.5;if(y<4||y>pb)continue;
       if(S.grid){g.strokeStyle='rgba(120,140,170,.13)';g.beginPath();g.moveTo(0,y);g.lineTo(cw,y);g.stroke()}
       g.fillStyle='#7c8aa0';
-      g.fillText(S.pct&&ref?(((p/ref-1)*100).toFixed(2)+'%'):fmtTick(p,step),cw+5,y+3.5)}
+      g.fillText(S.pct&&ref?(((p/ref-1)*100).toFixed(2)+'%'):dTick(p,step),cw+5,y+3.5)}
     timeAxis(g,k)}
 
   /* ---- کندل‌ها / بار / خط / ناحیه + حجم ---- */
@@ -166,7 +172,7 @@
     y=Math.max(9,Math.min(pb-9,y));y=Math.round(y)+.5;
     if(showLast){
     g.save();g.strokeStyle=col;g.globalAlpha=.75;g.lineWidth=1;g.setLineDash([3,3]);g.beginPath();g.moveTo(0,y);g.lineTo(cw,y);g.stroke();g.restore();
-    var txt=S.pct&&k.ref?(((c.c/k.ref-1)*100).toFixed(2)+'%'):lastFmt(c.c);
+    var txt=S.pct&&k.ref?(((c.c/k.ref-1)*100).toFixed(2)+'%'):dLast(c.c);
     g.fillStyle=col;g.beginPath();if(g.roundRect)g.roundRect(cw+1,y-8,W-cw-2,16,3);else g.rect(cw+1,y-8,W-cw-2,16);g.fill();
     g.fillStyle='#0a0f1a';g.font='bold 10px sans-serif';g.fillText(txt,cw+5,y+3.5);g.font='10px sans-serif'}
     /* v1.68: شمارش معکوس بسته‌شدن کندل زیر برچسب قیمت */

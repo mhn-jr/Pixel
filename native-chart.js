@@ -42,15 +42,20 @@ function dataStateBadge(x){
   }
   return "";
 }
-function head(){if(!cs.length)return;const W=$("cc").clientWidth,stH=((window.__ov||{}).st||7),sourceEnd=(window.onellaReplay&&window.onellaReplay.active)?Math.max(1,Math.min(window.onellaReplay.end,cs.length)):cs.length,source=cs.slice(0,sourceEnd),n=Math.min(source.length,Math.floor((W-46)/stH)),i=cur>=0&&cur<n?source.length-n+cur:source.length-1,c=source[i],p=source[i-1]||c,ch=(c.c-p.c)/p.c*100;
- $("px").innerHTML=marketPairName()+"<b>"+fmt(c.c)+"</b><span style='color:"+(window.OnellaChartStyle&&OnellaChartStyle.pc?OnellaChartStyle.pc(ch>=0?"#2ecc8f":"#ff5d6c"):(ch>=0?"#2ecc8f":"#ff5d6c"))+"'>"+(ch>=0?"+":"")+ch.toFixed(2)+"%</span>"+dataStateBadge();
+/* v1.6.0 — نمایش قیمت چارت با ضریب ارز: در حالت تومان، قیمت‌های نمایشی چارت
+   (سربرگ، محور، برچسب قیمت آخر، جعبهٔ OHLC) همان کندل‌های دلاری × نرخ تومان‌اند؛
+   حجم و درصد تغییر دست‌نخورده می‌مانند. ضریب را app.js می‌گذارد (window.__dispMul). */
+function pfmt(p){var m=window.__dispMul; m=(typeof m==='number'&&isFinite(m)&&m>0)?m:1; return fmt(p*m);}
+window.__pfmt=pfmt;
+function head(){if(!cs.length)return;const W=$("cc").clientWidth,stH=((window.__ov||{}).st||7),sourceEnd=(window.onellaReplay&&window.onellaReplay.active)?Math.max(1,Math.min(window.onellaReplay.end,cs.length)):cs.length,source=cs.slice(0,sourceEnd),n=Math.min(source.length,Math.floor((W-((window.__geo&&window.__geo.pw)||46))/stH)),i=cur>=0&&cur<n?source.length-n+cur:source.length-1,c=source[i],p=source[i-1]||c,ch=(c.c-p.c)/p.c*100;
+ $("px").innerHTML=marketPairName()+"<b>"+pfmt(c.c)+"</b><span style='color:"+(window.OnellaChartStyle&&OnellaChartStyle.pc?OnellaChartStyle.pc(ch>=0?"#2ecc8f":"#ff5d6c"):(ch>=0?"#2ecc8f":"#ff5d6c"))+"'>"+(ch>=0?"+":"")+ch.toFixed(2)+"%</span>"+dataStateBadge();
  /* v1.3.0 — جعبهٔ OHLC کراس‌هیر (مرحله ۱): فقط وقتی کراس‌هیر فعال است (cur>=0)؛
     وگرنه پنهان. MA20 همان میانگین ۲۰ خط MA روی چارت است؛ Vol فقط وقتی عدد دارد. */
  try{var xb=$("xhBox");if(xb){
    if(cur>=0&&cur<n&&window.__xhIdx!==i){
      window.__xhIdx=i;
      var ma20=null;if(i>=19){var s20=0;for(var j=i-19;j<=i;j++)s20+=source[j].c;ma20=s20/20}
-     xb.innerHTML='<span>O <b>'+fmt(c.o)+'</b></span> <span>H <b>'+fmt(c.h)+'</b></span> <span>L <b>'+fmt(c.l)+'</b></span> <span>C <b>'+fmt(c.c)+'</b></span> <span style="color:'+(ch>=0?'#2ecc8f':'#ff5d6c')+'">'+(ch>=0?'+':'')+ch.toFixed(2)+'%</span>'+(typeof c.v==='number'?' <span>Vol <b>'+fmt(c.v)+'</b></span>':'')+(ma20!=null?' <span>MA20 <b>'+fmt(ma20)+'</b></span>':'');
+     xb.innerHTML='<span>O <b>'+pfmt(c.o)+'</b></span> <span>H <b>'+pfmt(c.h)+'</b></span> <span>L <b>'+pfmt(c.l)+'</b></span> <span>C <b>'+pfmt(c.c)+'</b></span> <span style="color:'+(ch>=0?'#2ecc8f':'#ff5d6c')+'">'+(ch>=0?'+':'')+ch.toFixed(2)+'%</span>'+(typeof c.v==='number'?' <span>Vol <b>'+fmt(c.v)+'</b></span>':'')+(ma20!=null?' <span>MA20 <b>'+pfmt(ma20)+'</b></span>':'');
      xb.style.display='';
    }else if(!(cur>=0&&cur<n)){window.__xhIdx=-1;xb.style.display='none';}
  }}catch(e){}}
@@ -85,7 +90,7 @@ async function loadNative(){const __seq=++__onellaLoadSeq;const __requestedSym=p
  if(window.OnellaLiveSeconds&&window.OnellaLiveSeconds.isSub(tf)){try{window.__onellaLastSub={tf:tf,sym:pair.sym,x:x}}catch(_){}}
  if(!cs.length&&window.OnellaLiveSeconds&&window.OnellaLiveSeconds.isSub(tf)){$("px").textContent=window.OnellaLiveSeconds.emptyMsg(x)}
   else if(!cs.length){$("px").textContent=T("داده زنده در دسترس نیست؛ برای تحلیل چارت به اینترنت وصل شو.","Live chart data is unavailable; connect to the internet to load the chart.")+(x&&x.error?" ["+String(x.error).replace(/\s+/g," ").slice(0,140)+"]":"")+(x&&x.detail?" — "+String(x.detail).replace(/\s+/g," ").slice(0,260):"");}
- else {head();if(x.offline){$("px").innerHTML=marketPairName()+" <b>"+fmt(cs.at(-1).c)+"</b><span style=\"color:#ffb347\"> · آخرین داده ذخیره‌شده</span>"}}
+ else {head();if(x.offline){$("px").innerHTML=marketPairName()+" <b>"+pfmt(cs.at(-1).c)+"</b><span style=\"color:#ffb347\"> · آخرین داده ذخیره‌شده</span>"}}
  draw()}
 /* Mini App: loadChart (TradingView) حذف شد — فقط چارت بومی */
 /* Mini App: setMode و سیم‌کشی دکمه‌های اپ (#seg/#tfs/#tvt) حذف شد — تایم‌فریم از تب چارت می‌آید */

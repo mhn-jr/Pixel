@@ -25,7 +25,7 @@
   function sym() { try { return (window.pair && window.pair.sym) || 'UNKNOWN'; } catch (_) { return 'UNKNOWN'; } }
   function list(s) { s = s || sym(); return store[s] || (store[s] = []); }
   function mkId() { idSeq++; return 'd' + Date.now().toString(36) + '_' + idSeq + '_' + Math.floor(Math.random() * 1e6).toString(36); }
-  function fmtNum(v) { try { return typeof fmt === 'function' ? fmt(v) : String(v); } catch (_) { return String(v); } }
+  function fmtNum(v) { try { var m = window.__dispMul; m = (typeof m === 'number' && isFinite(m) && m > 0) ? m : 1; return typeof fmt === 'function' ? fmt(v * m) : String(v); } catch (_) { return String(v); } }
   function tt(fa, en) { try { return typeof T === 'function' ? T(fa, en) : fa; } catch (_) { return fa; } }
   function lerp(a, b, r) {
     try { var S = window.OnellaChartStyle; if (S && typeof S.lerp === 'function') return S.lerp(a, b, r); } catch (_) {}
