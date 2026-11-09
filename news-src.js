@@ -192,7 +192,7 @@ function createNews(opts) {
     const lists = await Promise.all(IMPACT_MARKETS.map(m => marketNews(m, lang, 5)));
     for (const list of lists) for (const it of list) all.push(it);
     const key = t => String(t || '').toLowerCase().replace(/[^a-z0-9؀-ۿ]+/g, ' ').trim();
-    const high = [], med = [];
+    const high = [], med = [], low = [];
     for (const it of all) {
       const k = key(it.title);
       if (!k || seen.has(k)) continue;
@@ -200,10 +200,18 @@ function createNews(opts) {
       const lv = impactOf(it.title);
       if (lv === 'high') high.push(it);
       else if (lv === 'medium') med.push(it);
+      else low.push(it);
     }
     const pick = high.concat(med);
     pick.sort((a, b) => (b.time || 0) - (a.time || 0));
-    return pick.slice(0, limit || 8);
+    // v1.2.1 (Mini App): اگر خبر مهم کم بود، با خبرهای کم‌تاثیرِ همان بازارها پر می‌کنیم
+    // تا داشبورد همیشه ۶ تا ۱۰ خبر داشته باشد — نه فقط یک خبر.
+    const lim = limit || 8;
+    if (pick.length < lim) {
+      low.sort((a, b) => (b.time || 0) - (a.time || 0));
+      pick.push(...low.slice(0, lim - pick.length));
+    }
+    return pick.slice(0, lim);
   }
 
   function formatNewsList(title, items, lang, tag, marketTag) {

@@ -136,12 +136,61 @@
   .axis-btn { position: absolute; z-index: 5; background: #31415f; color: #fff; border: 0; border-radius: 8px; padding: 5px 9px; font-size: 12px; font-weight: 700; cursor: pointer; }
   #tvAutoBtn { top: 8px; inset-inline-end: 8px; }
   #tvLatestBtn { bottom: 8px; inset-inline-start: 8px; }
-  /* نوار انتخاب نماد (مثل اپ اصلی: ▼ BTC/USDT + آیکون + 🔍) */
+  /* نوار انتخاب نماد (مثل اپ اصلی: ▼ BTC/USDT + آیکون + ذره‌بین) */
   #symBar { display: flex; align-items: center; gap: 8px; width: 100%; background: var(--card); border: 1px solid var(--acc); color: var(--txt); border-radius: 12px; padding: 10px 12px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 10px; text-align: start; }
   #symBar .sym-bar-ic { display: inline-flex; }
   #symBar .sym-bar-ic .oa-ic { width: 26px; height: 26px; }
   #symBarTx { flex: 1; color: var(--acc); }
   #symBar .sym-bar-search { font-size: 16px; }
+  #symBar .sym-bar-search svg { width: 18px; height: 18px; color: var(--mut); display: block; }
+  /* v1.2.1 — قیمت روی چارت، آیکون SVG، کارت‌های تحلیل/بنیادی/خبر، دفتر سفارش */
+  #mainTabs button { display: flex; align-items: center; justify-content: center; gap: 6px; }
+  #mainTabs button svg { width: 18px; height: 18px; flex: none; }
+  .dash-sec h3 { display: flex; align-items: center; gap: 7px; }
+  .dash-sec h3 svg { width: 18px; height: 18px; color: var(--acc); flex: none; }
+  .px-ov { position: absolute; top: 8px; inset-inline-start: 10px; z-index: 4; pointer-events: none; background: rgba(5,7,12,.6); border-radius: 7px; padding: 4px 8px; font-size: 13px; min-height: 0; }
+  .px-ov b { font-size: 15px; }
+  #lastPxTag { position: absolute; z-index: 4; right: 0; transform: translateY(-50%); background: var(--up); color: #04120b; font-size: 11px; font-weight: 800; border-radius: 4px 0 0 4px; padding: 3px 6px; pointer-events: none; white-space: nowrap; }
+  #lastPxTag.dn { background: var(--dn); color: #fff; }
+  .imp-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-inline-end: 4px; }
+  .imp-dot.high { background: #ff5d6c; } .imp-dot.med { background: #ffb347; } .imp-dot.low { background: var(--mut); }
+  .an-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+  .an-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 11px 12px; }
+  .an-card.wide { grid-column: 1 / -1; }
+  .an-card h4 { margin: 0 0 8px; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+  .an-card h4 svg { width: 16px; height: 16px; color: var(--acc); flex: none; }
+  .an-card .an-big { font-size: 17px; font-weight: 800; }
+  .an-card .an-sub { font-size: 12px; color: var(--mut); margin-top: 2px; line-height: 1.6; }
+  .an-card .row { padding: 6px 0; font-size: 13px; }
+  .fund-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+  .fund-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 11px 12px; }
+  .fund-card.wide { grid-column: 1 / -1; }
+  .fund-card .fc-lb { font-size: 12px; color: var(--mut); }
+  .fund-card .fc-v { font-size: 16px; font-weight: 800; margin-top: 3px; }
+  .fund-card .fc-v small { font-size: 12px; font-weight: 400; color: var(--mut); }
+  .news-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 11px 12px; margin-bottom: 8px; }
+  .news-card .news-tag { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .news-card .news-chip { background: #1c2740; border-radius: 999px; padding: 2px 8px; font-size: 11px; }
+  .news-card .news-title { margin-top: 6px; }
+  .ob-wrap { margin-top: 6px; }
+  .ob-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; font-size: 13px; }
+  .ob-head b { font-size: 15px; }
+  .ob-head button { margin-inline-start: auto; background: var(--card); border: 1px solid var(--line); color: var(--txt); border-radius: 8px; padding: 5px 10px; font-size: 13px; cursor: pointer; }
+  .ob-imb { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: #1c2740; margin: 10px 0 4px; }
+  .ob-imb .ib-bid { background: var(--up); height: 100%; }
+  .ob-imb .ib-ask { background: var(--dn); height: 100%; }
+  .ob-sub { font-size: 12px; color: var(--mut); text-align: center; }
+  .ob-cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; padding: 4px 8px; font-size: 11px; color: var(--mut); text-align: end; }
+  .ob-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; padding: 4px 8px; font-size: 13px; position: relative; text-align: end; }
+  .ob-row span { position: relative; z-index: 1; }
+  .ob-row .ob-bar { position: absolute; top: 0; bottom: 0; inset-inline-end: 0; z-index: 0; }
+  .ob-ask .ob-bar { background: rgba(255,93,108,.14); }
+  .ob-bid .ob-bar { background: rgba(46,204,143,.14); }
+  .ob-row .ob-p { font-weight: 700; }
+  .ob-ask .ob-p { color: var(--dn); } .ob-bid .ob-p { color: var(--up); }
+  .ob-spread { text-align: center; font-size: 12px; color: var(--mut); padding: 7px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 2px 0; }
+  .sm-tabs button svg { width: 15px; height: 15px; vertical-align: -3px; }
+  .sm-star svg { width: 20px; height: 20px; display: block; }
 </style>
 </head>
 <body>
@@ -159,7 +208,7 @@
   </div>
   <div id="view-symbol" style="display:none">
     <div id="gaugeBox"></div>
-    <button id="symBar" type="button"><span class="sym-bar-ic" id="symBarIc"></span><span id="symBarTx">▼</span><span class="sym-bar-search">🔍</span></button>
+    <button id="symBar" type="button"><span class="sym-bar-ic" id="symBarIc"></span><span id="symBarTx">▼</span><span class="sym-bar-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.8-3.8"/></svg></span></button>
     <h2 id="symTitle" style="display:none"></h2>
     <div id="priceBox"></div>
     <div class="tabs">
@@ -167,11 +216,13 @@
       <button id="tabBtn-analysis" type="button">تحلیل</button>
       <button id="tabBtn-fund" type="button">بنیادی</button>
       <button id="tabBtn-news" type="button">خبر</button>
+      <button id="tabBtn-depth" type="button">عمق</button>
     </div>
     <div id="tab-chart"></div>
     <div id="tab-analysis" style="display:none"></div>
     <div id="tab-fund" style="display:none"></div>
     <div id="tab-news" style="display:none"></div>
+    <div id="tab-depth" style="display:none"></div>
   </div>
   <div id="view-dash" style="display:none">
     <div class="dash-h"><span id="dashTitle">داشبورد</span><button id="dashRefresh" type="button">↻</button></div>
@@ -182,8 +233,8 @@
   </div>
 </main>
 <nav id="mainTabs">
-  <button id="mainTab-chart" type="button" class="on">📊 چارت</button>
-  <button id="mainTab-dash" type="button">📋 داشبورد</button>
+  <button id="mainTab-chart" type="button" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 21h18"/><path d="M7 17v-6"/><path d="M12 17V7"/><path d="M17 17v-3"/></svg> چارت</button>
+  <button id="mainTab-dash" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="10" rx="1.5"/><rect x="13" y="3" width="8" height="6" rx="1.5"/><rect x="13" y="11" width="8" height="10" rx="1.5"/><rect x="3" y="15" width="8" height="6" rx="1.5"/></svg> داشبورد</button>
 </nav>
 <div id="searchModal" role="dialog" aria-modal="true" aria-label="search">
   <div class="sm-top"><b id="smTitle">جستجو</b><button id="smClose" type="button" aria-label="close">✕</button></div>
