@@ -191,14 +191,14 @@
   .tools-fab:active { border-color: var(--acc); }
   /* v1.5.0 — نوار ابزار عمودی (جای پنل بزرگ پایین چارت): باریک، قابل اسکرول؛
      دکمهٔ تنظیمات چارت (بالا-راست چارت، مثل اپ اصلی) + پنل تنظیمات قابل اسکرول. */
-  .tools-strip { display: none; position: absolute; left: 8px; top: 96px; bottom: 8px; width: 48px; overflow-y: auto; overflow-x: hidden; background: rgba(13,19,32,.97); border: 1px solid var(--line); border-radius: 12px; padding: 4px; z-index: 6; }
+  .tools-strip { display: none; position: absolute; left: 8px; top: 96px; width: 44px; max-height: 220px; overflow-y: auto; overflow-x: hidden; background: rgba(13,19,32,.97); border: 1px solid var(--line); border-radius: 12px; padding: 4px; z-index: 6; }
   .tools-strip.open { display: block; }
   .tools-strip::-webkit-scrollbar { width: 4px; }
   .tools-strip::-webkit-scrollbar-thumb { background: rgba(124,138,160,.5); border-radius: 2px; }
   .strip-group { display: flex; flex-direction: column; gap: 4px; }
   .strip-sep { height: 1px; background: var(--line); margin: 6px 2px; flex: none; }
-  .tools-strip .tbtn { width: 100%; height: 40px; padding: 4px; display: flex; align-items: center; justify-content: center; flex: none; }
-  .tools-strip .tbtn svg { width: 22px; height: 22px; display: block; }
+  .tools-strip .tbtn { width: 100%; height: 36px; padding: 4px; display: flex; align-items: center; justify-content: center; flex: none; }
+  .tools-strip .tbtn svg { width: 20px; height: 20px; display: block; }
   .tools-strip #chartTools .tbtn.on { border-color: var(--p-vol); color: var(--p-vol); }
   .tools-strip #drawTools .tbtn.on { border-color: var(--acc); color: var(--acc); }
   .tools-strip .tbtn:disabled { opacity: .4; }
@@ -206,30 +206,31 @@
   .set-fab { position: absolute; right: 8px; top: 48px; width: 36px; height: 36px; padding: 6px; background: rgba(13,19,32,.88); border: 1px solid var(--acc); border-radius: 10px; cursor: pointer; z-index: 5; }
   .set-fab svg { width: 22px; height: 22px; display: block; }
   .set-fab.on { background: rgba(240,106,21,.18); }
-  /* v1.6.0 — تمام‌صفحه: گوشهٔ بالا-راست چارت (بالای دکمهٔ تنظیمات)؛ پنل تنظیمات کوچک‌تر. */
-  .fs-fab { position: absolute; right: 8px; top: 8px; width: 32px; height: 32px; padding: 6px; background: rgba(13,19,32,.88); border: 1px solid var(--line); border-radius: 9px; cursor: pointer; z-index: 5; color: var(--txt); }
-  .fs-fab svg { width: 18px; height: 18px; display: block; }
-  .settings-panel { display: none; position: absolute; top: 92px; right: 8px; width: 236px; max-width: calc(100% - 16px); max-height: 340px; overflow-y: auto; background: rgba(13,19,32,.97); border: 1px solid var(--line); border-radius: 12px; padding: 10px; z-index: 7; box-shadow: 0 10px 24px rgba(0,0,0,.45); }
+  /* v1.7.0 — تمام‌صفحه کنار تب تایم‌فریم رفت (دیگر روی چارت نیست)؛ پنل تنظیمات کوچک‌تر. */
+  .settings-panel { display: none; position: absolute; top: 92px; right: 8px; width: 216px; max-width: calc(100% - 16px); max-height: 280px; overflow-y: auto; background: rgba(13,19,32,.97); border: 1px solid var(--line); border-radius: 12px; padding: 8px; z-index: 7; box-shadow: 0 10px 24px rgba(0,0,0,.45); }
   .settings-panel.open { display: block; }
   .settings-panel::-webkit-scrollbar { width: 4px; }
   .settings-panel::-webkit-scrollbar-thumb { background: rgba(124,138,160,.5); border-radius: 2px; }
-  .settings-panel-h { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 700; margin-bottom: 4px; }
-  .set-sec-h { font-size: 11px; font-weight: 700; color: var(--mut); margin: 8px 0 5px; }
-  .set-type-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
-  .set-type { background: var(--card); border: 1px solid var(--line); border-radius: 9px; padding: 6px 2px; color: var(--txt); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; }
-  .set-type svg { width: 18px; height: 18px; display: block; }
+  .settings-panel-h { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 700; margin-bottom: 2px; }
+  .set-sec-h { font-size: 11px; font-weight: 700; color: var(--mut); margin: 7px 0 4px; }
+  .set-type-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+  .set-type { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 5px 2px; color: var(--txt); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 11px; }
+  .set-type svg { width: 17px; height: 17px; display: block; }
   .set-type.on { border-color: var(--acc); color: var(--acc); }
-  .set-pal-row { display: flex; gap: 6px; flex-wrap: wrap; }
-  .set-pal { background: var(--card); border: 1px solid var(--line); border-radius: 9px; padding: 6px; cursor: pointer; display: flex; gap: 3px; align-items: center; }
+  .set-pal-row { display: flex; gap: 5px; flex-wrap: wrap; }
+  .set-pal { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 5px; cursor: pointer; display: flex; gap: 3px; align-items: center; }
   .set-pal.on { border-color: var(--acc); }
-  .set-pal .sw { width: 14px; height: 20px; border-radius: 4px; display: block; }
-  .set-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 2px; font-size: 12px; border-bottom: 1px solid rgba(120,140,170,.08); }
-  .switch { width: 40px; height: 22px; border-radius: 11px; background: #2a3550; border: 1px solid var(--line); position: relative; cursor: pointer; flex: none; padding: 0; }
-  .switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #e6e9ef; }
+  .set-pal .sw { width: 13px; height: 18px; border-radius: 3px; display: block; }
+  .set-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 2px; font-size: 12px; border-bottom: 1px solid rgba(120,140,170,.08); }
+  .switch { width: 38px; height: 20px; border-radius: 10px; background: #2a3550; border: 1px solid var(--line); position: relative; cursor: pointer; flex: none; padding: 0; }
+  .switch::after { content: ''; position: absolute; top: 1px; left: 1px; width: 16px; height: 16px; border-radius: 50%; background: #e6e9ef; }
   .switch.on { background: var(--acc); border-color: var(--acc); }
-  .switch.on::after { left: 20px; }
-  /* v1.6.0 — تایم‌فریم: یک تب واحد (دکمهٔ تایم‌فریم فعلی + پنل بازشوندهٔ شبکه‌ای). */
-  .tf-wrap { position: relative; margin: 10px 0 4px; }
+  .switch.on::after { left: 19px; }
+  /* v1.7.0 — تمام‌صفحه کنار تب تایم‌فریم: دکمهٔ آیکون کوچک در ردیف تایم‌فریم. */
+  .tf-wrap { position: relative; margin: 10px 0 4px; display: flex; gap: 6px; align-items: center; }
+  .tf-fs { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; padding: 6px; background: var(--card); border: 1px solid var(--line); color: var(--txt); border-radius: 10px; cursor: pointer; flex: none; }
+  .tf-fs svg { width: 18px; height: 18px; display: block; }
+  .tf-fs:active { border-color: var(--acc); }
   #tfBtn { display: inline-flex; align-items: center; gap: 6px; background: var(--card); border: 1px solid var(--acc); color: var(--txt); border-radius: 10px; padding: 7px 12px; font-size: 13px; font-weight: 700; cursor: pointer; }
   #tfBtn svg { width: 15px; height: 15px; color: var(--acc); }
   #tfBtn .tf-cur { color: var(--acc); }
@@ -237,9 +238,67 @@
   .tf-panel.open { display: grid; }
   .tf-panel button { background: var(--card); border: 1px solid var(--line); color: var(--txt); border-radius: 8px; padding: 8px 0; font-size: 12px; font-weight: 700; cursor: pointer; min-width: 52px; }
   .tf-panel button.on { border-color: transparent; color: #fff; background: linear-gradient(135deg, #f06a15, #ff8a1f); }
-  .an-card .an-big { font-size: 17px; font-weight: 800; }
+  /* v1.7.0 — کارت تحلیل پیشرفته: دو ردیف جهت (کوتاه‌مدت/بلندمدت) + شرط تغییر جهت. */
+  .an-verdict { border-color: rgba(240,106,21,.4); }
+  .verdict-row { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; }
+  .verdict-row + .verdict-row { border-top: 1px solid rgba(120,140,170,.12); }
+  .verdict-ic { flex: none; margin-top: 2px; }
+  .verdict-ic svg { display: block; }
+  .verdict-tx { flex: 1; min-width: 0; line-height: 1.7; }
+  .verdict-flip { font-size: 12px; color: #ffb347; border-top: 1px solid rgba(120,140,170,.12); padding-top: 7px; margin-top: 4px; line-height: 1.6; }
+  .g-txt { display: flex; align-items: center; gap: 6px; }
+  .g-txt svg { flex: none; }
+  .an-card h4 svg { vertical-align: -3px; }
+  .an-big svg { vertical-align: -4px; margin-inline-end: 2px; }
   .an-card .an-sub { font-size: 12px; color: var(--mut); margin-top: 2px; line-height: 1.6; }
   .an-card .row { padding: 6px 0; font-size: 13px; }
+  /* v1.7.0 — دیزاین: حرکت نرم. تعویض تب با محو + بالا آمدن کوتاه؛ دکمه‌ها
+     گذار رنگ/سایه دارند. */
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  #view-symbol .tabs, #gaugeBox, #symBar, #priceBox { animation: fadeIn .18s ease; }
+  #tab-chart, #tab-analysis, #tab-fund, #tab-news, #tab-depth { animation: fadeUp .18s ease; }
+  .big-v { transition: color .25s ease; }
+  .sym, .srow, .sm-row, .mv-row { transition: border-color .15s ease, background-color .15s ease; }
+  .tabs button, .seg button, #mainTabs button, .sm-tabs button, .tf-panel button { transition: background-color .15s ease, color .15s ease, box-shadow .15s ease, transform .1s ease; }
+  /* v1.7.0 — دیزاین: کارت‌ها عمیق‌تر. سربرگ هر کارت تحلیل یک نوار رنگِ نقش
+     خودش را دارد (نه فقط آیکون)؛ کارت خلاصه و کارت تحلیل پیشرفته گرادیان ملایم
+     نارنجی می‌گیرند تا قهرمان صفحه باشند. */
+  .an-card { position: relative; overflow: hidden; }
+  .an-card::before { content: ''; position: absolute; top: 0; inset-inline: 0; height: 3px; background: var(--line); border-radius: 3px 3px 0 0; }
+  .an-card.an-trend::before { background: var(--p-trend); }
+  .an-card.an-mom::before { background: var(--p-mom); }
+  .an-card.an-vola::before { background: var(--p-vola); }
+  .an-card.an-vol::before { background: var(--p-vol); }
+  .an-card.an-cndl::before { background: var(--p-cndl); }
+  .an-card.an-lvl::before { background: var(--p-lvl); }
+  .an-card.an-sum::before { background: linear-gradient(90deg, var(--acc), #ff8a1f); }
+  .an-card.an-verdict { background: linear-gradient(180deg, rgba(240,106,21,.09), rgba(13,19,32,0) 55%), var(--card); }
+  .an-card.an-verdict::before { background: linear-gradient(90deg, var(--acc), #ff8a1f); }
+  .an-card.an-sum { background: linear-gradient(180deg, rgba(240,106,21,.06), rgba(13,19,32,0) 60%), var(--card); }
+  /* v1.7.0 — دیزاین: قیمت بزرگ‌تر و خواناتر؛ سقف/کف/حجم در یک ردیف سه‌ستونه
+     (نه سه ردیف جدا) تا باکس قیمت جمع‌وجورتر شود. */
+  .big { font-size: 34px; font-weight: 800; margin: 8px 0 2px; letter-spacing: .2px; }
+  .px-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+  .px-stat { background: rgba(28,39,64,.55); border: 1px solid var(--line); border-radius: 10px; padding: 7px 8px; }
+  .px-stat .px-lb { font-size: 11px; color: var(--mut); }
+  .px-stat .px-v { font-size: 14px; font-weight: 700; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  /* v1.7.0 — دیزاین: گیج قهرمان‌تر — متن جهت بزرگ‌تر. */
+  .gauge .g-txt { font-size: 15px; }
+  .gauge { padding: 12px; border-color: rgba(240,106,21,.25); }
+  /* v1.7.0 — دیزاین: خبر — خط رنگی تاثیر در سمت راست کارت (قرمز/زرد/خاکستری). */
+  .news-card { border-inline-start: 3px solid var(--line); }
+  .news-card.imp-high { border-inline-start-color: #ff5d6c; }
+  .news-card.imp-med { border-inline-start-color: #ffb347; }
+  /* v1.7.0 — دیزاین: داشبورد — سطرهای صعودی/نزولی با بازخورد لمسی. */
+  .mv-row { border-radius: 8px; padding: 9px 8px; }
+  .mv-row:active { background: rgba(28,39,64,.6); }
+  /* v1.7.0 — دیزاین: ناوبری پایین — تب فعال یک نقطهٔ نارنجی زیر آیکون می‌گیرد. */
+  #mainTabs button.on { position: relative; }
+  #mainTabs button.on::after { content: ''; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 16px; height: 3px; border-radius: 3px; background: rgba(255,255,255,.85); }
+  /* v1.7.0 — دیزاین: کاتولوگ — کارت نماد کمی بلندتر. */
+  .sym { padding: 11px 4px 10px; }
+  .sym .sym-px { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .fund-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
   .fund-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 11px 12px; }
   .fund-card.wide { grid-column: 1 / -1; }

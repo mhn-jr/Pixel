@@ -14,6 +14,32 @@ const COINDESK_RSS = 'https://www.coindesk.com/arc/outboundfeeds/rss/';
 // BBC Business برای بازارهای جهانی، BBC Persian برای نرخ/بورس ایران.
 const BBC_BUSINESS = 'https://feeds.bbci.co.uk/news/business/rss.xml';
 const BBC_PERSIAN = 'https://feeds.bbci.co.uk/persian/rss.xml';
+/* v1.7.0 — خوراک‌های RSS مستقیم بدون کلید، پروب‌شده ۲۰۲۶-۱۱-۰۹ (همه 200 و
+   پر از خبر، از یک سرور خارجی): نبض بورس (بورس تهران)، ایبنا (اقتصاد کلان/
+   بانکی)، فردای اقتصاد (اقتصاد + بورس)، کوین‌تلگراف، CNBC، فدرال رزرو، EIA.
+   تسنیم از IP خارجی جواب نداد (سرور اتصال را می‌بندد)، Majid API و StreamData
+   منبع خبری عمومی نیستند (اولی وجود ندارد، دومی پروکسی پولی است)، SheedNews
+   کلید می‌خواهد (پلن رایگان ۲۰ درخواست/روز) — هیچ‌کدام وصل نشد. */
+const NABZ_RSS = 'https://nabzebourse.com/fa/rss/allnews';
+const IBENA_RSS = 'https://www.ibena.ir/rss';
+const FARDAY_RSS = 'https://www.fardayeeghtesad.com/rss';
+const COINTELEGRAPH_RSS = 'https://cointelegraph.com/rss';
+const CNBC_TOP = 'https://www.cnbc.com/id/100003114/device/rss/rss.html';
+const CNBC_BIZ = 'https://www.cnbc.com/id/10001147/device/rss/rss.html';
+const FED_RSS = 'https://www.federalreserve.gov/feeds/press_all.xml';
+const EIA_RSS = 'https://www.eia.gov/rss/todayinenergy.xml';
+/* زنجیرهٔ جایگزین هر بازار — اول Google News (جست‌وجوی مخصوص نماد؛ وقتی کار
+   کند مرتبط‌ترین است)، بعد خوراک‌های مستقیم به ترتیب ربط. خبرهای خوراک‌ها
+   عمومیِ بازارند و فیلتر نمادی نمی‌خورند (فیلتر، خبر را خالی می‌کرد). */
+const MARKET_FEEDS = {
+  crypto: [COINDESK_RSS, COINTELEGRAPH_RSS, BBC_BUSINESS],
+  stock: [CNBC_TOP, CNBC_BIZ, BBC_BUSINESS],
+  index: [CNBC_TOP, BBC_BUSINESS],
+  commodity: [EIA_RSS, CNBC_TOP, BBC_BUSINESS],
+  forex: [CNBC_TOP, FED_RSS, BBC_BUSINESS],
+  'iran-stock': [NABZ_RSS, FARDAY_RSS, IBENA_RSS, BBC_PERSIAN],
+  'iran-rate': [IBENA_RSS, FARDAY_RSS, NABZ_RSS, BBC_PERSIAN]
+};
 const FALLBACK_RSS = {
   stock: BBC_BUSINESS, index: BBC_BUSINESS, commodity: BBC_BUSINESS, forex: BBC_BUSINESS,
   'iran-rate': BBC_PERSIAN, 'iran-stock': BBC_PERSIAN
@@ -168,6 +194,29 @@ function createNews(opts) {
     return fa ? 'بازارهای مالی' : 'financial markets';
   }
 
+  function marketKeyOf(quote) {
+    if (!quote) return null;
+    if (quote.provider === 'iran-stock') return 'iran-stock';
+    if (quote.provider === 'iran-rate') return 'iran-rate';
+    if (quote.provider === 'binance') return 'crypto';
+    if (quote.provider === 'yahoo') {
+      const s = quote.symbol || '';
+      if (s.slice(-2) === '=X') return 'forex';
+      if (s.slice(-2) === '=F') return 'commodity';
+      if (s[0] === '^') return 'index';
+      return 'stock';
+    }
+    return null;
+  }
+
+  async function firstNonEmpty(urls, limit) {
+    for (const u of urls || []) {
+      const items = await fetchRss(u);
+      if (items.length) return items.slice(0, limit || 5);
+    }
+    return [];
+  }
+
   async function symbolNews(quote, lang, limit) {
     const q = symbolQuery(quote, lang);
     if (!q) return [];
@@ -175,14 +224,20 @@ function createNews(opts) {
     const gl = (quote.provider === 'iran-rate' || quote.provider === 'iran-stock') ? 'IR' : 'US';
     const ceid = (quote.provider === 'iran-rate' || quote.provider === 'iran-stock') ? 'IR:fa' : 'US:en';
     const url = GNEWS + '?q=' + encodeURIComponent(q) + '&hl=' + hl + '&gl=' + gl + '&ceid=' + ceid;
-    return (await fetchRss(url)).slice(0, limit || 5);
+    var items = await fetchRss(url);
+    /* v1.7.0 — Google News از IP ورکر 503 می‌دهد، پس خبر نماد دیگر فقط به آن
+       وابسته نیست: اگر خالی آمد، خوراک‌های مستقیم بازار را به ترتیب می‌گیرد. */
+    if (!items.length) {
+      const key = marketKeyOf(quote);
+      if (key && MARKET_FEEDS[key]) items = await firstNonEmpty(MARKET_FEEDS[key], limit || 5);
+    }
+    return items.slice(0, limit || 5);
   }
 
   async function marketNews(market, lang, limit) {
     if (market === 'crypto') {
-      var ci = await fetchRss(COINDESK_RSS);
-      if (!ci.length) ci = await fetchRss(BBC_BUSINESS);
-      return ci.slice(0, limit || 5);
+      var ci = await firstNonEmpty(MARKET_FEEDS.crypto, limit || 5);
+      return ci;
     }
     const q = marketQuery(market, lang);
     if (!q) return [];
@@ -190,8 +245,8 @@ function createNews(opts) {
     const url = GNEWS + '?q=' + encodeURIComponent(q) + '&hl=' + (fa ? 'fa' : 'en-US') + '&gl=' + (fa ? 'IR' : 'US') + '&ceid=' + (fa ? 'IR:fa' : 'US:en');
     var items = await fetchRss(url);
     /* v1.2.3 — Google News از IP ورکر 503 می‌دهد (بلاک «ترافیک غیرعادی»)؛
-       اگر هیچ خبری نیامد، BBC را جایگزین کن تا بخش خبر خالی نماند. */
-    if (!items.length && FALLBACK_RSS[market]) items = await fetchRss(FALLBACK_RSS[market]);
+       اگر هیچ خبری نیامد، خوراک‌های مستقیم بازار را به ترتیب می‌گیرد. */
+    if (!items.length && MARKET_FEEDS[market]) items = await firstNonEmpty(MARKET_FEEDS[market], limit || 5);
     return items.slice(0, limit || 5);
   }
 

@@ -455,6 +455,67 @@ function formatAnalysis(quote, candles, tf, lang, quoteRes) {
     fa ? '⚠️ فقط تحلیل است — نه سیگنال، نه پیش‌بینی، نه توصیهٔ معامله.' : '⚠️ Analysis only — not a signal, not a prediction, not trading advice.');
 }
 
-window.OnellaAnalysis = { sma, ema, emaSeries, rsi, macd, atr, stdev, bollinger, changeBack, analyze, formatAnalysis, marketOf, MARKET_INDICATORS, adx, stoch, emaCross, obvDir, volTrend, candleRead, structure, atrSeries };
+/* v1.7.0 — تحلیل پیشرفته: جهت کوتاه‌مدت (تایم‌فریم انتخابی) و بلندمدت
+   (EMA200 + ساختار + تغییر ۵۰ کندل)، با دلیل‌ها و شرط تغییر جهت.
+   توصیفی است — نه سیگنال، نه پیش‌بینی، نه هدف، نه توصیهٔ معامله.
+   کوتاه‌مدت از همان کندل‌های تایم‌فریم انتخابی حساب می‌شود، پس با عوض کردن
+   تایم‌فریم، تحلیل هم عوض می‌شود. */
+function verdictFromVotes(votes) {
+  var net = votes.bull - votes.bear, tot = votes.bull + votes.bear;
+  var dir = net >= 3 ? 'bull' : net <= -3 ? 'bear' : 'flat';
+  return { dir: dir, bull: votes.bull, bear: votes.bear, total: tot, net: net };
+}
+function longVerdict(candles) {
+  var closes = candles.map(function (c) { return c.c; });
+  var last = closes[closes.length - 1];
+  var e200 = ema(closes, 200), e50 = ema(closes, 50), e20 = ema(closes, 20);
+  var struct = structure(candles);
+  var chg = null;
+  if (closes.length > 50 && closes[closes.length - 51]) {
+    var then = closes[closes.length - 51];
+    if (then > 0) chg = (last - then) / then * 100;
+  }
+  var bull = 0, bear = 0, reasons = [];
+  if (e200 != null) {
+    if (last > e200) { bull++; reasons.push('بالای EMA200'); }
+    else { bear++; reasons.push('زیر EMA200'); }
+  }
+  if (e50 != null && e20 != null) {
+    if (e20 > e50) { bull++; reasons.push('EMA20 بالای EMA50'); }
+    else { bear++; reasons.push('EMA20 زیر EMA50'); }
+  }
+  if (struct === 'bull') { bull++; reasons.push('سقف‌ها و کف‌های بالاتر'); }
+  else if (struct === 'bear') { bear++; reasons.push('سقف‌ها و کف‌های پایین‌تر'); }
+  if (chg != null) {
+    if (chg > 2) { bull++; reasons.push('رشد ' + Math.abs(chg).toFixed(1) + '٪ در ۵۰ کندل اخیر'); }
+    else if (chg < -2) { bear++; reasons.push('افت ' + Math.abs(chg).toFixed(1) + '٪ در ۵۰ کندل اخیر'); }
+  }
+  var net = bull - bear;
+  return {
+    dir: net >= 2 ? 'bull' : net <= -2 ? 'bear' : 'flat',
+    bull: bull, bear: bear, net: net, reasons: reasons,
+    ema200: e200, change50: chg, structure: struct,
+    candles: candles.length
+  };
+}
+function analyzeAdvanced(candles, tf) {
+  var a = analyze(candles, null);
+  var short = verdictFromVotes(a.votes);
+  var forShort = a.votes.items.filter(function (it) { return short.dir === 'bull' ? it.v > 0 : short.dir === 'bear' ? it.v < 0 : it.v === 0; }).map(function (it) { return it.label; });
+  var againstShort = a.votes.items.filter(function (it) { return short.dir === 'bull' ? it.v < 0 : short.dir === 'bear' ? it.v > 0 : it.v !== 0; }).map(function (it) { return it.label; });
+  var long = longVerdict(candles);
+  // شرط تغییر جهت کوتاه‌مدت: نزدیک‌ترین سطحی که با عبور از آن، رأی EMA20 برمی‌گردد.
+  var flip = null;
+  if (short.dir === 'bull') flip = { level: a.e20 != null ? a.e20 : a.lo20, label: a.e20 != null ? 'EMA20' : 'حمایت', side: 'below' };
+  else if (short.dir === 'bear') flip = { level: a.e20 != null ? a.e20 : a.hi20, label: a.e20 != null ? 'EMA20' : 'مقاومت', side: 'above' };
+  else flip = { level: a.e20, label: 'EMA20', side: 'either' };
+  return {
+    tf: tf || '1h', candles: candles.length,
+    short: short, shortFor: forShort, shortAgainst: againstShort,
+    long: long, flip: flip, base: a
+  };
+}
+
+window.OnellaAnalysis = { sma, ema, emaSeries, rsi, macd, atr, stdev, bollinger, changeBack, analyze, formatAnalysis, marketOf, MARKET_INDICATORS, adx, stoch, emaCross, obvDir, volTrend, candleRead, structure, atrSeries, analyzeAdvanced, verdictFromVotes, longVerdict };
 
 })();

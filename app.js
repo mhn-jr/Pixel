@@ -1,5 +1,5 @@
 'use strict';
-/* Onella Nelora Lite v1.6.0 — منطق مینی‌اپ (صفحهٔ استاتیک؛ بدون سرور).
+/* Onella Nelora Lite v1.7.0 — منطق مینی‌اپ (صفحهٔ استاتیک؛ بدون سرور).
    دیزاین = کپیِ دیدنیِ خود اپ Onella Nelora (نه فقط الهام): همان توکن‌ها،
    همان چیدمان صفحهٔ چارت (گیج بالا، تب‌های بازار، نوار انتخاب نماد، تایم‌فریم
    بالای چارت)، همان مودال سرچ (تب بازار + باکس بزرگ + ردیف آیکون‌دار + ستاره).
@@ -1013,11 +1013,17 @@
     var subLabel = p.closeLabel
       ? esc(T('قیمت پایانی', 'Closing price')) + (state.mofidAsOf ? ' • ' + esc(mofidDate(state.mofidAsOf)) : '')
       : esc(T('تغییر ۲۴ ساعت', '24h change')) + ': ' + ch;
+    var stats = '';
+    if (p.high != null || p.low != null || p.volume != null) {
+      stats = '<div class="px-stats">'
+        + (p.high != null ? '<div class="px-stat"><div class="px-lb">' + esc(T('سقف ۲۴ ساعت', 'High 24h')) + '</div><div class="px-v">' + fmt(p.high) + '</div></div>' : '')
+        + (p.low != null ? '<div class="px-stat"><div class="px-lb">' + esc(T('کف ۲۴ ساعت', 'Low 24h')) + '</div><div class="px-v">' + fmt(p.low) + '</div></div>' : '')
+        + (p.volume != null ? '<div class="px-stat"><div class="px-lb">' + esc(T('حجم ۲۴ ساعت', 'Volume 24h')) + '</div><div class="px-v">' + fmt(p.volume) + '</div></div>' : '')
+        + '</div>';
+    }
     $('priceBox').innerHTML = '<div class="big"><span class="big-v">' + fmt(p.price) + '</span><span class="unit">' + esc(unit) + '</span></div>'
       + '<div class="sub">' + subLabel + liveBadge() + '</div>'
-      + ((p.high != null) ? row(T('سقف ۲۴ ساعت', 'High 24h'), fmt(p.high)) : '')
-      + ((p.low != null) ? row(T('کف ۲۴ ساعت', 'Low 24h'), fmt(p.low)) : '')
-      + ((p.volume != null) ? row(T('حجم ۲۴ ساعت', 'Volume 24h'), fmt(p.volume)) : '')
+      + stats
       + (canSwitch ? '<div class="seg"><button type="button" data-mode="usd"' + (state.priceMode === 'usd' ? ' class="on"' : '') + '>' + esc(T('دلار', 'USD')) + '</button>'
         + '<button type="button" data-mode="iran"' + (state.priceMode === 'iran' ? ' class="on"' : '') + '>' + esc(T('تومان', 'Toman')) + '</button></div>' : '');
     bindPriceMode();
@@ -1248,6 +1254,17 @@
     var bias = score >= 70 ? 'up' : score <= 30 ? 'down' : 'neutral';
     return { score: score, bias: bias, reasons: reasons };
   }
+  /* v1.7.0 — آیکون جهت: سبز = صعودی، قرمز = نزولی، زرد = خنثی (دایره + پیکان).
+     در گیج، کارت خلاصه و کارت‌های تحلیل استفاده می‌شود. */
+  function dirSvg(dir, size) {
+    var s = size || 20;
+    if (dir === 'bull') return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" fill="#2ecc8f"/><path d="M7 14.5l3.5-4 2.5 2.5 4-4.5" stroke="#04120b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 8.5v3h-3" stroke="#04120b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    if (dir === 'bear') return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" fill="#ff5d6c"/><path d="M7 9.5l3.5 4 2.5-2.5 4 4.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 15.5v-3h-3" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" fill="#ffb347"/><path d="M7 12h10" stroke="#3a2a00" stroke-width="2.2" stroke-linecap="round"/></svg>';
+  }
+  function dirWord(dir) {
+    return dir === 'bull' ? T('صعودی', 'Bullish') : dir === 'bear' ? T('نزولی', 'Bearish') : T('خنثی', 'Neutral');
+  }
   function renderGauge() {
     var box = $('gaugeBox');
     if (!box) return;
@@ -1273,7 +1290,7 @@
       + (c.score > 0 ? '<path d="' + arc + '" fill="none" stroke="' + col + '" stroke-width="6" stroke-linecap="round"/>' : '')
       + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx.toFixed(1) + '" y2="' + ny.toFixed(1) + '" stroke="#e6e9ef" stroke-width="2" stroke-linecap="round"/>'
       + '<circle cx="' + cx + '" cy="' + cy + '" r="3" fill="#e6e9ef"/></svg>'
-      + '<div><div class="g-txt">' + esc(biasTxt) + ' · ' + esc(T('همگرایی شواهد', 'Evidence confluence')) + ' ' + c.score + '/100</div>'
+      + '<div><div class="g-txt">' + dirSvg(c.bias === 'up' ? 'bull' : c.bias === 'down' ? 'bear' : 'flat', 22) + ' ' + esc(biasTxt) + ' · ' + esc(T('همگرایی شواهد', 'Evidence confluence')) + ' ' + c.score + '/100</div>'
       + '<div class="g-sub">' + esc(sym) + (c.reasons.length ? ' · ' + esc(c.reasons.join(' ')) : '') + '</div></div></div>';
   }
 
@@ -1370,11 +1387,11 @@
     try { var _st = window.OnellaChartStyle.get(); if (_st) st = _st; } catch (e) {}
     $('tab-chart').innerHTML =
       '<div id="tfRow" class="tf-wrap"><button id="tfBtn" type="button" title="' + esc(T('تایم‌فریم', 'Timeframe')) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg><span class="tf-cur">' + esc(state.tf) + '</span> ▾</button>'
+      + '<button id="fsBtn" class="tf-fs" type="button" title="' + esc(T('تمام‌صفحه', 'Fullscreen')) + '">' + FS_ICONS.on + '</button>'
       + '<div id="tfPanel" class="tf-panel">' + tfs.map(function (k) {
           return '<button data-tf="' + k + '"' + (state.tf === k ? ' class="on"' : '') + ' type="button">' + k + '</button>';
         }).join('') + '</div></div>'
       + '<div class="chartwrap" id="chartWrap"><div id="nv" style="position:relative;height:260px"><div id="px" class="px px-ov"></div><div id="lastPxTag" style="display:none"></div><div id="xhBox" class="xh-box" dir="ltr" style="display:none"></div><canvas id="cc" dir="ltr" style="width:100%;height:260px;display:block"></canvas><button class="axis-btn" id="tvAutoBtn" type="button" style="display:none">A</button><button class="axis-btn" id="tvLatestBtn" type="button" style="display:none">⏭</button><button class="tools-fab" id="toolsFab" type="button" title="' + esc(T('ابزارهای چارت', 'Chart tools')) + '">' + ICON.tools + '</button>'
-      + '<button class="fs-fab" id="fsBtn" type="button" title="' + esc(T('تمام‌صفحه', 'Fullscreen')) + '">' + FS_ICONS.on + '</button>'
       + '<button class="set-fab" id="setBtn" type="button" title="' + esc(T('تنظیمات چارت', 'Chart settings')) + '">' + SET_ICON + '</button>'
       + '<div class="tools-strip" id="toolsStrip"><div class="strip-group" id="chartTools">' + TOOLS.map(function (t) {
           return '<button class="tbtn' + (toolOn[t[0]] ? ' on' : '') + '" data-tool="' + t[0] + '" type="button" title="' + esc(lang === 'fa' ? t[1] : t[2]) + '">' + (TOOL_ICONS[t[0]] || esc(lang === 'fa' ? t[1] : t[2])) + '</button>';
@@ -1937,16 +1954,44 @@
     var vTot = a.votes.bull + a.votes.bear;
     var vDir = a.votes.bull > a.votes.bear ? T('صعود', 'up') : a.votes.bear > a.votes.bull ? T('نزول', 'down') : T('توافق نیست', 'no agreement');
     var vLead = a.votes.bull > a.votes.bear ? a.votes.bull : a.votes.bear;
+    /* v1.7.0 — تحلیل پیشرفته: جهت کوتاه‌مدت (تایم‌فریم انتخابی) و بلندمدت،
+       با دلیل‌ها و شرط تغییر جهت + آیکون سبز/قرمز/زرد. کنار کارت‌های نمایشی
+       اطلاعات می‌نشیند — جای آن‌ها را نمی‌گیرد. توصیفی است، نه سیگنال. */
+    var adv = null;
+    try { adv = window.OnellaAnalysis.analyzeAdvanced ? window.OnellaAnalysis.analyzeAdvanced(state.candles, state.tf) : null; } catch (e) {}
+    var verdictHtml = '';
+    if (adv) {
+      var sDir = adv.short.dir, lDir = adv.long.dir;
+      var sWord = dirWord(sDir), lWord = dirWord(lDir);
+      var sCls = sDir === 'bull' ? 'up' : sDir === 'bear' ? 'dn' : '';
+      var lCls = lDir === 'bull' ? 'up' : lDir === 'bear' ? 'dn' : '';
+      var sFor = adv.shortFor.length ? adv.shortFor.join('، ') : '—';
+      var sAgainst = adv.shortAgainst.length ? adv.shortAgainst.join('، ') : '—';
+      var lReasons = adv.long.reasons.length ? adv.long.reasons.join('؛ ') : '—';
+      var flipTxt = '';
+      if (adv.flip) {
+        if (adv.flip.side === 'below') flipTxt = esc(T('شرط تغییر جهت', 'What would change it')) + ': ' + esc(T('بسته شدن زیر', 'a close below')) + ' ' + esc(adv.flip.label) + ' ' + fmt(adv.flip.level);
+        else if (adv.flip.side === 'above') flipTxt = esc(T('شرط تغییر جهت', 'What would change it')) + ': ' + esc(T('بسته شدن بالای', 'a close above')) + ' ' + esc(adv.flip.label) + ' ' + fmt(adv.flip.level);
+        else flipTxt = esc(T('شرط تغییر جهت', 'What would change it')) + ': ' + esc(T('بسته شدن بالای یا زیر', 'a close above or below')) + ' ' + esc(adv.flip.label) + ' ' + fmt(adv.flip.level);
+      }
+      var thinNote = (adv.long.candles < 200) ? '<br><span style="color:var(--mut)">' + esc(T('دادهٔ بلندمدت کم است', 'Long-term data is thin')) + ' (' + adv.long.candles + ' ' + esc(T('کندل', 'candles')) + ')</span>' : '';
+      verdictHtml = '<div class="an-card wide an-verdict"><h4>' + ICON.activity + esc(T('تحلیل پیشرفته', 'Advanced analysis')) + ' · <span style="color:var(--acc)">' + esc(state.tf) + '</span></h4>'
+        + '<div class="verdict-row"><span class="verdict-ic">' + dirSvg(sDir, 26) + '</span><span class="verdict-tx"><b>' + esc(T('کوتاه‌مدت', 'Short term')) + ' (' + esc(state.tf) + '):</b> <span class="an-big ' + sCls + '" style="font-size:17px">' + esc(sWord) + '</span> <span style="color:var(--mut)">· ' + adv.short.bull + ' ' + esc(T('موافق صعود', 'bull')) + ' / ' + adv.short.bear + ' ' + esc(T('موافق نزول', 'bear')) + '</span><br><span class="an-sub">' + esc(T('موافق', 'For')) + ': ' + esc(sFor) + '<br>' + esc(T('مخالف', 'Against')) + ': ' + esc(sAgainst) + '</span></span></div>'
+        + '<div class="verdict-row"><span class="verdict-ic">' + dirSvg(lDir, 26) + '</span><span class="verdict-tx"><b>' + esc(T('بلندمدت', 'Long term')) + ':</b> <span class="an-big ' + lCls + '" style="font-size:17px">' + esc(lWord) + '</span> <span style="color:var(--mut)">· ' + adv.long.bull + ' ' + esc(T('موافق صعود', 'bull')) + ' / ' + adv.long.bear + ' ' + esc(T('موافق نزول', 'bear')) + '</span><br><span class="an-sub">' + esc(lReasons) + thinNote + '</span></span></div>'
+        + (flipTxt ? '<div class="verdict-flip">' + flipTxt + '</div>' : '')
+        + '</div>';
+    }
     var sumTxt = esc(T('روند', 'Trend')) + ' ' + esc(trendTxt)
       + (adxW ? ' · ' + esc(T('قدرت روند', 'trend strength')) + ' ' + esc(adxW) + (a.adx ? ' (ADX ' + a.adx.adx.toFixed(0) + ')' : '') : '')
       + '<br>' + esc(T('همگرایی شاخص‌ها', 'Indicator agreement')) + ': ' + (vTot ? vLead + ' ' + esc(T('از', 'of')) + ' ' + vTot + ' ' + esc(T('موافق', 'agree on')) + ' ' + esc(vDir) : '—')
       + (structW ? '<br>' + esc(T('ساختار', 'Structure')) + ': ' + esc(structW) : '')
       + '<br>' + esc(T('نزدیک‌ترین سطح', 'Nearest level')) + ': ' + esc(T('مقاومت', 'Resistance')) + ' ' + fmt(cs2 ? cs2.R1 : a.hi20) + ' · ' + esc(T('حمایت', 'Support')) + ' ' + fmt(cs2 ? cs2.S1 : a.lo20);
     var html = '<div class="an-grid">'
+      + verdictHtml
       + '<div class="an-card wide an-sum"><h4>' + ICON.book + esc(T('خلاصهٔ تحلیل', 'Analysis summary')) + '</h4>'
-      + '<div class="an-big ' + trendCls + '">' + esc(trendTxt) + '</div>'
+      + '<div class="an-big ' + trendCls + '">' + dirSvg(a.trend === 'up' ? 'bull' : a.trend === 'down' ? 'bear' : 'flat', 22) + ' ' + esc(trendTxt) + '</div>'
       + '<div class="an-sub">' + sumTxt + '</div></div>'
-      + '<div class="an-card an-trend"><h4>' + ICON.trendUp + esc(T('روند', 'Trend')) + '</h4>'
+      + '<div class="an-card an-trend"><h4>' + ICON.trendUp + esc(T('روند', 'Trend')) + ' ' + dirSvg(a.trend === 'up' ? 'bull' : a.trend === 'down' ? 'bear' : 'flat', 18) + '</h4>'
       + '<div class="an-big ' + trendCls + '">' + esc(trendTxt) + '</div>'
       + '<div class="an-sub">EMA20 ' + fmt(a.e20) + ' · EMA50 ' + fmt(a.e50)
       + (a.e200 != null ? '<br>EMA200 ' + fmt(a.e200) + ' (' + (a.longTrend === 'up' ? T('صعودی', 'up') : a.longTrend === 'down' ? T('نزولی', 'down') : T('خنثی', 'neutral')) + ')' : '')
@@ -1954,7 +1999,7 @@
       + (adxW ? '<br>ADX ' + a.adx.adx.toFixed(1) + ' (' + esc(adxW) + ') · DI+ ' + a.adx.diPlus.toFixed(0) + ' / DI− ' + a.adx.diMinus.toFixed(0) : '')
       + (structW ? '<br>' + esc(structW) : '')
       + '<br>' + esc(T('تغییر', 'Change')) + ' ' + fmtPct(chgS) + ' · ' + fmtPct(chgL) + '</div></div>'
-      + '<div class="an-card an-mom"><h4>' + ICON.activity + 'RSI / MACD / Stoch</h4>'
+      + '<div class="an-card an-mom"><h4>' + ICON.activity + 'RSI / MACD / Stoch ' + dirSvg(a.rsi == null ? 'flat' : a.rsi >= 55 ? 'bull' : a.rsi <= 45 ? 'bear' : 'flat', 18) + '</h4>'
       + '<div class="an-big">' + (a.rsi == null ? '—' : a.rsi.toFixed(1)) + ' <small style="font-size:12px;color:var(--mut)">' + esc(rsiWord) + '</small></div>'
       + '<div class="an-sub">MACD ' + esc(macdTxt)
       + (a.macd ? (a.macdAboveZero ? ' · ' + esc(T('بالای صفر', 'above zero')) : ' · ' + esc(T('زیر صفر', 'below zero'))) + (a.macdHistRising != null ? ' · ' + esc(T('هیستوگرام', 'histogram')) + ' ' + (a.macdHistRising ? esc(T('در حال رشد', 'growing')) : esc(T('در حال کوچک شدن', 'shrinking'))) : '') + '<br>' + esc(T('خط', 'Line')) + ' ' + fmt(a.macd.line, 4) + ' · ' + esc(T('سیگنال', 'Signal')) + ' ' + fmt(a.macd.signal, 4) : '')
@@ -1971,7 +2016,7 @@
       + (volTW ? '<br>' + esc(T('روند حجم', 'Volume trend')) + ': ' + esc(volTW) : '')
       + (obvW ? '<br>OBV: ' + esc(obvW) : '')
       + '</div></div>' : '')
-      + '<div class="an-card an-cndl"><h4>' + ICON.chart + esc(T('کندل آخر', 'Last candle')) + '</h4>'
+      + '<div class="an-card an-cndl"><h4>' + ICON.chart + esc(T('کندل آخر', 'Last candle')) + ' ' + dirSvg(a.candle == null ? 'flat' : a.candle.dir === 'up' ? 'bull' : a.candle.dir === 'down' ? 'bear' : 'flat', 18) + '</h4>'
       + '<div class="an-big">' + (shapeW || '—') + '</div>'
       + '<div class="an-sub">' + (a.candle ? esc(T('بدنه', 'Body')) + ' ' + a.candle.bodyPct.toFixed(0) + '% · ' + esc(T('فیتیلهٔ بالا', 'upper wick')) + ' ' + a.candle.upperWickPct.toFixed(0) + '% · ' + esc(T('فیتیلهٔ پایین', 'lower wick')) + ' ' + a.candle.lowerWickPct.toFixed(0) + '%' + '<br>' + esc(T('جهت کندل', 'Candle direction')) + ': ' + (a.candle.dir === 'up' ? esc(T('صعودی', 'up')) : a.candle.dir === 'down' ? esc(T('نزولی', 'down')) : esc(T('خنثی', 'flat'))) : '—') + '</div></div>'
       + '<div class="an-card wide an-lvl"><h4>' + ICON.levels + esc(T('سطوح', 'Levels')) + '</h4>'
@@ -2063,7 +2108,7 @@
       items.forEach(function (it) {
         var tag = symTag;
         var lv = N.impactOf(it.title);
-        html += '<div class="news-card"><div class="news-tag"><span class="news-chip">[' + esc(tag) + ']</span>' + impactBadge(lv) + '</div>'
+        html += '<div class="news-card imp-' + (lv === 'high' ? 'high' : lv === 'medium' ? 'med' : 'low') + '"><div class="news-tag"><span class="news-chip">[' + esc(tag) + ']</span>' + impactBadge(lv) + '</div>'
           + '<div class="news-title">' + esc(it.title) + '</div>'
           + (it.time ? '<div class="news-time">' + new Date(it.time).toUTCString().slice(5, 22) + ' UTC</div>' : '')
           + '</div>';
@@ -2358,7 +2403,7 @@
         /* v1.2.2 — درصد تاثیر حذف شد (دستور مالک: ۹۵٪/۴۵٪ عددهای ساختگی و
            گمراه‌کننده بودند): مثل تب خبرِ نماد، فقط سطح تاثیر با بج نشان داده
            می‌شود — بالا/متوسط/کم — بدون هیچ درصدی. */
-        newsHtml += '<div class="news-card"><div class="news-tag"><span class="news-chip">[' + esc(tag) + ']</span>' + impactBadge(lv) + '</div>'
+        newsHtml += '<div class="news-card imp-' + (lv === 'high' ? 'high' : lv === 'medium' ? 'med' : 'low') + '"><div class="news-tag"><span class="news-chip">[' + esc(tag) + ']</span>' + impactBadge(lv) + '</div>'
           + '<div class="news-title">' + esc(it.title) + '</div>'
           + (it.time ? '<div class="news-time">' + new Date(it.time).toUTCString().slice(5, 22) + ' UTC</div>' : '')
           + '</div>';
