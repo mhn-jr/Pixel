@@ -1,5 +1,10 @@
 'use strict';
-/* Onella Nelora Lite v1.8.0 — منطق مینی‌اپ (صفحهٔ استاتیک؛ بدون سرور).
+/* Onella Nelora Lite v1.9.0 — منطق مینی‌اپ (صفحهٔ استاتیک؛ بدون سرور).
+   v1.9.0: (۱) نام هیچ منبع/سرویس در UI نمی‌آید — برچسب‌ها و hintها عمومی‌اند؛
+   (۲) ابزارهای چارت بیشتر شد: ایچیموکو + روبان EMA، پنل استوکاستیک + OBV،
+   رسم پرتو افقی + خط عمودی؛ (۳) هشدار قیمت به سبک تریدینگ‌ویو: دیالوگ
+   (شرط/عبور/تکرار/انقضا/پیام) + نگه‌داشتن روی محور قیمت → منوی هشدار/خط افقی
+   + خط هشدار روی چارت؛ بررسی فقط وقتی مینی‌اپ باز است (بدون پوش/سرور).
    دیزاین = کپیِ دیدنیِ خود اپ Onella Nelora (نه فقط الهام): همان توکن‌ها،
    همان چیدمان صفحهٔ چارت (گیج بالا، تب‌های بازار، نوار انتخاب نماد، تایم‌فریم
    بالای چارت)، همان مودال سرچ (تب بازار + باکس بزرگ + ردیف آیکون‌دار + ستاره).
@@ -38,7 +43,7 @@
   var L = {
     en: { catalog: 'Catalog', back: '‹ Back', price: 'Price', change24: '24h change', high: 'High 24h', low: 'Low 24h', volume: 'Volume 24h',
       chart: 'Chart', analysis: 'Analysis', fundamentals: 'Fundamentals', news: 'News', impactNews: 'Important & impactful news',
-      notAvailable: 'Not available right now.', needProxy: 'Needs the proxy — set PROXY_URL in app.js (see README).',
+      notAvailable: 'Not available right now.', needProxy: 'Data is not available from here right now.',
       iranStockNote: 'Iran stocks need the bot on your PC — they are blocked from foreign IPs.',
       loading: 'Loading…', noCandles: 'No candles for this symbol.', noNews: 'No news found.', noFund: 'No fundamentals for this symbol.',
       trend: 'Trend', rsi: 'RSI (14)', bollinger: 'Bollinger (20, 2σ)', support: 'Support', resistance: 'Resistance', atr: 'ATR (14)',
@@ -52,7 +57,7 @@
       noChangeData: 'No daily-change data for this market in the source.', needsWorker120: 'Needs the new Worker (v1.2.0) — redeploy worker.js on Cloudflare.' },
     fa: { catalog: 'کاتولوگ', back: '‹ بازگشت', price: 'قیمت', change24: 'تغییر ۲۴ ساعت', high: 'سقف ۲۴ ساعت', low: 'کف ۲۴ ساعت', volume: 'حجم ۲۴ ساعت',
       chart: 'چارت', analysis: 'تحلیل', fundamentals: 'بنیادی', news: 'خبر', impactNews: 'خبرهای مهم و تاثیرگذار',
-      notAvailable: 'فعلاً در دسترس نیست.', needProxy: 'به پروکسی نیاز دارد — PROXY_URL را در app.js بگذار (README را ببین).',
+      notAvailable: 'فعلاً در دسترس نیست.', needProxy: 'داده فعلاً از اینجا در دسترس نیست.',
       iranStockNote: 'سهام ایران به ربات روی PC نیاز دارد — از IP خارجی بلاک است.',
       loading: 'در حال بارگذاری…', noCandles: 'برای این نماد کندل نیست.', noNews: 'خبری پیدا نشد.', noFund: 'برای این نماد بنیادی نیست.',
       trend: 'روند', rsi: 'RSI (14)', bollinger: 'بولینگر (۲۰، ۲σ)', support: 'حمایت', resistance: 'مقاومت', atr: 'ATR (14)',
@@ -584,6 +589,7 @@
   var MKT_COLOR = { crypto: 'var(--p-vol)', stocks: 'var(--p-trend)', etf: 'var(--p-etf)', forex: 'var(--p-mom)', commodities: 'var(--p-vola)', iran: 'var(--p-cndl)', indices: 'var(--p-lvl)', boorse: 'var(--p-cndl)', farabourse: 'var(--p-cndl)' };
   /* v1.2.1 — آیکون‌های SVG اپ (به‌جای ایموجی؛ stroke currentColor، هماهنگ با تم). */
   var ICON = {
+    bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.7 21a2 2 0 0 1-3.4 0"></path></svg>',
     chart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 21h18"/><path d="M7 17v-6"/><path d="M12 17V7"/><path d="M17 17v-3"/></svg>',
     dash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="10" rx="1.5"/><rect x="13" y="3" width="8" height="6" rx="1.5"/><rect x="13" y="11" width="8" height="10" rx="1.5"/><rect x="3" y="15" width="8" height="6" rx="1.5"/></svg>',
     flame: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12c2-2.96 0-7-1-8 0 3.038-1.773 4.741-3 6-1.226 1.26-2 3.24-2 5a6 6 0 1 0 12 0c0-1.532-1.056-3.94-2-5-1.786 3-2.791 3-4 2z"/></svg>',
@@ -1018,8 +1024,7 @@
     var iranOnly = !state.priceUsd && !!state.priceIran;
     if (!p) {
       $('priceBox').innerHTML = '<div class="na">' + esc(T('فعلاً در دسترس نیست.', 'Not available right now.')) + '</div>'
-        + (iranBlocked ? '<div class="hint">' + esc(T('سهام ایران به ربات روی PC نیاز دارد — از IP خارجی بلاک است.', 'Iran stocks need the bot on your PC — they are blocked from foreign IPs.')) + '</div>'
-        : (needProxy ? '<div class="hint">' + esc(T('به پروکسی نیاز دارد — PROXY_URL را در app.js بگذار (README را ببین).', 'Needs the proxy — set PROXY_URL in app.js (see README).')) + '</div>' : ''))
+        + (needProxy ? '<div class="hint">' + esc(T('داده فعلاً از اینجا در دسترس نیست.', 'Data is not available from here right now.')) + '</div>' : '')
         + (iranOnly ? '<div class="seg"><button type="button" data-mode="iran">' + esc(T('قیمت ایران (تومان)', 'Iran price (Toman)')) + '</button></div>' : '');
       bindPriceMode();
       return;
@@ -1028,8 +1033,7 @@
     var ch = (typeof p.changePct === 'number') ? ' <span class="' + (p.changePct >= 0 ? 'up' : 'dn') + '">' + fmtPct(p.changePct) + '</span>' : '';
     var subLabel = p.closeLabel
       ? esc(T('قیمت پایانی', 'Closing price')) + (state.mofidAsOf ? ' • ' + esc(mofidDate(state.mofidAsOf)) : '')
-      : esc(T('تغییر ۲۴ ساعت', '24h change')) + ': ' + ch;
-    var stats = '';
+      : esc(T('تغییر ۲۴ ساعت', '24h change')) + ': ' + ch;    var stats = '';
     if (p.high != null || p.low != null || p.volume != null) {
       stats = '<div class="px-stats">'
         + (p.high != null ? '<div class="px-stat"><div class="px-lb">' + esc(T('سقف ۲۴ ساعت', 'High 24h')) + '</div><div class="px-v">' + fmt(p.high) + '</div></div>' : '')
@@ -1177,6 +1181,8 @@
     refreshAxisBtns();
     if (state.tab === 'analysis') renderAnalysis();
     if (q.provider === 'binance') startLive();
+    checkAlertsNow(curAlertPrice()); // v1.9.0 — قیمت اول هم هشدار را چک می‌کند (سمت را می‌سنجد، شلیک نمی‌کند).
+    startAlertPoll(); // v1.9.0 — برای بازارهای غیرکریپتو، پولینگ ۳۰ ثانیه‌ای هشدار.
   }
   function aggregateCandles(csArr, n) {
     var out = [];
@@ -1353,9 +1359,10 @@
     var toolOn = window.on || {};
     /* v1.2.2 — ۱۱ ابزار: ۵ قبلی + EMA، VWAP، دونچیان، کلتنر، سوپرترند، SAR.
        همه پشت دکمهٔ شناور (FAB) روی چارت باز می‌شوند، نه ردیف زیر چارت. */
-    var TOOLS = [['fib', 'فیبوناچی', 'Fibonacci'], ['sr', 'حمایت/مقاومت', 'Support/Resistance'], ['tl', 'خط روند', 'Trendline'], ['bb', 'بولینگر', 'Bollinger'], ['pv', 'پیوت', 'Pivot'], ['ema', 'میانگین نمایی', 'EMA'], ['vwap', 'وی‌واپ', 'VWAP'], ['donch', 'دونچیان', 'Donchian'], ['kelt', 'کلتنر', 'Keltner'], ['super', 'سوپرترند', 'Supertrend'], ['sar', 'پارابولیک', 'SAR']];
-    /* v1.4.0 — ۵ ابزار رسم تعاملی (مرحله ۳): در همان پنل شناور، زیر ابزارهای محاسبه‌شده. */
-    var DRAW_TOOLS = [['trend', 'خط روند', 'Trendline'], ['hline', 'خط افقی', 'Horizontal'], ['rect', 'مستطیل', 'Rectangle'], ['fib', 'فیبوناچی', 'Fibonacci'], ['text', 'متن', 'Text']];
+    var TOOLS = [['fib', 'فیبوناچی', 'Fibonacci'], ['sr', 'حمایت/مقاومت', 'Support/Resistance'], ['tl', 'خط روند', 'Trendline'], ['bb', 'بولینگر', 'Bollinger'], ['pv', 'پیوت', 'Pivot'], ['ema', 'میانگین نمایی', 'EMA'], ['vwap', 'وی‌واپ', 'VWAP'], ['donch', 'دونچیان', 'Donchian'], ['kelt', 'کلتنر', 'Keltner'], ['super', 'سوپرترند', 'Supertrend'], ['sar', 'پارابولیک', 'SAR'], ['ichi', 'ایچیموکو', 'Ichimoku'], ['ribbon', 'روبان میانگین', 'EMA ribbon']];
+    /* v1.4.0 — ۵ ابزار رسم تعاملی (مرحله ۳): در همان پنل شناور، زیر ابزارهای محاسبه‌شده.
+       v1.9.0 — +۲ رسم: پرتو افقی (از نقطه به راست) و خط عمودی (در زمان نقطه). */
+    var DRAW_TOOLS = [['trend', 'خط روند', 'Trendline'], ['hline', 'خط افقی', 'Horizontal'], ['rect', 'مستطیل', 'Rectangle'], ['fib', 'فیبوناچی', 'Fibonacci'], ['text', 'متن', 'Text'], ['ray', 'پرتو افقی', 'Ray'], ['vline', 'خط عمودی', 'Vertical']];
     /* v1.5.0 — آیکون‌های نوار ابزار (SVG ساده، بدون self-closing تا ماک تست هم parse کند). */
     var IC = function (inner) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + inner + '</svg>'; };
     var TOOL_ICONS = {
@@ -1369,17 +1376,22 @@
       donch: IC('<path d="M4 6h16"></path><path d="M4 18h16"></path><path d="M4 6v12"></path><path d="M20 6v12"></path>'),
       kelt: IC('<path d="M4 7h16"></path><path d="M4 17h16"></path><path d="M4 12h16" stroke-dasharray="3 3"></path>'),
       super: IC('<path d="M4 18h6v-6h6v-4h4"></path>'),
-      sar: IC('<circle cx="6" cy="18" r="1.8" fill="currentColor" stroke="none"></circle><circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none"></circle><circle cx="18" cy="6" r="1.8" fill="currentColor" stroke="none"></circle>')
+      sar: IC('<circle cx="6" cy="18" r="1.8" fill="currentColor" stroke="none"></circle><circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none"></circle><circle cx="18" cy="6" r="1.8" fill="currentColor" stroke="none"></circle>'),
+      ichi: IC('<path d="M4 9c4-3 12-3 16 0"></path><path d="M4 15c4 3 12 3 16 0"></path><path d="M4 12h16" stroke-dasharray="3 3"></path>'),
+      ribbon: IC('<path d="M3 8c5-3 10 3 18-2"></path><path d="M3 13c5-3 10 3 18-2"></path><path d="M3 18c5-3 10 3 18-2"></path>')
     };
     var DRAW_ICONS = {
       trend: IC('<path d="M5 19L19 5"></path><circle cx="5" cy="19" r="2" fill="currentColor" stroke="none"></circle><circle cx="19" cy="5" r="2" fill="currentColor" stroke="none"></circle>'),
       hline: IC('<path d="M3 12h18"></path>'),
       rect: IC('<rect x="5" y="7" width="14" height="10" rx="1"></rect>'),
       fib: IC('<path d="M5 5l14 14"></path><path d="M5 8h14"></path><path d="M5 13h14"></path><path d="M5 18h14"></path>'),
-      text: IC('<path d="M6 6h12"></path><path d="M12 6v12"></path>')
+      text: IC('<path d="M6 6h12"></path><path d="M12 6v12"></path>'),
+      ray: IC('<path d="M4 12h16"></path><path d="M16 8l4 4-4 4"></path>'),
+      vline: IC('<path d="M12 3v18"></path><path d="M8 7l4-4 4 4"></path>')
     };
     var TRASH_ICON = IC('<path d="M5 7h14"></path><path d="M9 7V5h6v2"></path><path d="M8 7l1 12h6l1-12"></path><path d="M10 11v5"></path><path d="M14 11v5"></path>');
     var CLEAR_ICON = IC('<path d="M6 6l12 12"></path><path d="M18 6L6 18"></path>');
+    var BELL_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.7 21a2 2 0 0 1-3.4 0"></path></svg>';
     var SET_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="#f06a15" stroke-width="1.8" stroke-linecap="round"><path d="M7 3v4"></path><path d="M7 15v6"></path><rect x="4.5" y="7" width="5" height="8" rx="1" fill="#f06a15" stroke="none"></rect><path d="M17 3v3"></path><path d="M17 14v7"></path><rect x="14.5" y="6" width="5" height="8" rx="1" fill="#f06a15" stroke="none"></rect></svg>';
     /* v1.6.0 — تمام‌صفحه از نوار ابزار پایین چارت به گوشهٔ بالا-راست چارت رفت. */
     var FS_ICONS = {
@@ -1427,7 +1439,7 @@
           return '<div class="set-row"><span>' + esc(lang === 'fa' ? tg[1] : tg[2]) + '</span><button class="switch' + (st[tg[0]] ? ' on' : '') + '" data-set="' + tg[0] + '" type="button" aria-label="' + esc(lang === 'fa' ? tg[1] : tg[2]) + '"></button></div>';
         }).join('') + '</div></div></div></div>'
       + '<div class="tool-note-bar" id="toolNote" style="display:none"></div>'
-      + '<div class="panes" id="panes"><div class="pane-row" id="rsiRow"><div class="pane-h"><span>RSI (14)</span><b id="rsiVal">—</b></div><canvas id="rsiCv" class="pane-cv" dir="ltr"></canvas></div><div class="pane-row" id="macdRow"><div class="pane-h"><span>MACD (12, 26, 9)</span><b id="macdVal">—</b></div><canvas id="macdCv" class="pane-cv" dir="ltr"></canvas></div></div>'
+      + '<div class="panes" id="panes"><div class="pane-row" id="rsiRow"><div class="pane-h"><span>RSI (14)</span><b id="rsiVal">—</b></div><canvas id="rsiCv" class="pane-cv" dir="ltr"></canvas></div><div class="pane-row" id="macdRow"><div class="pane-h"><span>MACD (12, 26, 9)</span><b id="macdVal">—</b></div><canvas id="macdCv" class="pane-cv" dir="ltr"></canvas></div><div class="pane-row" id="stochRow" style="display:none"><div class="pane-h"><span>استوکاستیک (14, 3, 3)</span><b id="stochVal">—</b></div><canvas id="stochCv" class="pane-cv" dir="ltr"></canvas></div><div class="pane-row" id="obvRow" style="display:none"><div class="pane-h"><span>OBV</span><b id="obvVal">—</b></div><canvas id="obvCv" class="pane-cv" dir="ltr"></canvas></div></div>'
       + '<div class="toolbar" id="chartToolbar">'
       + '<button class="tbtn" id="typeBtn" type="button">' + esc(chartTypeLabel(cur)) + '</button>'
       + '<button class="tbtn' + (maOn ? ' on' : '') + '" id="maBtn" type="button">MA20</button>'
@@ -1436,6 +1448,9 @@
       + '<button class="tbtn' + (emaOn ? ' on' : '') + '" id="emaBtn" type="button">EMA20</button>'
       + '<button class="tbtn on" id="rsiBtn" type="button">RSI</button>'
       + '<button class="tbtn on" id="macdBtn" type="button">MACD</button>'
+      + '<button class="tbtn" id="stochBtn" type="button">Stoch</button>'
+      + '<button class="tbtn" id="obvBtn" type="button">OBV</button>'
+      + '<button class="tbtn" id="alertBtn" type="button">' + ICON.bell + '<span class="al-badge" id="alertBadge" style="display:none">0</span></button>'
       + '<button class="tbtn" id="zoomOutBtn" type="button">−</button>'
       + '<button class="tbtn" id="zoomInBtn" type="button">+</button>'
       + '</div>'
@@ -1503,9 +1518,13 @@
       } catch (e) {}
     });
     // v1.3.0 — پنل‌های RSI/MACD (مرحله ۲): خاموش/روشن از نوار ابزار؛ حالت در
-    // localStorage می‌ماند (chart-panes.js).
+    // localStorage می‌ماند (chart-panes.js). v1.9.0 — + استوکاستیک و OBV.
     $('rsiBtn').addEventListener('click', function () { try { window.OnellaPanes.toggle('rsi'); } catch (e) {} });
     $('macdBtn').addEventListener('click', function () { try { window.OnellaPanes.toggle('macd'); } catch (e) {} });
+    $('stochBtn').addEventListener('click', function () { try { window.OnellaPanes.toggle('stoch'); } catch (e) {} });
+    $('obvBtn').addEventListener('click', function () { try { window.OnellaPanes.toggle('obv'); } catch (e) {} });
+    $('alertBtn').addEventListener('click', function () { openAlertModal(); });
+    refreshAlertBadge();
     try { if (window.OnellaPanes) window.OnellaPanes.applyVis(); } catch (e) {}
     $('zoomInBtn').addEventListener('click', function () { zoomBy(1.4); });
     $('zoomOutBtn').addEventListener('click', function () { zoomBy(1 / 1.4); });
@@ -1613,6 +1632,7 @@
     var pointers = new Map(), pinchD = 0, pinchSt = 0, dragX = null, dragY = null, dragPan = 0;
     var pm0 = null, gMode = null, gVert = false, gMoved = false, gx0 = 0, gy0 = 0, gs0 = 7, gPan0 = 0, gLastTap = { t: 0, x: 0, y: 0 };
     var lpTimer = null, lpX = 0, lpY = 0, xhActive = false, drawAnchor = null;
+    var lpAxisTimer = null, lpAxisX = 0, lpAxisY = 0, lpAxisPrice = null, lpAxisCX = 0, lpAxisCY = 0;
     function DW() { try { return window.OnellaDraw || null; } catch (e) { return null; } }
     function ptrPos(e) { var r = cvs.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top, w: r.width, h: r.height }; }
     function setCurFromX(p) { var st2 = ((window.__ov || {}).st || 7); var n = Math.min(cs.length, Math.floor((p.w - 46) / st2)); var i = Math.floor(p.x / st2); window.cur = (i >= 0 && i < n) ? i : -1; }
@@ -1659,6 +1679,21 @@
           try { window.head(); window.draw(); } catch (err) {}
         }, 380);
       }
+      /* v1.9.0 — نگه‌داشتن انگشت روی محور قیمت = منوی قیمت (هشدار / خط افقی)،
+         مثل تریدینگ‌ویو؛ حرکت زودهنگام = لغو (همان pscale قبلی). */
+      if (zoneOf(p) === 'p') {
+        var Gp = window.__geo || {};
+        if (Gp.inv && Gp.ph) {
+          lpAxisX = p.x; lpAxisY = p.y; lpAxisCX = e.clientX; lpAxisCY = e.clientY;
+          lpAxisPrice = Gp.inv(Math.max(0, Math.min(Gp.ph, p.y)));
+          if (lpAxisTimer) { try { clearTimeout(lpAxisTimer); } catch (err) {} }
+          lpAxisTimer = setTimeout(function () {
+            lpAxisTimer = null;
+            if (pointers.size !== 1 || gMoved) return;
+            showPriceAxisMenu(lpAxisPrice, lpAxisCX, lpAxisCY);
+          }, 380);
+        }
+      }
     });
     cvs.addEventListener('pointermove', function (e) {
       var p = ptrPos(e);
@@ -1681,6 +1716,7 @@
         /* v1.3.0 — حرکت زودهنگام = لغو long-press (همان pan قبلی)؛ در حالت
            کراس‌هیر، حرکت انگشت فقط نشانگر را جابه‌جا می‌کند، نه چارت را. */
         if (lpTimer && Math.hypot(p.x - lpX, p.y - lpY) > 10) { try { clearTimeout(lpTimer); } catch (err) {} lpTimer = null; }
+        if (lpAxisTimer && Math.hypot(p.x - lpAxisX, p.y - lpAxisY) > 10) { try { clearTimeout(lpAxisTimer); } catch (err) {} lpAxisTimer = null; }
         /* v1.4.0 — حالت رسم: کشیدن = خط راهنمای رسم؛ حالت جابه‌جایی: کشیدن = حرکت رسم. */
         if (gMode === 'draw') { var dwM = DW(); if (dwM) dwM.setPreview(dwM.pointFromXY(p.x, p.y)); try { window.draw(); } catch (err) {} return; }
         if (gMode === 'move') { var dwV = DW(); if (dwV) dwV.moveTo(p.x, p.y); try { window.draw(); } catch (err) {} return; }
@@ -1722,6 +1758,7 @@
       var wasMode = gMode;
       pointers.delete(e.pointerId);
       if (lpTimer) { try { clearTimeout(lpTimer); } catch (err) {} lpTimer = null; }
+      if (lpAxisTimer) { try { clearTimeout(lpAxisTimer); } catch (err) {} lpAxisTimer = null; }
       if (pointers.size < 2) pinchD = 0;
       if (pointers.size === 0) {
         dragX = null; dragY = null;
@@ -1813,6 +1850,7 @@
     if (live.timer) { clearInterval(live.timer); live.timer = null; }
     if (live.mode) { live.mode = null; state.liveMode = null; }
     live.sym = null; live.tf = null;
+    stopAlertPoll(); // v1.9.0
   }
   /* v1.2.1 — برچسب قیمت آخر روی محور قیمت (سبک TradingView): دقیقاً همان کندلی را
      نشان می‌دهد که head() نشان می‌دهد (کراس‌هیر فعال → کندل زیر کراس‌هیر، وگرنه
@@ -1901,6 +1939,7 @@
       state.priceUsd = tk;
       applyDispMul(); // v1.6.0 — مخرج نرخ تبدیل تومان با قیمت تازهٔ دلاری به‌روز می‌شود.
       updateLivePrice(tk.price);
+      checkAlertsNow(state.priceMode === 'iran' && state.priceIran ? state.priceIran.price : tk.price); // v1.9.0
       if (typeof tk.changePct === 'number') {
         // تغییر ۲۴س را تازه کن — renderPriceBox خودش بج زنده را هم می‌گذارد.
         renderPriceBox(false, false);
@@ -1922,11 +1961,13 @@
     var cs = state.candles;
     if (!cs || !cs.length) return;
     var last = cs[cs.length - 1];
-    if (last && last.t === k.t) cs[cs.length - 1] = k;
-    else if (!last || k.t > last.t) { cs.push(k); if (cs.length > 500) cs.shift(); }
+    if (last && last.t === k.t) { cs[cs.length - 1] = k; }
+    else if (!last || k.t > last.t) { cs.push(k); }
     else return;
+    if (cs.length > 500) cs.splice(0, cs.length - 500);
     window.cs = cs;
     updateLivePrice(k.c);
+    checkAlertsNow(k.c); // v1.9.0 — تیک WS کندل هم هشدار را چک می‌کند.
     throttledDraw();
   }
   function mergeLiveKlines(ks) {
@@ -1955,6 +1996,229 @@
     if (document.hidden) stopLive();
     else if (state.view === 'symbol' && state.quote && state.quote.provider === 'binance' && state.candles) startLive();
   });
+
+  /* ---- هشدار قیمت v1.9.0 (به سبک تریدینگ‌ویو) ----
+     موتور: alerts-src.js (localStorage + تشخیص عبور با تغییر سمت).
+     بررسی فقط وقتی مینی‌اپ باز است: کریپتو با تیک زنده/پولینگ، بقیه با پولینگ
+     ۳۰ ثانیه‌ای وقتی هشدار فعال دارند. وقتی بسته است هیچ هشداری نمی‌رسد. */
+  var alertTimer = null;
+  var alertBannerTimer = null, axisMenuPrice = null;
+  function curAlertPrice() {
+    if (state.priceMode === 'iran' && state.priceIran) return state.priceIran.price;
+    return state.priceUsd ? state.priceUsd.price : null;
+  }
+  function checkAlertsNow(price) {
+    var q = state.quote;
+    if (!q || price == null || typeof price !== 'number' || !isFinite(price)) return;
+    var fired = [];
+    try { if (window.OnellaAlerts) fired = window.OnellaAlerts.check(q.symbol, price, Date.now()) || []; } catch (e) {}
+    if (!fired.length) return;
+    fired.forEach(showAlertFired);
+    refreshAlertBadge();
+    try { window.draw(); } catch (e) {}
+  }
+  function showAlertFired(a) {
+    ensureAlertUI();
+    var b = $('alertBanner');
+    if (!b) return;
+    var tm = '';
+    try { tm = new Date(a.firedAt || Date.now()).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }); } catch (e) {}
+    b.innerHTML = '<span class="al-bell">' + ICON.bell + '</span><span class="al-bmsg">' + esc(a.msg || '') + '</span><span class="al-bpx">' + esc(fmt(a.firedPrice)) + ' • ' + esc(tm) + '</span><button class="al-bx" id="alBannerX" type="button">✕</button>';
+    b.style.display = 'flex';
+    var x = $('alBannerX');
+    if (x) x.addEventListener('click', function () { b.style.display = 'none'; });
+    if (alertBannerTimer) { try { clearTimeout(alertBannerTimer); } catch (e) {} }
+    alertBannerTimer = setTimeout(function () { try { b.style.display = 'none'; } catch (e) {} }, 15000);
+    try { if (tg && tg.HapticFeedback && tg.HapticFeedback.notificationOccurred) tg.HapticFeedback.notificationOccurred('success'); } catch (e) {}
+    renderAlertList();
+  }
+  function refreshAlertBadge() {
+    var bd = $('alertBadge');
+    if (!bd) return;
+    var n = 0;
+    try { if (window.OnellaAlerts && state.quote) n = window.OnellaAlerts.listActive(state.quote.symbol).length; } catch (e) {}
+    bd.textContent = String(n);
+    bd.style.display = n > 0 ? '' : 'none';
+  }
+  async function fetchCurrentPrice(q) {
+    try {
+      if (q.provider === 'binance') { var tk = await binanceTicker(q.symbol); return tk ? tk.price : null; }
+      if (q.provider === 'yahoo') { var yq = await yahooQuote(q.symbol); return yq ? yq.price : null; }
+      if (q.provider === 'iran-rate') { var ir = await iranRate(q.symbol); return ir ? ir.price : null; }
+      if (q.provider === 'mofid') { var cs2 = await mofidCandles(q, '1d'); return (cs2 && cs2.length) ? cs2[cs2.length - 1].c : null; }
+    } catch (e) {}
+    return null;
+  }
+  async function alertPollTick() {
+    if (document.hidden || state.view !== 'symbol' || !state.quote) return;
+    var q = state.quote;
+    var has = false;
+    try { has = !!(window.OnellaAlerts && window.OnellaAlerts.listActive(q.symbol).length); } catch (e) {}
+    if (!has) { stopAlertPoll(); return; }
+    var p = await fetchCurrentPrice(q);
+    if (p == null || !isFinite(p)) return;
+    if (q.provider !== 'binance') { updateLivePrice(p); }
+    checkAlertsNow(p);
+  }
+  function startAlertPoll() {
+    stopAlertPoll();
+    if (!state.quote || state.quote.provider === 'binance') return;
+    var has = false;
+    try { has = !!(window.OnellaAlerts && window.OnellaAlerts.listActive(state.quote.symbol).length); } catch (e) {}
+    if (!has) return;
+    alertTimer = setInterval(alertPollTick, 30000);
+  }
+  function stopAlertPoll() { if (alertTimer) { try { clearInterval(alertTimer); } catch (e) {} alertTimer = null; } }
+  function ensureAlertUI() {
+    if ($('alertModal')) return;
+    var bd = document.body;
+    var banner = document.createElement('div');
+    banner.id = 'alertBanner'; banner.className = 'al-banner'; banner.style.display = 'none';
+    bd.appendChild(banner);
+    var menu = document.createElement('div');
+    menu.id = 'axisMenu'; menu.className = 'axis-menu'; menu.style.display = 'none';
+    bd.appendChild(menu);
+    var modal = document.createElement('div');
+    modal.id = 'alertModal'; modal.className = 'al-modal'; modal.style.display = 'none';
+    modal.innerHTML = '<div class="al-card">'
+      + '<div class="al-top"><b id="alTitle"></b><button class="tbtn" id="alClose" type="button">✕</button></div>'
+      + '<div class="al-now" id="alNow"></div>'
+      + '<label class="al-lb">' + esc(T('شرط', 'Condition')) + '<select id="alCond" class="al-in">'
+      + '<option value="cross">' + esc(T('عبور (هر جهت)', 'Crossing')) + '</option>'
+      + '<option value="crossUp">' + esc(T('عبور به بالا', 'Crossing up')) + '</option>'
+      + '<option value="crossDown">' + esc(T('عبور به پایین', 'Crossing down')) + '</option>'
+      + '<option value="above">' + esc(T('بالاتر از', 'Greater than')) + '</option>'
+      + '<option value="below">' + esc(T('پایین‌تر از', 'Less than')) + '</option></select></label>'
+      + '<label class="al-lb">' + esc(T('قیمت', 'Price')) + '<input id="alPrice" class="al-in" inputmode="decimal" autocomplete="off"></label>'
+      + '<label class="al-lb">' + esc(T('تکرار', 'Trigger')) + '<select id="alRepeat" class="al-in">'
+      + '<option value="once">' + esc(T('فقط یک بار', 'Once only')) + '</option>'
+      + '<option value="every">' + esc(T('هر بار', 'Every time')) + '</option></select></label>'
+      + '<label class="al-lb">' + esc(T('انقضا', 'Expiration')) + '<select id="alExp" class="al-in">'
+      + '<option value="2592000000">' + esc(T('۱ ماه', '1 month')) + '</option>'
+      + '<option value="604800000">' + esc(T('۱ هفته', '1 week')) + '</option>'
+      + '<option value="86400000">' + esc(T('۱ روز', '1 day')) + '</option>'
+      + '<option value="">' + esc(T('بدون انقضا', 'No expiration')) + '</option></select></label>'
+      + '<label class="al-lb">' + esc(T('پیام', 'Message')) + '<input id="alMsg" class="al-in" autocomplete="off" maxlength="120"></label>'
+      + '<div class="al-note">' + esc(T('اعلان: درون‌برنامه (بنر + نشان). هشدار فقط وقتی مینی‌اپ باز است بررسی می‌شود؛ وقتی بسته است نمی‌رسد.', 'Notifications: in-app (banner + badge). Alerts are only checked while the Mini App is open; nothing fires while it is closed.')) + '</div>'
+      + '<div class="al-err" id="alErr" style="display:none"></div>'
+      + '<div class="al-actions"><button class="tbtn on" id="alCreate" type="button">' + esc(T('ایجاد هشدار', 'Create alert')) + '</button><button class="tbtn" id="alCancel" type="button">' + esc(T('انصراف', 'Cancel')) + '</button></div>'
+      + '<div class="al-list-h">' + esc(T('هشدارهای این نماد', 'Alerts for this symbol')) + '</div>'
+      + '<div id="alList"></div></div>';
+    bd.appendChild(modal);
+    $('alClose').addEventListener('click', function () { modal.style.display = 'none'; });
+    $('alCancel').addEventListener('click', function () { modal.style.display = 'none'; });
+    modal.addEventListener('click', function (e) { if (e.target === modal) modal.style.display = 'none'; });
+    $('alCreate').addEventListener('click', function () { createAlertFromModal(); });
+    document.addEventListener('click', function (e) {
+      var m2 = $('axisMenu');
+      if (m2 && m2.style.display !== 'none' && !(e.target && e.target.closest && e.target.closest('#axisMenu'))) m2.style.display = 'none';
+    });
+  }
+  function toLatinNum(s) {
+    return String(s == null ? '' : s).replace(/[۰-۹]/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'.indexOf(d); }).replace(/[٠-٩]/g, function (d) { return '٠١٢٣٤٥٦٧٨٩'.indexOf(d); }).replace(/[٬,]/g, '').trim();
+  }
+  function openAlertModal(prefillPrice) {
+    ensureAlertUI();
+    var q = state.quote;
+    if (!q) return;
+    var m = $('alertModal');
+    $('alTitle').textContent = T('هشدار در ', 'Alert on ') + q.display;
+    var now = curAlertPrice();
+    $('alNow').textContent = (now != null ? T('قیمت فعلی: ', 'Current price: ') + fmt(now) : '');
+    var p = (prefillPrice != null && isFinite(prefillPrice)) ? prefillPrice : now;
+    $('alPrice').value = (p != null) ? String(p) : '';
+    $('alCond').value = 'cross';
+    $('alRepeat').value = 'once';
+    $('alExp').value = '2592000000';
+    try { $('alMsg').value = window.OnellaAlerts ? window.OnellaAlerts.defaultMsg({ sym: q.symbol, label: q.display, cond: 'cross', price: (p != null ? p : 0) }, lang) : ''; } catch (e) { $('alMsg').value = ''; }
+    $('alErr').style.display = 'none';
+    renderAlertList();
+    m.style.display = 'flex';
+  }
+  function renderAlertList() {
+    var el = $('alList');
+    if (!el || !state.quote) return;
+    var q = state.quote, A = window.OnellaAlerts;
+    if (!A) { el.innerHTML = ''; return; }
+    var all = A.list(q.symbol);
+    function expTxt(a) {
+      if (!a.expiresAt) return '';
+      try { return ' • ' + T('تا ', 'until ') + new Date(a.expiresAt).toLocaleDateString('fa-IR'); } catch (e) { return ''; }
+    }
+    function row(a, kind) {
+      var sub = A.condLabel(a.cond, lang) + ' ' + fmt(a.price) + ' • ' + (a.repeat === 'every' ? T('هر بار', 'Every time') : T('فقط یک بار', 'Once only')) + expTxt(a);
+      var fired = '';
+      if (kind === 'fired' && a.firedAt) {
+        try { fired = ' • ' + T('فعال شد ', 'Fired ') + new Date(a.firedAt).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }); } catch (e) {}
+      }
+      var btns = '';
+      if (kind === 'active') btns = '<button class="tbtn" data-act="off" data-id="' + a.id + '" type="button">' + esc(T('خاموش', 'Off')) + '</button>';
+      else btns = '<button class="tbtn" data-act="on" data-id="' + a.id + '" type="button">' + esc(T('دوباره فعال', 'Re-enable')) + '</button>';
+      btns += '<button class="tbtn" data-act="del" data-id="' + a.id + '" type="button">✕</button>';
+      return '<div class="al-row"><div class="al-row-tx"><b>' + esc(a.msg || '') + '</b><span>' + esc(sub + fired) + '</span></div><div class="al-row-bt">' + btns + '</div></div>';
+    }
+    var act = all.filter(function (a) { return a.active; });
+    var fired = all.filter(function (a) { return !a.active && a.firedAt; });
+    var other = all.filter(function (a) { return !a.active && !a.firedAt; });
+    var html = '';
+    if (!all.length) html = '<div class="na">' + esc(T('هنوز هشداری برای این نماد نساخته‌ای.', 'No alerts for this symbol yet.')) + '</div>';
+    else {
+      if (act.length) html += '<div class="al-sec">' + esc(T('فعال', 'Active')) + '</div>' + act.map(function (a) { return row(a, 'active'); }).join('');
+      if (fired.length) html += '<div class="al-sec">' + esc(T('فعال‌شده', 'Triggered')) + '</div>' + fired.map(function (a) { return row(a, 'fired'); }).join('');
+      if (other.length) html += '<div class="al-sec">' + esc(T('خاموش / منقضی', 'Off / expired')) + '</div>' + other.map(function (a) { return row(a, 'other'); }).join('');
+    }
+    el.innerHTML = html;
+    el.querySelectorAll('[data-act]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var id = b.dataset.id, act2 = b.dataset.act;
+        if (act2 === 'del') A.remove(id);
+        else if (act2 === 'off') A.setActive(id, false);
+        else if (act2 === 'on') A.setActive(id, true);
+        renderAlertList(); refreshAlertBadge(); startAlertPoll();
+        try { window.draw(); } catch (e) {}
+      });
+    });
+  }
+  function createAlertFromModal() {
+    var q = state.quote;
+    if (!q) return;
+    var err = $('alErr');
+    var price = parseFloat(toLatinNum($('alPrice').value));
+    if (!isFinite(price) || price <= 0) { err.textContent = T('قیمت معتبر وارد کن.', 'Enter a valid price.'); err.style.display = ''; return; }
+    var exp = $('alExp').value;
+    var a = null;
+    try {
+      a = window.OnellaAlerts.add({
+        sym: q.symbol, label: q.display, mode: state.priceMode,
+        cond: $('alCond').value, price: price, repeat: $('alRepeat').value,
+        expiresAt: exp ? Date.now() + parseInt(exp, 10) : null,
+        msg: $('alMsg').value
+      });
+    } catch (e) {}
+    if (!a) { err.textContent = T('هشدار ساخته نشد — سقف ۵۰ هشدار فعال است.', 'Alert was not created — the 50 active-alert limit is reached.'); err.style.display = ''; return; }
+    $('alertModal').style.display = 'none';
+    refreshAlertBadge(); startAlertPoll();
+    try { window.draw(); } catch (e) {}
+  }
+  function showPriceAxisMenu(price, clientX, clientY) {
+    if (price == null || !isFinite(price) || !state.quote) return;
+    ensureAlertUI();
+    axisMenuPrice = price;
+    var m = $('axisMenu');
+    var px = fmt(price);
+    m.innerHTML = '<button class="ax-item" id="axAlert" type="button">' + ICON.bell + '<span>' + esc(T('هشدار در ', 'Add alert at ') + px) + '</span></button>'
+      + '<button class="ax-item" id="axLine" type="button"><span class="ax-ic">—</span><span>' + esc(T('خط افقی در ', 'Draw horizontal line at ') + px) + '</span></button>';
+    var vw = 0, vh = 0;
+    try { vw = window.innerWidth || 0; vh = window.innerHeight || 0; } catch (e) {}
+    m.style.left = Math.max(8, Math.min(clientX - 10, (vw || 400) - 230)) + 'px';
+    m.style.top = Math.max(8, Math.min(clientY - 10, (vh || 700) - 110)) + 'px';
+    m.style.display = 'block';
+    $('axAlert').addEventListener('click', function () { m.style.display = 'none'; openAlertModal(axisMenuPrice); });
+    $('axLine').addEventListener('click', function () {
+      m.style.display = 'none';
+      try { if (window.OnellaDraw) { window.OnellaDraw.add({ type: 'hline', p: axisMenuPrice }); window.draw(); } } catch (e) {}
+    });
+  }
 
   /* ---- تحلیل (همان موتور ربات؛ DOM به‌جای HTML تلگرام) ---- */
   function renderAnalysis() {
@@ -2165,7 +2429,7 @@
     if (q.provider === 'yahoo') {
       if (!state.quoteRes) {
         el.innerHTML = naHtml
-          + '<div class="hint">' + esc(T('به پروکسی نیاز دارد — PROXY_URL را در app.js بگذار (README را ببین).', 'Needs the proxy — set PROXY_URL in app.js (see README).')) + '</div>';
+          + '<div class="hint">' + esc(T('داده فعلاً از اینجا در دسترس نیست.', 'Data is not available from here right now.')) + '</div>';
         return;
       }
       var r = state.quoteRes;
@@ -2197,7 +2461,7 @@
         + fundCard(esc(T('بازده ۷ روزه', 'Return 7d')), perf ? pctSpan(perf.chg7) : '—')
         + fundCard(esc(T('بازده ۳۰ روزه', 'Return 30d')), perf ? pctSpan(perf.chg30) : '—')
         + fundCard(esc(T('بازده ۹۰ روزه', 'Return 90d')), perf ? pctSpan(perf.chg90) : '—')
-        + ((fx7 != null) ? fundCard(esc(T('تغییر ۷ روزه (Frankfurter)', 'Change 7d (Frankfurter)')), pctSpan(fx7)) : '')
+        + ((fx7 != null) ? fundCard(esc(T('تغییر ۷ روزه', 'Change 7d')), pctSpan(fx7)) : '')
         + (r.exchange ? fundCard(esc(T('بورس', 'Exchange')), esc(r.exchange)) : '')
         + '</div>';
       return;
@@ -2239,7 +2503,6 @@
       el.innerHTML = '<div class="fund-grid">'
         + fundCard(esc(T('قیمت', 'Price')), fmt(ir.price) + ' ' + esc(T('تومان', 'Toman')))
         + fundCard(esc(T('تغییر امروز', 'Change today')), pctSpan(ir.changePct))
-        + fundCard(esc(T('منبع', 'Source')), 'Nerkhsanj')
         + (ir.asOf ? fundCard(esc(T('به‌روز شده', 'Updated')), esc(ir.asOf), true) : '')
         + '</div>';
       return;
@@ -2257,8 +2520,7 @@
     var symTag = (q.provider === 'binance') ? q.symbol.replace(/USDT$/, '') : q.symbol;
     N.symbolNews(q, lang, 5).then(function (items) {
       if (!items || !items.length) {
-        el.innerHTML = '<div class="na">' + esc(T('خبری پیدا نشد.', 'No news found.')) + '</div>'
-          + (!PROXY_URL ? '<div class="hint">' + esc(T('به پروکسی نیاز دارد — PROXY_URL را در app.js بگذار (README را ببین).', 'Needs the proxy — set PROXY_URL in app.js (see README).')) + '</div>' : '');
+        el.innerHTML = '<div class="na">' + esc(T('خبری پیدا نشد.', 'No news found.')) + '</div>';
         return;
       }
       var html = '<div class="news">';
@@ -2455,22 +2717,22 @@
           + fundCard(esc(T('بهترین فروش', 'Best ask')), fmt(r.ask) + (r.askSize ? ' <small>× ' + fmt(r.askSize) + '</small>' : ''))
           + fundCard(esc(T('اسپرد', 'Spread')), fmt(sp) + ' (' + spPct.toFixed(3) + '٪)', true)
           + '</div>'
-          + '<div class="warn">' + esc(T('قیمت خرید/فروش یاهو با تأخیر است و فقط بالاترین سطح دفتر است — دفتر کامل برای این بازار در دسترس نیست.', 'Yahoo bid/ask is delayed and top-of-book only — no full order book for this market.')) + '</div>';
+          + '<div class="warn">' + esc(T('قیمت خرید/فروش با تأخیر است و فقط بالاترین سطح دفتر است — دفتر کامل برای این بازار در دسترس نیست.', 'Bid/ask is delayed and top-of-book only — no full order book for this market.')) + '</div>';
       } else {
-        el.innerHTML = '<div class="na">' + esc(T('برای این نماد قیمت خرید/فروش از یاهو در دسترس نیست.', 'No bid/ask from Yahoo for this symbol.')) + '</div>';
+        el.innerHTML = '<div class="na">' + esc(T('برای این نماد قیمت خرید/فروش در دسترس نیست.', 'No bid/ask for this symbol.')) + '</div>';
       }
       return;
     }
     if (q.provider === 'iran-rate') {
-      el.innerHTML = '<div class="na">' + esc(T('نرخ‌های ایران دفتر سفارش ندارند — نر‌خسنج فقط قیمت لحظه‌ای می‌دهد؛ دفتر سفارش نوبیتکس هم از ورکر در دسترس نیست.', 'Iran rates have no order book — Nerkhsanj is spot-only, and the Nobitex order book is unreachable from the Worker.')) + '</div>';
+      el.innerHTML = '<div class="na">' + esc(T('نرخ‌های ایران دفتر سفارش ندارند — فقط قیمت لحظه‌ای می‌دهند.', 'Iran rates have no order book — spot prices only.')) + '</div>';
       return;
     }
     if (q.provider === 'mofid') {
-      el.innerHTML = '<div class="na">' + esc(T('بورس/فرابورس دفتر سفارش ندارد — مفید فقط تاریخچهٔ قیمت می‌دهد و TSETMC از IP خارجی بلاک است.', 'TSE/Farabourse have no order book here — Mofid only gives price history, and TSETMC blocks foreign IPs.')) + '</div>';
+      el.innerHTML = '<div class="na">' + esc(T('بورس/فرابورس دفتر سفارش ندارد — فقط تاریخچهٔ قیمت در دسترس است.', 'TSE/Farabourse have no order book here — only price history is available.')) + '</div>';
       return;
     }
     if (q.provider !== 'binance') {
-      el.innerHTML = '<div class="na">' + esc(T('دفتر سفارش فقط برای نمادهای کریپتو (Binance) در دسترس است.', 'Order book is only available for crypto symbols (Binance).')) + '</div>';
+      el.innerHTML = '<div class="na">' + esc(T('دفتر سفارش فقط برای نمادهای کریپتو در دسترس است.', 'Order book is only available for crypto symbols.')) + '</div>';
       return;
     }
     el.innerHTML = '<div class="muted">' + esc(T('در حال بارگذاری…', 'Loading…')) + '</div>';
@@ -2754,6 +3016,7 @@
     loadDash: loadDash, renderDash: renderDash, confluence: confluence, renderGauge: renderGauge, renderDepth: renderDepth, renderDepthData: renderDepthData, fetchDepth: fetchDepth, stopDepthPoll: stopDepthPoll, applyDepthDiff: applyDepthDiff, tradesRowsHtml: tradesRowsHtml, getDepthData: function () { return depthData; }, getLiveTrades: function () { return liveTrades; }, setLiveTrades: function (t) { liveTrades = t || []; }, positionLastPxTag: positionLastPxTag,
     yahooSearch: yahooSearch, mofidResolve: mofidResolve, rememberQuote: rememberQuote,
     iranRate: iranRate, perfFromDaily: perfFromDaily, frankfurterWeek: frankfurterWeek, iranRatesBulk: iranRatesBulk, dailyCandlesFor: dailyCandlesFor,
+    openAlertModal: openAlertModal, showPriceAxisMenu: showPriceAxisMenu, checkAlertsNow: checkAlertsNow, refreshAlertBadge: refreshAlertBadge, renderAlertList: renderAlertList,
     pmScale: pmScale, pmPan: pmPan, autoScale: autoScale, toLatest: toLatest, refreshAxisBtns: refreshAxisBtns,
     toggleFav: toggleFav, isFav: isFav, lookupQuote: lookupQuote, yahooMulti: yahooMulti, mofidBulk: mofidBulk, cgMarkets: cgMarkets };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

@@ -14,6 +14,29 @@ function emaSeriesLocal(cl, n) {
 }
 var ema = window.ema;
 /* v1.2.2 — سری‌های ابزارهای تازه (همه از روی همان کندل‌ها؛ بدون دادهٔ جدید). */
+function ichimokuSeries(candles) {
+  if (!Array.isArray(candles) || candles.length < 52) return null;
+  var n = candles.length, i, j;
+  function mid(a, b) {
+    var hi = -Infinity, lo = Infinity;
+    for (var k = a; k <= b; k++) { if (candles[k].h > hi) hi = candles[k].h; if (candles[k].l < lo) lo = candles[k].l; }
+    return (hi + lo) / 2;
+  }
+  var tenkan = [], kijun = [], senA = [], senB = [], chikou = [];
+  for (i = 0; i < n; i++) { tenkan.push(null); kijun.push(null); senA.push(null); senB.push(null); chikou.push(null); }
+  for (i = 8; i < n; i++) tenkan[i] = mid(i - 8, i);
+  for (i = 25; i < n; i++) kijun[i] = mid(i - 25, i);
+  /* سنکو A/B بیست‌وشش کندل جلوتر رسم می‌شوند (مقدارِ i-26 در ایندکس i). */
+  for (i = 51; i < n; i++) senA[i] = (tenkan[i - 26] + kijun[i - 26]) / 2;
+  for (i = 77; i < n; i++) senB[i] = mid(i - 26 - 51, i - 26);
+  for (i = 0; i < n - 26; i++) chikou[i] = candles[i + 26].c;
+  return { tenkan: tenkan, kijun: kijun, senA: senA, senB: senB, chikou: chikou };
+}
+function ribbonSeries(closes) {
+  if (!Array.isArray(closes) || closes.length < 5) return null;
+  var periods = [9, 21, 55, 100, 200];
+  return periods.map(function (p) { return emaSeriesLocal(closes, p); });
+}
 function vwapSeries(candles) {
   var cumPV = 0, cumV = 0, out = [];
   for (var i = 0; i < candles.length; i++) {
@@ -158,6 +181,8 @@ function analyzeCSLocal() {
 var analyzeCS = window.analyzeCS;
 if (typeof window.onellaDrawAdvancedTools !== 'function') window.onellaDrawAdvancedTools = function () {};
 var onellaDrawAdvancedTools = window.onellaDrawAdvancedTools;
+if (typeof window.ichimokuSeries !== 'function') window.ichimokuSeries = ichimokuSeries;
+if (typeof window.ribbonSeries !== 'function') window.ribbonSeries = ribbonSeries;
 /* js/01-12-chart-tool-readout.js — ابزارهای روی چارت (drawTools) و خوانش آن‌ها (toolNote)  [مرحله ۳ ریفکتور: خطوط 469–494 از 01-inline.js قبلی؛ بدنه بایت‌به‌بایت همان است] */
 function swing(){const W=$("cc").clientWidth||360,n=Math.min(cs.length,Math.floor((W-46)/7)),v=cs.slice(-n);let ih=0,il=0;v.forEach((c,i)=>{if(c.h>v[ih].h)ih=i;if(c.l<v[il].l)il=i});return{v,ih,il,H:v[ih].h,Lw:v[il].l,up:il<ih}}
 function reg(){const v=swing().v,m=v.length,my=v.reduce((a,c)=>a+c.c,0)/m,mx=(m-1)/2;let nu=0,de=0;v.forEach((c,i)=>{nu+=(i-mx)*(c.c-my);de+=(i-mx)**2});const sl=nu/de,ic=my-sl*mx,sd=Math.sqrt(v.reduce((a,c,i)=>a+(c.c-(ic+sl*i))**2,0)/m)||1e-9;return{m,sl,ic,sd}}
@@ -184,6 +209,22 @@ function drawTools(g,o){const{off,n,X,Y,cw}=o;if(cs.length<60)return;try{
  }
  if(!replayOn&&on.super){const st=supertrendSeries(cs,10,3);if(st){for(let i=0;i<n;i++){const v=st[off+i];if(!v)continue;const nx2=st[off+i+1];g.strokeStyle=v.dir>0?"#2ecc8f":"#ff5d6c";g.lineWidth=1.4;g.beginPath();g.moveTo(X(i),Y(v.v));if(nx2&&i+1<n)g.lineTo(X(i+1),Y(nx2.v));else{g.lineTo(X(i)+3,Y(v.v));}g.stroke();}}}
  if(!replayOn&&on.sar){const sr=sarSeries(cs);if(sr){g.fillStyle="#ffb347";for(let i=0;i<n;i++){const v=sr[off+i];if(v==null||!isFinite(v))continue;g.beginPath();g.arc(X(i),Y(v),1.8,0,7);g.fill();}}}
+ /* v1.9.0 — ایچیموکو (تنکان/کیجون + ابر) و روبان EMA (۹/۲۱/۵۵/۱۰۰/۲۰۰). */
+ if(!replayOn&&on.ichi){const im=ichimokuSeries(cs);if(im){
+  const line3=(arr,col,wd)=>{g.strokeStyle=col;g.lineWidth=wd||1.2;g.beginPath();let s=0;for(let i=0;i<n;i++){const y=arr[off+i];if(y==null||!isFinite(y))continue;s?g.lineTo(X(i),Y(y)):g.moveTo(X(i),Y(y));s=1}g.stroke()};
+  /* ابر: بین سنکو A و B روی پنجرهٔ دیده‌شده؛ رنگ از آخرین مقدار. */
+  let a0=-1,a1=-1;for(let i=0;i<n;i++){if(im.senA[off+i]!=null&&im.senB[off+i]!=null){if(a0<0)a0=i;a1=i}}
+  if(a0>=0){const up=im.senA[off+a1]>im.senB[off+a1];g.fillStyle=up?"rgba(46,204,143,.07)":"rgba(255,93,108,.07)";g.beginPath();let s2=0;for(let i=a0;i<=a1;i++){const y=Y(im.senA[off+i]);s2?g.lineTo(X(i),y):g.moveTo(X(i),y);s2=1}for(let i=a1;i>=a0;i--)g.lineTo(X(i),Y(im.senB[off+i]));g.closePath();g.fill()}
+  line3(im.tenkan,"#7aa2d6",1.2);line3(im.kijun,"#d6a55f",1.4);line3(im.senA,"rgba(122,162,214,.55)",1);line3(im.senB,"rgba(214,165,95,.55)",1);
+  line3(im.chikou,"#8fa3b8",1);
+ }}
+ if(!replayOn&&on.ribbon){const rb=ribbonSeries(cs.map(x=>x.c));if(rb){const cols=["#7aa2d6","#a58fd6","#5fb8a6","#d6a55f","#d68a8a"];rb.forEach((arr,idx)=>{const col=cols[idx%cols.length];g.strokeStyle=col;g.lineWidth=1;g.beginPath();let s=0;for(let i=0;i<n;i++){const y=arr[off+i];if(y==null||!isFinite(y))continue;s?g.lineTo(X(i),Y(y)):g.moveTo(X(i),Y(y));s=1}g.stroke()});}}
+ /* v1.9.0 — خط‌های هشدار فعال نماد فعلی (خط‌چین نارنجی + برچسب قیمت روی محور). */
+ try{const AL=window.OnellaAlerts,sk=(window.pair&&window.pair.sym)||null;
+  if(AL&&sk){AL.listActive(sk).forEach(function(a){let p=a.price;try{const m=window.__dispMul;if(a.mode==="iran"&&typeof m==="number"&&m>0&&m!==1)p=a.price/m}catch(_){ }
+   const yy=Math.round(Y(p))+.5;if(yy<0||yy>ph)return;g.strokeStyle="#f06a15";g.lineWidth=1.2;g.setLineDash([5,3]);g.beginPath();g.moveTo(0,yy);g.lineTo(cw,yy);g.stroke();g.setLineDash([]);
+   g.fillStyle="#f06a15";g.beginPath();if(g.roundRect)g.roundRect(cw+1,yy-8,W-cw-2,16,3);else g.rect(cw+1,yy-8,W-cw-2,16);g.fill();g.fillStyle="#0a0f1a";g.font="bold 10px sans-serif";try{g.fillText(fmt(p),cw+5,yy+3.5)}catch(_){}g.font="10px sans-serif";});}
+ }catch(_){}
  onellaDrawAdvancedTools(g,{off,n,X,Y,cw});
 }catch(e){}}
 function toolNote(id){if(cs.length<60)return"";const a=analyzeCS(),l=a.l,nm=marketPairName(),pc=x=>(Math.abs(x-l)/l*100).toFixed(1)+"٪";
@@ -218,4 +259,18 @@ function toolNote(id){if(cs.length<60)return"";const a=analyzeCS(),l=a.l,nm=mark
  if(id==="sar"){const sr=sarSeries(cs);if(!sr)return"";
   const v=sr[sr.length-1],above=l>v;
   return T("پارابولیک SAR: نقطهٔ آخر "+fmt(v)+" — قیمت "+(above?"بالای نقطه‌هاست (روند صعودی)":"زیر نقطه‌هاست (روند نزولی)")+".","Parabolic SAR: last dot "+fmt(v)+" — price is "+(above?"above the dots (uptrend)":"below the dots (downtrend)")+".");}
+ /* v1.9.0 — خوانش ایچیموکو و روبان. */
+ if(id==="ichi"){const im=ichimokuSeries(cs);if(!im)return"";
+  const tk=im.tenkan[im.tenkan.length-1],kj=im.kijun[im.kijun.length-1],sa=im.senA[im.senA.length-1],sb=im.senB[im.senB.length-1];
+  if(tk==null||kj==null)return"";
+  const cloudUp=sa!=null&&sb!=null&&sa>sb;
+  return T("ایچیموکو: تنکان "+fmt(tk)+"، کیجون "+fmt(kj)+"؛ قیمت "+(l>tk?"بالای":"زیر")+" تنکان است و تنکان "+(tk>kj?"بالای":"زیر")+" کیجون — "+(tk>kj?"گرایش کوتاه‌مدت صعودی":"گرایش کوتاه‌مدت نزولی")+(sa!=null&&sb!=null?("؛ ابر جلو "+(cloudUp?"صعودی":"نزولی")+" است ("+fmt(Math.max(sa,sb))+" تا "+fmt(Math.min(sa,sb))+")."):"؛ ابر هنوز کامل نیست."),
+   "Ichimoku: Tenkan "+fmt(tk)+", Kijun "+fmt(kj)+"; price is "+(l>tk?"above":"below")+" Tenkan and Tenkan is "+(tk>kj?"above":"below")+" Kijun — short-term bias is "+(tk>kj?"up":"down")+(sa!=null&&sb!=null?("; the cloud ahead is "+(cloudUp?"bullish":"bearish")+" ("+fmt(Math.max(sa,sb))+" to "+fmt(Math.min(sa,sb))+")."):"; the cloud is not complete yet."));}
+ if(id==="ribbon"){const rb=ribbonSeries(cs.map(x=>x.c));if(!rb)return"";
+  const vals=rb.map(function(arr){return arr[arr.length-1];});
+  if(vals.some(function(v){return v==null;}))return"";
+  const ordered=vals[0]>vals[1]&&vals[1]>vals[2]&&vals[2]>vals[3]&&vals[3]>vals[4];
+  const orderedDn=vals[0]<vals[1]&&vals[1]<vals[2]&&vals[2]<vals[3]&&vals[3]<vals[4];
+  return T("روبان EMA (۹/۲۱/۵۵/۱۰۰/۲۰۰): "+vals.map(fmt).join("، ")+" — "+(ordered?"میانگین‌ها مرتب صعودی‌اند (روند صعودی منظم).":orderedDn?"میانگین‌ها مرتب نزولی‌اند (روند نزولی منظم).":"میانگین‌ها درهم‌اند (روند مشخص نیست)."),
+   "EMA ribbon (9/21/55/100/200): "+vals.map(fmt).join(", ")+" — "+(ordered?"the averages are stacked bullishly (clean uptrend).":orderedDn?"the averages are stacked bearishly (clean downtrend).":"the averages are tangled (no clear trend)."));}
  return""}

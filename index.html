@@ -98,6 +98,40 @@
   .xh-box { position: absolute; top: 92px; right: 8px; z-index: 4; background: rgba(13,19,32,.88); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; font-size: 11px; line-height: 1.7; color: var(--txt); pointer-events: none; text-align: left; white-space: nowrap; }
   .xh-box b { color: var(--txt); }
   .panes { margin-top: 8px; }
+  /* v1.9.0 — هشدار (به سبک تریدینگ‌ویو): دیالوگ، بنر، منوی محور قیمت، بج دکمه. */
+  #alertBtn { position: relative; }
+  #alertBtn svg { width: 16px; height: 16px; display: block; }
+  .al-badge { position: absolute; top: -5px; inset-inline-end: -5px; min-width: 15px; height: 15px; border-radius: 999px; background: var(--acc); color: #fff; font-size: 10px; font-weight: 800; line-height: 15px; text-align: center; padding: 0 3px; }
+  .al-banner { position: fixed; top: calc(10px + env(safe-area-inset-top)); left: 12px; right: 12px; z-index: 70; display: flex; align-items: center; gap: 8px; background: #1a1408; border: 1px solid var(--acc); border-radius: 12px; padding: 10px 12px; font-size: 13px; color: var(--txt); box-shadow: 0 8px 24px rgba(0,0,0,.5); }
+  .al-banner .al-bell { color: var(--acc); flex: none; }
+  .al-banner .al-bell svg { width: 18px; height: 18px; display: block; }
+  .al-banner .al-bmsg { flex: 1; font-weight: 700; }
+  .al-banner .al-bpx { color: var(--mut); font-size: 12px; white-space: nowrap; }
+  .al-banner .al-bx { background: none; border: 0; color: var(--mut); font-size: 15px; cursor: pointer; padding: 2px 6px; }
+  .axis-menu { position: fixed; z-index: 75; width: 220px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 6px; box-shadow: 0 10px 28px rgba(0,0,0,.55); }
+  .axis-menu .ax-item { display: flex; align-items: center; gap: 10px; width: 100%; background: none; border: 0; color: var(--txt); font-size: 13px; font-weight: 700; text-align: start; padding: 10px 8px; border-radius: 8px; cursor: pointer; font-family: inherit; }
+  .axis-menu .ax-item:hover { background: rgba(240,106,21,.12); }
+  .axis-menu .ax-item svg { width: 17px; height: 17px; color: var(--acc); flex: none; }
+  .axis-menu .ax-ic { color: var(--acc); font-weight: 800; flex: none; width: 17px; text-align: center; }
+  .al-modal { position: fixed; inset: 0; z-index: 80; background: rgba(0,0,0,.6); display: flex; align-items: flex-end; justify-content: center; }
+  .al-card { width: 100%; max-width: 480px; max-height: 88dvh; overflow-y: auto; background: var(--bg); border: 1px solid var(--line); border-radius: 16px 16px 0 0; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); }
+  .al-top { display: flex; align-items: center; justify-content: space-between; font-size: 16px; margin-bottom: 4px; }
+  .al-now { color: var(--mut); font-size: 13px; margin-bottom: 10px; }
+  .al-lb { display: block; font-size: 13px; color: var(--mut); margin-bottom: 10px; }
+  .al-in { display: block; width: 100%; box-sizing: border-box; margin-top: 5px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; color: var(--txt); font-size: 15px; font-family: inherit; padding: 10px 12px; outline: none; }
+  .al-in:focus { border-color: var(--acc); }
+  .al-note { color: var(--mut); font-size: 12px; line-height: 1.7; margin-bottom: 10px; }
+  .al-err { color: var(--dn); font-size: 13px; margin-bottom: 10px; }
+  .al-actions { display: flex; gap: 8px; margin-bottom: 14px; }
+  .al-actions .tbtn { flex: 1; padding: 11px; font-size: 14px; }
+  .al-list-h { font-size: 14px; font-weight: 800; margin-bottom: 8px; }
+  .al-sec { color: var(--mut); font-size: 12px; margin: 10px 0 6px; }
+  .al-row { display: flex; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; margin-bottom: 6px; }
+  .al-row-tx { flex: 1; min-width: 0; }
+  .al-row-tx b { display: block; font-size: 13px; }
+  .al-row-tx span { font-size: 12px; color: var(--mut); }
+  .al-row-bt { display: flex; gap: 6px; flex: none; }
+  .al-row-bt .tbtn { padding: 5px 9px; font-size: 12px; }
   .pane-row { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin-bottom: 8px; }
   .pane-h { display: flex; justify-content: space-between; padding: 6px 10px 0; font-size: 12px; color: var(--mut); }
   .pane-h b { color: var(--txt); font-weight: 700; }
@@ -401,6 +435,7 @@
 <script src="chart-draw.js"></script>
 <script src="analysis-src.js"></script>
 <script src="chart-panes.js"></script>
+<script src="alerts-src.js"></script>
 <script src="news-src.js"></script>
 <script src="asset-icons.js"></script>
 <script src="app.js"></script>

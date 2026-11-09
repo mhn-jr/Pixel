@@ -11,7 +11,7 @@
   var KEY = 'onella_drawings_v1';
   var MAX_PER_SYM = 50;
   var FIB_RATIOS = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
-  var COLORS = { trend: '#ffb347', hline: '#7aa2d6', rect: '#5fb8a6', fib: '#ffb347', text: '#e6e9ef', sel: '#f06a15' };
+  var COLORS = { trend: '#ffb347', hline: '#7aa2d6', rect: '#5fb8a6', fib: '#ffb347', text: '#e6e9ef', ray: '#5fb8a6', vline: '#8fa3b8', sel: '#f06a15' };
   var store = {};
   var activeTool = null, pending = null, preview = null, selectedId = null, moveStart = null;
   var idSeq = 0;
@@ -119,6 +119,16 @@
       syncUI();
       return 'placed';
     }
+    if (activeTool === 'ray') {
+      add({ type: 'ray', t: pt.t, p: pt.p });
+      syncUI();
+      return 'placed';
+    }
+    if (activeTool === 'vline') {
+      add({ type: 'vline', t: pt.t });
+      syncUI();
+      return 'placed';
+    }
     if (activeTool === 'text') {
       var tx = askText(pt);
       if (tx == null) return 'noprompt';
@@ -141,6 +151,8 @@
   function completeDrag(a, b) {
     if (!a || !b || !activeTool) return null;
     if (activeTool === 'hline') { add({ type: 'hline', p: b.p }); syncUI(); return 'placed'; }
+    if (activeTool === 'ray') { add({ type: 'ray', t: a.t, p: a.p }); syncUI(); return 'placed'; }
+    if (activeTool === 'vline') { add({ type: 'vline', t: a.t }); syncUI(); return 'placed'; }
     if (activeTool === 'text') return null;
     add({ type: activeTool, t1: a.t, p1: a.p, t2: b.t, p2: b.p });
     pending = null; preview = null;
@@ -176,6 +188,8 @@
     for (i = 0; i < arr.length; i++) if (arr[i].id === selectedId) d = arr[i];
     if (!d) return false;
     if (d.type === 'hline') { d.p = s.p + dP; }
+    else if (d.type === 'ray') { d.t = shiftT(s.t); d.p = s.p + dP; }
+    else if (d.type === 'vline') { d.t = shiftT(s.t); }
     else if (d.type === 'text') { d.t = shiftT(s.t); d.p = s.p + dP; }
     else { d.t1 = shiftT(s.t1); d.p1 = s.p1 + dP; d.t2 = shiftT(s.t2); d.p2 = s.p2 + dP; }
     return true;
@@ -206,6 +220,11 @@
         }
       } else if (d.type === 'hline') {
         if (Math.abs(y - g.Y(d.p)) < 10) return d;
+      } else if (d.type === 'ray') {
+        var rx0 = pxOf(d.t, g);
+        if (x >= rx0 - 6 && Math.abs(y - g.Y(d.p)) < 10) return d;
+      } else if (d.type === 'vline') {
+        if (Math.abs(x - pxOf(d.t, g)) < 10) return d;
       } else if (d.type === 'rect') {
         var rx1 = pxOf(d.t1, g), rx2 = pxOf(d.t2, g), ry1 = g.Y(d.p1), ry2 = g.Y(d.p2);
         if (x >= Math.min(rx1, rx2) - 6 && x <= Math.max(rx1, rx2) + 6 && y >= Math.min(ry1, ry2) - 6 && y <= Math.max(ry1, ry2) + 6) return d;
@@ -249,6 +268,16 @@
         var yh = Math.round(gg.Y(d.p)) + .5;
         line(0, yh, cw, yh, sel ? COLORS.sel : COLORS.hline, sel ? 2 : 1.2, [5, 3]);
         if (sel) handles([[8, yh]]);
+      } else if (d.type === 'ray') {
+        var yr = Math.round(gg.Y(d.p)) + .5, xr = pxOf(d.t, gg);
+        line(xr, yr, cw, yr, sel ? COLORS.sel : COLORS.ray, sel ? 2 : 1.2, [5, 3]);
+        g.fillStyle = sel ? COLORS.sel : COLORS.ray;
+        g.beginPath(); g.moveTo(xr, yr); g.lineTo(xr + 7, yr - 4); g.lineTo(xr + 7, yr + 4); g.closePath(); g.fill();
+        if (sel) handles([[xr, yr]]);
+      } else if (d.type === 'vline') {
+        var xv = pxOf(d.t, gg);
+        line(xv, 0, xv, ph, sel ? COLORS.sel : COLORS.vline, sel ? 2 : 1.2, [5, 3]);
+        if (sel) handles([[xv, 8]]);
       } else if (d.type === 'rect') {
         var ax = pxOf(d.t1, gg), bx = pxOf(d.t2, gg), ay = gg.Y(d.p1), by = gg.Y(d.p2);
         var rx = Math.min(ax, bx), ry = Math.min(ay, by), rw = Math.abs(bx - ax), rh = Math.abs(by - ay);
@@ -289,10 +318,10 @@
     g.restore();
     /* برچسب قیمت خط‌های افقی روی محور قیمت (بیرون clip) */
     arr.forEach(function (d) {
-      if (d.type !== 'hline') return;
+      if (d.type !== 'hline' && d.type !== 'ray') return;
       var yy2 = Math.round(gg.Y(d.p)) + .5;
       if (yy2 < 9 || yy2 > ph - 9) return;
-      var col = d.id === selectedId ? COLORS.sel : COLORS.hline;
+      var col = d.id === selectedId ? COLORS.sel : (d.type === 'ray' ? COLORS.ray : COLORS.hline);
       g.fillStyle = col;
       g.beginPath();
       if (g.roundRect) g.roundRect(cw + 1, yy2 - 8, W - cw - 2, 16, 3); else g.rect(cw + 1, yy2 - 8, W - cw - 2, 16);

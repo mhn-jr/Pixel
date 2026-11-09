@@ -8,8 +8,8 @@
    بدون دادهٔ کافی، پنل «در دسترس نیست» می‌گیرد — هرگز عدد ساختگی نیست. */
 (function () {
   var KEY = 'onella_panes_v1';
-  var on = { rsi: true, macd: true };
-  try { var r = JSON.parse(localStorage.getItem(KEY) || 'null'); if (r) { if (typeof r.rsi === 'boolean') on.rsi = r.rsi; if (typeof r.macd === 'boolean') on.macd = r.macd; } } catch (_) {}
+  var on = { rsi: true, macd: true, stoch: false, obv: false };
+  try { var r = JSON.parse(localStorage.getItem(KEY) || 'null'); if (r) { if (typeof r.rsi === 'boolean') on.rsi = r.rsi; if (typeof r.macd === 'boolean') on.macd = r.macd; if (typeof r.stoch === 'boolean') on.stoch = r.stoch; if (typeof r.obv === 'boolean') on.obv = r.obv; } } catch (_) {}
   function save() { try { localStorage.setItem(KEY, JSON.stringify(on)); } catch (_) {} }
 
   function closesOf(cs) { return cs.map(function (c) { return c.c; }); }
@@ -47,6 +47,49 @@
     return { line: line, signal: sig, hist: hist };
   }
 
+  /* v1.9.0 — استوکاستیک (۱۴، ۳، ۳) به‌صورت سری؛ همان فرمول stoch() در
+     analysis-src.js (بازهٔ ۱۴ کندل، %D = میانگین ۳تایی %K). */
+  function stochSeries(cs, n, smooth) {
+    n = n || 14; smooth = smooth || 3;
+    if (!Array.isArray(cs) || cs.length < n + smooth) return null;
+    var k = [], i, j;
+    for (i = 0; i < cs.length; i++) {
+      if (i < n - 1) { k.push(null); continue; }
+      var hi = -Infinity, lo = Infinity;
+      for (j = i - n + 1; j <= i; j++) { if (cs[j].h > hi) hi = cs[j].h; if (cs[j].l < lo) lo = cs[j].l; }
+      k.push(hi > lo ? 100 * (cs[i].c - lo) / (hi - lo) : 50);
+    }
+    var d = [];
+    for (i = 0; i < cs.length; i++) {
+      if (i < n - 1 + smooth - 1) { d.push(null); continue; }
+      var s = 0, cnt = 0;
+      for (j = i - smooth + 1; j <= i; j++) if (k[j] != null) { s += k[j]; cnt++; }
+      d.push(cnt ? s / cnt : null);
+    }
+    return { k: k, d: d };
+  }
+  /* v1.9.0 — OBV تجمعی؛ بدون حجم معتبر null (هرگز عدد ساختگی نیست). */
+  function obvSeries(cs) {
+    if (!Array.isArray(cs) || cs.length < 2) return null;
+    var hasVol = false, i;
+    for (i = 0; i < cs.length; i++) if (typeof cs[i].v === 'number' && cs[i].v > 0) { hasVol = true; break; }
+    if (!hasVol) return null;
+    var out = [0];
+    for (i = 1; i < cs.length; i++) {
+      var v = (typeof cs[i].v === 'number' && cs[i].v > 0) ? cs[i].v : 0;
+      var dd = cs[i].c - cs[i - 1].c;
+      out.push(out[i - 1] + (dd > 0 ? v : dd < 0 ? -v : 0));
+    }
+    return out;
+  }
+  function compactNum(v) {
+    if (v == null || !isFinite(v)) return '—';
+    var a = Math.abs(v);
+    if (a >= 1e9) return (v / 1e9).toFixed(2) + 'B';
+    if (a >= 1e6) return (v / 1e6).toFixed(2) + 'M';
+    if (a >= 1e3) return (v / 1e3).toFixed(1) + 'K';
+    return String(Math.round(v));
+  }
   function paneCtx(id) {
     var cv = document.getElementById(id);
     if (!cv) return null;
@@ -128,6 +171,47 @@
     g.fillText(fmtNum(mn), cw + 5, H - 4);
   }
 
+  function drawStoch(cs, off, n, st, cw) {
+    var c = paneCtx('stochCv'), valEl = document.getElementById('stochVal');
+    var s = stochSeries(cs, 14, 3);
+    if (!c || !s) { if (valEl) valEl.textContent = 'در دسترس نیست'; return; }
+    var last = s.k[s.k.length - 1];
+    if (valEl) valEl.textContent = (last == null ? 'در دسترس نیست' : last.toFixed(1));
+    var g = c.g, H = c.H;
+    var Y = function (v) { return 4 + (100 - v) / 100 * (H - 8); };
+    var X = function (i) { return i * st + st / 2; };
+    g.font = '10px sans-serif'; g.textAlign = 'start';
+    [80, 50, 20].forEach(function (lv) {
+      var y = Math.round(Y(lv)) + .5;
+      g.strokeStyle = lv === 50 ? 'rgba(120,140,170,.18)' : 'rgba(120,140,170,.30)';
+      g.setLineDash(lv === 50 ? [2, 3] : [4, 4]); g.lineWidth = 1;
+      g.beginPath(); g.moveTo(0, y); g.lineTo(cw, y); g.stroke(); g.setLineDash([]);
+      g.fillStyle = '#7c8aa0'; g.fillText(String(lv), cw + 5, y + 3.5);
+    });
+    drawLine(g, s.k, off, n, X, Y, '#a58fd6', 1.4);
+    drawLine(g, s.d, off, n, X, Y, '#d6a55f', 1.2);
+    var lv2 = s.k[off + n - 1];
+    if (lv2 != null && isFinite(lv2)) { g.fillStyle = '#a58fd6'; g.beginPath(); g.arc(X(n - 1), Y(lv2), 2.5, 0, 7); g.fill(); }
+  }
+  function drawObv(cs, off, n, st, cw) {
+    var c = paneCtx('obvCv'), valEl = document.getElementById('obvVal');
+    var s = obvSeries(cs);
+    if (!c || !s) { if (valEl) valEl.textContent = 'در دسترس نیست'; return; }
+    var last = s[s.length - 1];
+    if (valEl) valEl.textContent = compactNum(last);
+    var g = c.g, H = c.H;
+    var mn = Infinity, mx = -Infinity, i;
+    for (i = 0; i < n; i++) { var v = s[off + i]; if (v == null || !isFinite(v)) continue; if (v < mn) mn = v; if (v > mx) mx = v; }
+    if (!isFinite(mn) || !isFinite(mx)) return;
+    if (mx - mn < 1e-12) { mx += 1; mn -= 1; }
+    var pad = (mx - mn) * 0.08; mx += pad; mn -= pad;
+    var Y = function (v) { return 4 + (mx - v) / (mx - mn) * (H - 8); };
+    var X = function (k) { return k * st + st / 2; };
+    drawLine(g, s, off, n, X, Y, '#5fb8a6', 1.4);
+    var lv2 = s[off + n - 1];
+    if (lv2 != null && isFinite(lv2)) { g.fillStyle = '#5fb8a6'; g.beginPath(); g.arc(X(n - 1), Y(lv2), 2.5, 0, 7); g.fill(); }
+  }
+
   function drawPanes() {
     var G = window.__geo, cs = window.cs;
     if (!G || G.off == null || !Array.isArray(cs) || !cs.length) return;
@@ -136,23 +220,31 @@
     if (n < 2) return;
     if (on.rsi) { try { drawRsi(cs, G.off, n, st, cw); } catch (_) {} }
     if (on.macd) { try { drawMacd(cs, G.off, n, st, cw); } catch (_) {} }
+    if (on.stoch) { try { drawStoch(cs, G.off, n, st, cw); } catch (_) {} }
+    if (on.obv) { try { drawObv(cs, G.off, n, st, cw); } catch (_) {} }
   }
 
   function applyVis() {
-    var r1 = document.getElementById('rsiRow'), r2 = document.getElementById('macdRow');
+    var r1 = document.getElementById('rsiRow'), r2 = document.getElementById('macdRow'), r3 = document.getElementById('stochRow'), r4 = document.getElementById('obvRow');
     if (r1) r1.style.display = on.rsi ? '' : 'none';
     if (r2) r2.style.display = on.macd ? '' : 'none';
-    var b1 = document.getElementById('rsiBtn'), b2 = document.getElementById('macdBtn');
+    if (r3) r3.style.display = on.stoch ? '' : 'none';
+    if (r4) r4.style.display = on.obv ? '' : 'none';
+    var b1 = document.getElementById('rsiBtn'), b2 = document.getElementById('macdBtn'), b3 = document.getElementById('stochBtn'), b4 = document.getElementById('obvBtn');
     if (b1) b1.classList.toggle('on', !!on.rsi);
     if (b2) b2.classList.toggle('on', !!on.macd);
+    if (b3) b3.classList.toggle('on', !!on.stoch);
+    if (b4) b4.classList.toggle('on', !!on.obv);
   }
 
   window.drawPanes = drawPanes;
   window.rsiSeries = rsiSeries;
   window.macdSeries = macdSeries;
+  window.stochSeries = stochSeries;
+  window.obvSeries = obvSeries;
   window.OnellaPanes = {
     get on() { return on; },
-    toggle: function (id) { if (id === 'rsi' || id === 'macd') { on[id] = !on[id]; save(); applyVis(); try { drawPanes(); } catch (_) {} } },
+    toggle: function (id) { if (id === 'rsi' || id === 'macd' || id === 'stoch' || id === 'obv') { on[id] = !on[id]; save(); applyVis(); try { drawPanes(); } catch (_) {} } },
     applyVis: applyVis
   };
 })();
