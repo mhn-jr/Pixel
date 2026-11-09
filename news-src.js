@@ -191,11 +191,18 @@ function createNews(opts) {
     if (market === 'index') return fa ? 'شاخص بورس' : 'stock market index';
     if (market === 'iran-rate') return fa ? 'قیمت دلار و طلا' : 'Iran currency gold';
     if (market === 'iran-stock') return fa ? 'بورس تهران' : 'Tehran stock exchange';
+    /* v1.8.0 — داشبورد و جاهای دیگر بازار را با کلید کاتولوگ صدا می‌زنند
+       ('boorse'/'farabourse')، نه 'iran-stock'؛ همان خبر بورس تهران است. */
+    if (market === 'boorse' || market === 'farabourse') return fa ? 'بورس تهران' : 'Tehran stock exchange';
     return fa ? 'بازارهای مالی' : 'financial markets';
   }
 
   function marketKeyOf(quote) {
     if (!quote) return null;
+    /* v1.8.0 — نمادهای بورس/فرابورس providerشان 'mofid' است، نه 'iran-stock'؛
+       تا حالا marketKeyOf برای آن‌ها null برمی‌گرداند و خبر نماد هیچ زنجیرهٔ
+       جایگزینی نداشت (فقط Google News انگلیسی — عملاً خالی). */
+    if (quote.provider === 'mofid') return 'iran-stock';
     if (quote.provider === 'iran-stock') return 'iran-stock';
     if (quote.provider === 'iran-rate') return 'iran-rate';
     if (quote.provider === 'binance') return 'crypto';
@@ -220,9 +227,11 @@ function createNews(opts) {
   async function symbolNews(quote, lang, limit) {
     const q = symbolQuery(quote, lang);
     if (!q) return [];
-    const hl = (quote.provider === 'iran-rate' || quote.provider === 'iran-stock') ? 'fa' : 'en-US';
-    const gl = (quote.provider === 'iran-rate' || quote.provider === 'iran-stock') ? 'IR' : 'US';
-    const ceid = (quote.provider === 'iran-rate' || quote.provider === 'iran-stock') ? 'IR:fa' : 'US:en';
+    /* v1.8.0 — مفید هم فارسی است (نماد بورس تهران)؛ مثل iran-rate با hl=fa و gl=IR. */
+    const isFa = (quote.provider === 'iran-rate' || quote.provider === 'iran-stock' || quote.provider === 'mofid');
+    const hl = isFa ? 'fa' : 'en-US';
+    const gl = isFa ? 'IR' : 'US';
+    const ceid = isFa ? 'IR:fa' : 'US:en';
     const url = GNEWS + '?q=' + encodeURIComponent(q) + '&hl=' + hl + '&gl=' + gl + '&ceid=' + ceid;
     var items = await fetchRss(url);
     /* v1.7.0 — Google News از IP ورکر 503 می‌دهد، پس خبر نماد دیگر فقط به آن
@@ -246,7 +255,9 @@ function createNews(opts) {
     var items = await fetchRss(url);
     /* v1.2.3 — Google News از IP ورکر 503 می‌دهد (بلاک «ترافیک غیرعادی»)؛
        اگر هیچ خبری نیامد، خوراک‌های مستقیم بازار را به ترتیب می‌گیرد. */
-    if (!items.length && MARKET_FEEDS[market]) items = await firstNonEmpty(MARKET_FEEDS[market], limit || 5);
+    /* v1.8.0 — کلید خوراک 'boorse'/'farabourse' همان 'iran-stock' است. */
+    var feedKey = (market === 'boorse' || market === 'farabourse') ? 'iran-stock' : market;
+    if (!items.length && MARKET_FEEDS[feedKey]) items = await firstNonEmpty(MARKET_FEEDS[feedKey], limit || 5);
     return items.slice(0, limit || 5);
   }
 
@@ -255,7 +266,9 @@ function createNews(opts) {
   // خوراک «مهم و تاثیرگذار»: خبر بازارهای اصلی را موازی می‌گیرد، فقط تاثیر بالا
   // نگه می‌دارد (اگر کمتر از ۳ تا بود، با متوسط پر می‌کند تا ۸ تا)، تکراری‌ها را
   // حذف می‌کند و تازه‌ترین‌ها را اول می‌گذارد. برچسب نماد/تاثیر را formatNewsList می‌زند.
-  const IMPACT_MARKETS = ['crypto', 'stock', 'forex', 'commodity', 'index', 'iran-rate'];
+  /* v1.8.0 — 'iran-stock' اضافه شد: خبرهای مهم داشبورد تا حالا بورس تهران را
+     نداشت (فقط نرخ ایران بود). */
+  const IMPACT_MARKETS = ['crypto', 'stock', 'forex', 'commodity', 'index', 'iran-rate', 'iran-stock'];
 
   async function impactfulNews(lang, limit) {
     const all = [];
@@ -303,7 +316,7 @@ function createNews(opts) {
       fa ? 'تاثیر از روی کلیدواژهٔ تیتر تخمین زده شده؛ قطعی نیست.' : 'Impact is estimated from headline keywords, not measured.');
   }
 
-  return { symbolNews, marketNews, impactfulNews, formatNewsList, parseRss, symbolQuery, marketQuery, impactOf, impactLabel, detectSymbolTag };
+  return { symbolNews, marketNews, impactfulNews, formatNewsList, parseRss, symbolQuery, marketQuery, marketKeyOf, impactOf, impactLabel, detectSymbolTag };
 }
 
 window.OnellaNews = { createNews, parseRss };

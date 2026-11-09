@@ -1,5 +1,5 @@
 'use strict';
-/* Onella Nelora Lite v1.7.0 — منطق مینی‌اپ (صفحهٔ استاتیک؛ بدون سرور).
+/* Onella Nelora Lite v1.8.0 — منطق مینی‌اپ (صفحهٔ استاتیک؛ بدون سرور).
    دیزاین = کپیِ دیدنیِ خود اپ Onella Nelora (نه فقط الهام): همان توکن‌ها،
    همان چیدمان صفحهٔ چارت (گیج بالا، تب‌های بازار، نوار انتخاب نماد، تایم‌فریم
    بالای چارت)، همان مودال سرچ (تب بازار + باکس بزرگ + ردیف آیکون‌دار + ستاره).
@@ -454,19 +454,26 @@
     var rates = j && j.rates;
     var k = IRAN_KEYS[key];
     if (!rates || !k || !(rates[k] > 0)) return null;
-    return { price: rates[k], changePct: null, high: null, low: null, open: null, prevClose: null, volume: null, currency: 'Toman' };
+    /* v1.8.0 — live.json فقط قیمت لحظه‌ای ندارد: فیلد `change` همان کلیدها را با
+       تغییر روزانهٔ ٪ دارد (پروب زندهٔ ۲۰۲۶-۱۱-۰۹: dollar ‏-0.39، ‏gold ‏+0.5)؛
+       تا حالا نادیده گرفته می‌شد و نرخ‌های ایران «تغییر روزانه ندارند» فرض
+       می‌شدند — اشتباه بود. `date`/`time` هم شمسی‌اند (مثلاً 1405/08/18 17:25). */
+    var ch = j.change && typeof j.change[k] === 'number' ? j.change[k] : null;
+    return { price: rates[k], changePct: ch, high: null, low: null, open: null, prevClose: null, volume: null, currency: 'Toman',
+      asOf: (j.date ? String(j.date) : '') + (j.time ? ' ' + String(j.time) : '') };
   }
   /* ---- داده: بنیادی کریپتو (مستقیم CoinGecko) ---- */
   async function coingeckoFund(sym) {
     var id = CG_IDS[sym];
     if (!id) return null;
-    var fundUrl = 'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=' + id + '&price_change_percentage=24h,7d,30d';
+    var fundUrl = 'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=' + id + '&price_change_percentage=24h,7d,30d,1y';
     var j = await fetchJSON(fundUrl, 10000);
     if (!Array.isArray(j) || !j[0]) j = await viaWorker('coingecko', fundUrl, 12000); // v1.0.2: مستقیم نشد — از ورکر.
     if (!Array.isArray(j) || !j[0]) return null;
     var c = j[0];
     return { name: c.name, rank: c.market_cap_rank, marketCap: c.market_cap, fdv: c.fully_diluted_valuation, volume24: c.total_volume,
       chg24: c.price_change_percentage_24h_in_currency, chg7d: c.price_change_percentage_7d_in_currency, chg30d: c.price_change_percentage_30d_in_currency,
+      chg1y: c.price_change_percentage_1y_in_currency,
       circulating: c.circulating_supply, total: c.total_supply, max: c.max_supply, ath: c.ath, athChange: c.ath_change_percentage, atl: c.atl, atlChange: c.atl_change_percentage };
   }
   /* ---- داده: بورس/فرابورس ایران — مفید از ورکر (v1.1.0) ----
@@ -475,6 +482,9 @@
      برمی‌گزیند — ردیف «محصول»/«شاخص صنعت» با همان نماد کنار گذاشته می‌شود). */
   var MOFID_RES = { '1m': '1', '3m': '1', '5m': '5', '15m': '15', '30m': '30', '1h': '60', '1d': '1D', '1w': '1W' };
   var mofidCache = {};
+  /* v1.8.0 — کش کوتاه کندل روزانهٔ مفید: قیمت (mofidPrice) و بنیادی (renderFund)
+     هر دو همان کندل ۱d صدو پنجاه روزه را می‌خواهند؛ دو بار نگیریم (۵ دقیقه). */
+  var mofidDailyCache = {};
   async function mofidResolve(symbol) {
     if (mofidCache[symbol]) return mofidCache[symbol];
     if (!PROXY_URL) return null;
@@ -503,6 +513,10 @@
   async function mofidCandles(symbol, tf) {
     var res = MOFID_RES[tf];
     if (!res) return null;
+    if (tf === '1d') {
+      var cd = mofidDailyCache[symbol];
+      if (cd && Date.now() - cd.at < 300000 && cd.data) return cd.data.slice();
+    }
     var r = await mofidResolve(symbol);
     if (!r) return null;
     var to = Math.floor(Date.now() / 1000);
@@ -511,12 +525,14 @@
     // نردبان واریانت (همان P56): ثانیه/بازهٔ کامل ← میلی‌ثانیه ← adjusted=true.
     var j = await mofidHistory(r.isin, res, from, to, 0);
     var out = parseMofidUdf(j);
-    if (out) return out;
+    if (out) { if (tf === '1d') mofidDailyCache[symbol] = { at: Date.now(), data: out }; return out; }
     j = await mofidHistory(r.isin, res, from * 1000, to * 1000, 0);
     out = parseMofidUdf(j);
-    if (out) return out;
+    if (out) { if (tf === '1d') mofidDailyCache[symbol] = { at: Date.now(), data: out }; return out; }
     j = await mofidHistory(r.isin, res, from, to, 1);
-    return parseMofidUdf(j);
+    out = parseMofidUdf(j);
+    if (out && tf === '1d') mofidDailyCache[symbol] = { at: Date.now(), data: out };
+    return out;
   }
   async function mofidPrice(symbol) {
     var cs = await mofidCandles(symbol, '1d');
@@ -1392,8 +1408,8 @@
     $('tab-chart').innerHTML =
       '<div id="tfRow" class="tf-wrap"><div class="tf-group"><button id="tfBtn" type="button" title="' + esc(T('تایم‌فریم', 'Timeframe')) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg><span class="tf-cur">' + esc(state.tf) + '</span> ▾</button>'
       + '<button id="fsBtn" class="tf-fs" type="button" title="' + esc(T('تمام‌صفحه', 'Fullscreen')) + '">' + FS_ICONS.on + '</button></div>'
-      + '<div class="tf-group"><button class="tf-fs" id="toolsFab" type="button" title="' + esc(T('ابزارهای چارت', 'Chart tools')) + '">' + ICON.tools + '</button>'
-      + '<button class="tf-fs" id="setBtn" type="button" title="' + esc(T('تنظیمات چارت', 'Chart settings')) + '">' + SET_ICON + '</button></div>'
+      + '<div class="tf-group"><button class="tf-fs" id="setBtn" type="button" title="' + esc(T('تنظیمات چارت', 'Chart settings')) + '">' + SET_ICON + '</button>'
+      + '<button class="tf-fs" id="toolsFab" type="button" title="' + esc(T('ابزارهای چارت', 'Chart tools')) + '">' + ICON.tools + '</button></div>'
       + '<div id="tfPanel" class="tf-panel">' + tfs.map(function (k) {
           return '<button data-tf="' + k + '"' + (state.tf === k ? ' class="on"' : '') + ' type="button">' + k + '</button>';
         }).join('') + '</div></div>'
@@ -2064,6 +2080,50 @@
     el.innerHTML = html;
   }
 
+  /* ---- v1.8.0 — بازده از کندل‌های روزانه (برای بنیادی همهٔ بازارهای کندل‌دار) ----
+     بدون API تازه: همان کندل‌های ۱d که چارت/قیمت از همان منبع می‌گیرند. */
+  function perfFromDaily(cs) {
+    var out = { chg7: null, chg30: null, chg90: null };
+    if (!Array.isArray(cs) || cs.length < 2) return out;
+    var closes = cs.map(function (c) { return c.c; }).filter(function (v) { return typeof v === 'number' && Number.isFinite(v) && v > 0; });
+    if (closes.length < 2) return out;
+    var last = closes[closes.length - 1];
+    var at = function (n) {
+      if (closes.length <= n) return null;
+      var base = closes[closes.length - 1 - n];
+      return base > 0 ? ((last - base) / base) * 100 : null;
+    };
+    out.chg7 = at(7); out.chg30 = at(30); out.chg90 = at(90);
+    return out;
+  }
+  async function dailyCandlesFor(q) {
+    // کندل ۱d همان نماد، بدون دست زدن به state.candles/چارت (بنیادی مستقل است).
+    if (!q) return null;
+    if (q.provider === 'binance') return binanceKlines(q.symbol, '1d', 100);
+    if (q.provider === 'yahoo') {
+      var r = await yahooChart(q.symbol, '6mo', '1d');
+      return (r && r.candles) ? r.candles : null;
+    }
+    if (q.provider === 'mofid') return mofidCandles(q.symbol, '1d');
+    return null; // نرخ ایران کندل ندارد (فقط قیمت لحظه‌ای).
+  }
+  function ymd(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  async function frankfurterWeek(sym) {
+    // تغییر ۷ روزهٔ جفت‌ارز از سری زمانی Frankfurter (بدون کلید، مستقیم، CORS دارد)؛
+    // فقط روزهای کاری برمی‌گردد — اول و آخر همان بازه را می‌گیریم (پروب ۲۰۲۶-۱۱-۰۹).
+    var p = FX_PAIRS[sym];
+    if (!p) return null;
+    var end = new Date(), start = new Date(Date.now() - 9 * 86400000);
+    var j = await fetchJSON('https://api.frankfurter.app/' + ymd(start) + '..' + ymd(end) + '?from=' + p[0] + '&to=' + p[1], 8000);
+    var rates = j && j.rates;
+    if (!rates) return null;
+    var days = Object.keys(rates).sort();
+    if (days.length < 2) return null;
+    var first = rates[days[0]] && rates[days[0]][p[1]], last = rates[days[days.length - 1]] && rates[days[days.length - 1]][p[1]];
+    if (!(first > 0) || !(last > 0)) return null;
+    return ((last - first) / first) * 100;
+  }
+
   /* ---- بنیادی ---- */
   /* v1.2.1 — کارت بنیادی: یک کارت برای هر متریک (به‌جای ردیف ساده). */
   function fundCard(lb, v, wide) {
@@ -2073,36 +2133,51 @@
     if (typeof v !== 'number') return '—';
     return '<span class="' + (v >= 0 ? 'up' : 'dn') + '">' + fmtPct(v) + '</span>';
   }
-  function renderFund() {
+  async function renderFund() {
     var el = $('tab-fund');
     var q = state.quote;
     if (!q) return;
     el.innerHTML = '<div class="muted">' + esc(T('در حال بارگذاری…', 'Loading…')) + '</div>';
+    var naHtml = '<div class="na">' + esc(T('برای این نماد بنیادی نیست.', 'No fundamentals for this symbol.')) + '</div>';
+    /* اگر تا رسیدن داده نماد عوض شد، در همان تب قدیمی چیزی ننویسیم. */
+    var alive = function () { return state.quote === q; };
     if (q.provider === 'binance') {
-      coingeckoFund(q.symbol).then(function (f) {
-        if (!f) { el.innerHTML = '<div class="na">' + esc(T('برای این نماد بنیادی نیست.', 'No fundamentals for this symbol.')) + '</div>'; return; }
-        el.innerHTML = '<div class="fund-grid">'
-          + (f.rank ? fundCard('#', String(f.rank)) : '')
-          + fundCard(esc(T('ارزش بازار', 'Market cap')), f.marketCap ? '$' + fmt(f.marketCap) : '—')
-          + fundCard('FDV', f.fdv ? '$' + fmt(f.fdv) : '—')
-          + fundCard(esc(T('حجم ۲۴ ساعت', 'Volume 24h')), f.volume24 ? '$' + fmt(f.volume24) : '—')
-          + fundCard(esc(T('تغییر ۲۴ ساعت', 'Change 24h')), pctSpan(f.chg24))
-          + fundCard(esc(T('تغییر ۷ روز', 'Change 7d')), pctSpan(f.chg7d))
-          + fundCard(esc(T('تغییر ۳۰ روز', 'Change 30d')), pctSpan(f.chg30d))
-          + fundCard(esc(T('در گردش', 'Circulating')), f.circulating ? fmt(f.circulating) : '—')
-          + fundCard(esc(T('سقف تاریخی', 'ATH')), f.ath ? '$' + fmt(f.ath) + (f.athChange != null ? ' <small>(' + fmtPct(f.athChange) + ')</small>' : '') : '—')
-          + fundCard(esc(T('کف تاریخی', 'ATL')), f.atl ? '$' + fmt(f.atl) : '—')
-          + '</div>';
-      });
+      var f = await coingeckoFund(q.symbol);
+      if (!alive()) return;
+      if (!f) { el.innerHTML = naHtml; return; }
+      el.innerHTML = '<div class="fund-grid">'
+        + (f.rank ? fundCard('#', String(f.rank)) : '')
+        + fundCard(esc(T('ارزش بازار', 'Market cap')), f.marketCap ? '$' + fmt(f.marketCap) : '—')
+        + fundCard('FDV', f.fdv ? '$' + fmt(f.fdv) : '—')
+        + fundCard(esc(T('حجم ۲۴ ساعت', 'Volume 24h')), f.volume24 ? '$' + fmt(f.volume24) : '—')
+        + fundCard(esc(T('تغییر ۲۴ ساعت', 'Change 24h')), pctSpan(f.chg24))
+        + fundCard(esc(T('تغییر ۷ روز', 'Change 7d')), pctSpan(f.chg7d))
+        + fundCard(esc(T('تغییر ۳۰ روز', 'Change 30d')), pctSpan(f.chg30d))
+        + fundCard(esc(T('تغییر ۱ سال', 'Change 1y')), pctSpan(f.chg1y))
+        + fundCard(esc(T('در گردش', 'Circulating')), f.circulating ? fmt(f.circulating) : '—')
+        + fundCard(esc(T('عرضهٔ کل', 'Total supply')), f.total ? fmt(f.total) : '—')
+        + fundCard(esc(T('سقف عرضه', 'Max supply')), f.max ? fmt(f.max) : '—')
+        + fundCard(esc(T('سقف تاریخی', 'ATH')), f.ath ? '$' + fmt(f.ath) + (f.athChange != null ? ' <small>(' + fmtPct(f.athChange) + ')</small>' : '') : '—')
+        + fundCard(esc(T('کف تاریخی', 'ATL')), f.atl ? '$' + fmt(f.atl) + (f.atlChange != null ? ' <small>(' + fmtPct(f.atlChange) + ')</small>' : '') : '—')
+        + '</div>';
       return;
     }
     if (q.provider === 'yahoo') {
       if (!state.quoteRes) {
-        el.innerHTML = '<div class="na">' + esc(T('برای این نماد بنیادی نیست.', 'No fundamentals for this symbol.')) + '</div>'
+        el.innerHTML = naHtml
           + '<div class="hint">' + esc(T('به پروکسی نیاز دارد — PROXY_URL را در app.js بگذار (README را ببین).', 'Needs the proxy — set PROXY_URL in app.js (see README).')) + '</div>';
         return;
       }
       var r = state.quoteRes;
+      /* v1.8.0 — پروفایل بازار از همان دادهٔ یاهو + کندل روزانه: برای فارکس/
+         شاخص/کالا که P/E و ارزش بازار ندارند، تب دیگر خالی نیست — بازهٔ روز،
+         ۵۲ هفته، میانگین‌ها، حجم در برابر میانگین و بازدهٔ ۷/۳۰/۹۰ روزه هست. */
+      var perf = null, fx7 = null;
+      try {
+        var res = await Promise.all([dailyCandlesFor(q), FX_PAIRS[q.symbol] ? frankfurterWeek(q.symbol) : Promise.resolve(null)]);
+        if (!alive()) return;
+        perf = perfFromDaily(res[0]); fx7 = res[1];
+      } catch (e) { perf = null; fx7 = null; }
       var dy = (typeof r.divYield === 'number') ? ((r.divYield > 0.05 ? r.divYield : r.divYield * 100).toFixed(2) + '%') : '—';
       el.innerHTML = '<div class="fund-grid">'
         + (r.name ? fundCard(esc(T('نام', 'Name')), esc(r.name), true) : '')
@@ -2117,11 +2192,59 @@
         + fundCard(esc(T('میانگین ۵۰ روزه', '50-day avg')), r.avg50 != null ? fmt(r.avg50) : '—')
         + fundCard(esc(T('میانگین ۲۰۰ روزه', '200-day avg')), r.avg200 != null ? fmt(r.avg200) : '—')
         + ((r.week52High != null) ? fundCard('52W', fmt(r.week52Low) + ' – ' + fmt(r.week52High), true) : '')
+        + ((r.high != null && r.low != null) ? fundCard(esc(T('بازهٔ روز', 'Day range')), fmt(r.low) + ' – ' + fmt(r.high), true) : '')
+        + ((typeof r.volume === 'number') ? fundCard(esc(T('حجم / میانگین', 'Volume / average')), fmt(r.volume) + (r.avgVolume ? ' / ' + fmt(r.avgVolume) : ''), true) : '')
+        + fundCard(esc(T('بازده ۷ روزه', 'Return 7d')), perf ? pctSpan(perf.chg7) : '—')
+        + fundCard(esc(T('بازده ۳۰ روزه', 'Return 30d')), perf ? pctSpan(perf.chg30) : '—')
+        + fundCard(esc(T('بازده ۹۰ روزه', 'Return 90d')), perf ? pctSpan(perf.chg90) : '—')
+        + ((fx7 != null) ? fundCard(esc(T('تغییر ۷ روزه (Frankfurter)', 'Change 7d (Frankfurter)')), pctSpan(fx7)) : '')
         + (r.exchange ? fundCard(esc(T('بورس', 'Exchange')), esc(r.exchange)) : '')
         + '</div>';
       return;
     }
-    el.innerHTML = '<div class="na">' + esc(T('برای این نماد بنیادی نیست.', 'No fundamentals for this symbol.')) + '</div>';
+    if (q.provider === 'mofid') {
+      /* v1.8.0 — بورس/فرابورس تا حالا هیچ بنیادی نداشت: نام + بورس + ISIN از
+         مفید، و بازده/بازه/حجم از همان کندل‌های روزانهٔ UDF مفید (۱۵۰ روز). */
+      var res2 = await mofidResolve(q.symbol);
+      if (!alive()) return;
+      var dcs = await mofidCandles(q.symbol, '1d');
+      if (!alive()) return;
+      if ((!res2 || !res2.ok) && !dcs) { el.innerHTML = naHtml; return; }
+      var pf = perfFromDaily(dcs);
+      var lastC = (dcs && dcs.length) ? dcs[dcs.length - 1] : null;
+      var hi = null, lo = null;
+      if (dcs && dcs.length) {
+        hi = dcs[0].h; lo = dcs[0].l;
+        dcs.forEach(function (c) { if (c.h > hi) hi = c.h; if (c.l < lo) lo = c.l; });
+      }
+      el.innerHTML = '<div class="fund-grid">'
+        + ((res2 && res2.title) ? fundCard(esc(T('نام', 'Name')), esc(res2.title), true) : '')
+        + ((res2 && res2.exchange) ? fundCard(esc(T('بورس', 'Exchange')), esc(res2.exchange)) : '')
+        + ((res2 && res2.isin) ? fundCard('ISIN', esc(res2.isin), true) : '')
+        + (lastC ? fundCard(esc(T('آخرین قیمت پایانی', 'Last close')), fmt(lastC.c) + ' ' + esc(T('ریال', 'Rial'))) : '')
+        + fundCard(esc(T('بازده ۷ روزه', 'Return 7d')), pctSpan(pf.chg7))
+        + fundCard(esc(T('بازده ۳۰ روزه', 'Return 30d')), pctSpan(pf.chg30))
+        + fundCard(esc(T('بازده ۹۰ روزه', 'Return 90d')), pctSpan(pf.chg90))
+        + ((hi != null && lo != null) ? fundCard(esc(T('بازهٔ ۱۵۰ روزه', '150-day range')), fmt(lo) + ' – ' + fmt(hi), true) : '')
+        + ((lastC && lastC.v) ? fundCard(esc(T('حجم روز آخر', 'Last-day volume')), fmt(lastC.v)) : '')
+        + '</div>';
+      return;
+    }
+    if (q.provider === 'iran-rate') {
+      /* v1.8.0 — نرخ ایران تا حالا هیچ بنیادی نداشت: قیمت تومان + تغییر امروز
+         + تاریخ به‌روزرسانی، همه از همان live.json نر‌خسنج. */
+      var ir = await iranRate(q.symbol);
+      if (!alive()) return;
+      if (!ir) { el.innerHTML = naHtml; return; }
+      el.innerHTML = '<div class="fund-grid">'
+        + fundCard(esc(T('قیمت', 'Price')), fmt(ir.price) + ' ' + esc(T('تومان', 'Toman')))
+        + fundCard(esc(T('تغییر امروز', 'Change today')), pctSpan(ir.changePct))
+        + fundCard(esc(T('منبع', 'Source')), 'Nerkhsanj')
+        + (ir.asOf ? fundCard(esc(T('به‌روز شده', 'Updated')), esc(ir.asOf), true) : '')
+        + '</div>';
+      return;
+    }
+    el.innerHTML = naHtml;
   }
 
   /* ---- خبر (همان RSS ربات؛ با پروکسی) ---- */
@@ -2320,6 +2443,32 @@
     var q = state.quote;
     if (!q) return;
     stopDepthPoll();
+    /* v1.8.0 — عمق فقط کریپتو نبود: یاهو بهترین خرید/فروش + اندازه‌اش را می‌دهد
+       (top-of-book — دفتر کامل نیست و قیمت‌ها با تأخیرند)؛ برای ایران و بورس
+       هیچ منبعی در اپ دفتر ندارد و پیام، دلیلش را صادقانه می‌گوید. */
+    if (q.provider === 'yahoo') {
+      var r = state.quoteRes;
+      if (r && typeof r.bid === 'number' && typeof r.ask === 'number' && r.bid > 0 && r.ask > 0) {
+        var sp = r.ask - r.bid, spPct = (sp / r.bid) * 100;
+        el.innerHTML = '<div class="fund-grid">'
+          + fundCard(esc(T('بهترین خرید', 'Best bid')), fmt(r.bid) + (r.bidSize ? ' <small>× ' + fmt(r.bidSize) + '</small>' : ''))
+          + fundCard(esc(T('بهترین فروش', 'Best ask')), fmt(r.ask) + (r.askSize ? ' <small>× ' + fmt(r.askSize) + '</small>' : ''))
+          + fundCard(esc(T('اسپرد', 'Spread')), fmt(sp) + ' (' + spPct.toFixed(3) + '٪)', true)
+          + '</div>'
+          + '<div class="warn">' + esc(T('قیمت خرید/فروش یاهو با تأخیر است و فقط بالاترین سطح دفتر است — دفتر کامل برای این بازار در دسترس نیست.', 'Yahoo bid/ask is delayed and top-of-book only — no full order book for this market.')) + '</div>';
+      } else {
+        el.innerHTML = '<div class="na">' + esc(T('برای این نماد قیمت خرید/فروش از یاهو در دسترس نیست.', 'No bid/ask from Yahoo for this symbol.')) + '</div>';
+      }
+      return;
+    }
+    if (q.provider === 'iran-rate') {
+      el.innerHTML = '<div class="na">' + esc(T('نرخ‌های ایران دفتر سفارش ندارند — نر‌خسنج فقط قیمت لحظه‌ای می‌دهد؛ دفتر سفارش نوبیتکس هم از ورکر در دسترس نیست.', 'Iran rates have no order book — Nerkhsanj is spot-only, and the Nobitex order book is unreachable from the Worker.')) + '</div>';
+      return;
+    }
+    if (q.provider === 'mofid') {
+      el.innerHTML = '<div class="na">' + esc(T('بورس/فرابورس دفتر سفارش ندارد — مفید فقط تاریخچهٔ قیمت می‌دهد و TSETMC از IP خارجی بلاک است.', 'TSE/Farabourse have no order book here — Mofid only gives price history, and TSETMC blocks foreign IPs.')) + '</div>';
+      return;
+    }
     if (q.provider !== 'binance') {
       el.innerHTML = '<div class="na">' + esc(T('دفتر سفارش فقط برای نمادهای کریپتو (Binance) در دسترس است.', 'Order book is only available for crypto symbols (Binance).')) + '</div>';
       return;
@@ -2345,7 +2494,8 @@
      حرارت بازار = سهم نمادهای مثبت + میانگین تغییر روزانهٔ هر بازار (از دادهٔ واقعی همان روز).
      ۵ صعودی/۵ نزولی = بزرگ‌ترین تغییرهای روزانهٔ ۲۴ ساعته در کل کاتولوگ (کریپتو از CoinGecko،
      سهام/ETF/فارکس/کالا/شاخص از Yahoo چندنمادی، بورس/فرابورس از مفید چندنمادی).
-     نرخ‌های ایران تغییر روزانه ندارند (live.json فقط قیمت لحظه‌ای دارد) — در داشبورد نمی‌آیند.
+     نرخ‌های ایران هم از live.json نر‌خسنج می‌آیند — فیلد `change` همان فایل تغییر
+     روزانه را دارد (پروب ۲۰۲۶-۱۱-۰۹؛ فرض قبلی که «فقط قیمت لحظه‌ای دارد» اشتباه بود).
      درصد تاثیر خبر = نگاشت سطح کلیدواژه‌ای ربات (بالا ۸۵٪ / متوسط ۶۰٪ / کم ۳۵٪) + ۱۰٪ اگر
      نماد در تیتر باشد (سقف ۹۵٪) — تخمین است، نه اندازه‌گیری واقعی. */
   var dashCache = { at: 0, data: null };
@@ -2370,6 +2520,24 @@
     var j = await fetchJSON(PROXY_URL.replace(/\/$/, '') + '/mofid?kind=bulk&symbols=' + encodeURIComponent(symbols.join(',')), 20000);
     return (j && Array.isArray(j.quotes)) ? j.quotes : [];
   }
+  /* v1.8.0 — نرخ‌های ایران، یک تماس: live.json نر‌خسنج قیمت + تغییر روزانهٔ همهٔ
+     نرخ‌ها را با هم می‌دهد (همان فایل iranRate)؛ پس داشبورد حالا هر ۹ بازار را دارد. */
+  async function iranRatesBulk() {
+    var u = proxyUrl('nerkhsanj', 'https://nerkh.jahankhahan.shop/data/live.json');
+    if (!u) return [];
+    var j = await fetchJSON(u, 10000);
+    var rates = j && j.rates, ch = j && j.change;
+    if (!rates) return [];
+    var rows = [];
+    MARKETS.iran.quotes.forEach(function (q) {
+      var k = IRAN_KEYS[q.symbol];
+      if (!k || !(rates[k] > 0)) return;
+      var c = (ch && typeof ch[k] === 'number') ? ch[k] : null;
+      if (typeof c !== 'number') return;
+      rows.push({ quote: q, market: 'iran', price: rates[k], changePct: c, currency: 'Toman' });
+    });
+    return rows;
+  }
   /* v1.2.3 — داشبورد تدریجی: هر پایه که رسید همان لحظه روی داشبورد می‌نشیند
      (کریپتو/طلا اول، سهام/بورس وقتی رسیدند) و خبر هم موازی گرفته می‌شود،
      نه بعد از پایه‌ها. قبلاً همه‌چیز پشت کندترین پایه (Yahoo/مفید، گاهی
@@ -2393,11 +2561,11 @@
     ['boorse', 'farabourse'].forEach(function (k) {
       MARKETS[k].quotes.forEach(function (q) { mofidSyms.push(q.symbol); });
     });
-    var live = { rows: [], news: null, newsDone: false, mktDone: 0, done: 0, total: 5, at: now };
+    var live = { rows: [], news: null, newsDone: false, mktDone: 0, done: 0, total: 6, at: now };
     function partial() {
       if (seq !== dashSeq) return;
       renderDash({ rows: live.rows, news: live.news || [], newsLoading: !live.newsDone,
-        rowsLoading: live.mktDone < 4, yahooOk: true, mofidOk: true, cgOk: true, at: now });
+        rowsLoading: live.mktDone < 5, yahooOk: true, mofidOk: true, cgOk: true, at: now });
     }
     function legDone() {
       live.done++;
@@ -2459,6 +2627,11 @@
         live.rows = live.rows.concat([{ quote: MARKETS.commodities.quotes[0], market: 'commodities', price: paxg.price, changePct: paxg.changePct, currency: 'USDT' }]);
         partial();
       }
+    }).catch(function () {}).then(mktLegDone),
+    iranRatesBulk().then(function (rows) {
+      if (seq !== dashSeq) return;
+      live.rows = live.rows.concat(rows);
+      partial();
     }).catch(function () {}).then(mktLegDone),
     (async function () {
       try {
@@ -2580,6 +2753,7 @@
     showMainTab: showMainTab, openSearchModal: openSearchModal, closeSearchModal: closeSearchModal, renderSmBody: renderSmBody, renderSmTabs: renderSmTabs, sm: sm,
     loadDash: loadDash, renderDash: renderDash, confluence: confluence, renderGauge: renderGauge, renderDepth: renderDepth, renderDepthData: renderDepthData, fetchDepth: fetchDepth, stopDepthPoll: stopDepthPoll, applyDepthDiff: applyDepthDiff, tradesRowsHtml: tradesRowsHtml, getDepthData: function () { return depthData; }, getLiveTrades: function () { return liveTrades; }, setLiveTrades: function (t) { liveTrades = t || []; }, positionLastPxTag: positionLastPxTag,
     yahooSearch: yahooSearch, mofidResolve: mofidResolve, rememberQuote: rememberQuote,
+    iranRate: iranRate, perfFromDaily: perfFromDaily, frankfurterWeek: frankfurterWeek, iranRatesBulk: iranRatesBulk, dailyCandlesFor: dailyCandlesFor,
     pmScale: pmScale, pmPan: pmPan, autoScale: autoScale, toLatest: toLatest, refreshAxisBtns: refreshAxisBtns,
     toggleFav: toggleFav, isFav: isFav, lookupQuote: lookupQuote, yahooMulti: yahooMulti, mofidBulk: mofidBulk, cgMarkets: cgMarkets };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
