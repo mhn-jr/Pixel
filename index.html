@@ -90,7 +90,7 @@
   #tab-chart:fullscreen #nv, #tab-chart.fs #nv { height: calc(100dvh - 200px) !important; }
   #tab-chart:fullscreen #cc, #tab-chart.fs #cc { height: 100% !important; }
   /* v1.3.0 — جعبهٔ OHLC کراس‌هیر + پنل‌های RSI/MACD */
-  .xh-box { position: absolute; top: 30px; right: 8px; z-index: 4; background: rgba(13,19,32,.88); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; font-size: 11px; line-height: 1.7; color: var(--txt); pointer-events: none; text-align: left; white-space: nowrap; }
+  .xh-box { position: absolute; top: 88px; right: 8px; z-index: 4; background: rgba(13,19,32,.88); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; font-size: 11px; line-height: 1.7; color: var(--txt); pointer-events: none; text-align: left; white-space: nowrap; }
   .xh-box b { color: var(--txt); }
   .panes { margin-top: 8px; }
   .pane-row { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin-bottom: 8px; }
@@ -182,19 +182,42 @@
   .tools-fab { position: absolute; left: 8px; top: 44px; width: 44px; height: 44px; padding: 7px; background: rgba(13,19,32,.88); border: 1px solid var(--line); border-radius: 12px; cursor: pointer; z-index: 5; }
   .tools-fab svg { width: 28px; height: 28px; display: block; }
   .tools-fab:active { border-color: var(--acc); }
-  .tools-panel { display: none; position: absolute; left: 8px; right: 8px; bottom: 8px; max-height: 224px; overflow-y: auto; background: rgba(13,19,32,.97); border: 1px solid var(--line); border-radius: 12px; padding: 10px; z-index: 6; }
-  .tools-panel.open { display: block; }
-  .tools-panel-h { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 700; margin-bottom: 8px; }
-  .tools-panel .chart-tools { display: grid; grid-template-columns: repeat(3, 1fr); margin: 0 0 6px; }
-  .tools-panel .chart-tools .tbtn { text-align: center; }
-  .tools-panel .chart-tools .tbtn.on { border-color: var(--p-vol); color: var(--p-vol); }
-  .tools-panel .tool-note { font-size: 12px; color: var(--mut); line-height: 1.6; padding: 4px 2px 0; }
-  /* v1.4.0 — ابزارهای رسم (مرحله ۳): بخش رسم + دکمه‌های حذف/پاک کردن */
-  .draw-sec-h { font-size: 12px; font-weight: 700; color: var(--mut); margin: 8px 0 6px; }
-  .tools-panel #drawTools .tbtn.on { border-color: var(--acc); color: var(--acc); }
-  .draw-actions { display: flex; gap: 6px; margin-bottom: 4px; }
-  .draw-actions .tbtn { flex: 1; }
-  .draw-actions .tbtn:disabled { opacity: .4; }
+  /* v1.5.0 — نوار ابزار عمودی (جای پنل بزرگ پایین چارت): باریک، قابل اسکرول؛
+     دکمهٔ تنظیمات چارت (بالا-راست چارت، مثل اپ اصلی) + پنل تنظیمات قابل اسکرول. */
+  .tools-strip { display: none; position: absolute; left: 8px; top: 96px; bottom: 8px; width: 48px; overflow-y: auto; overflow-x: hidden; background: rgba(13,19,32,.97); border: 1px solid var(--line); border-radius: 12px; padding: 4px; z-index: 6; }
+  .tools-strip.open { display: block; }
+  .tools-strip::-webkit-scrollbar { width: 4px; }
+  .tools-strip::-webkit-scrollbar-thumb { background: rgba(124,138,160,.5); border-radius: 2px; }
+  .strip-group { display: flex; flex-direction: column; gap: 4px; }
+  .strip-sep { height: 1px; background: var(--line); margin: 6px 2px; flex: none; }
+  .tools-strip .tbtn { width: 100%; height: 40px; padding: 4px; display: flex; align-items: center; justify-content: center; flex: none; }
+  .tools-strip .tbtn svg { width: 22px; height: 22px; display: block; }
+  .tools-strip #chartTools .tbtn.on { border-color: var(--p-vol); color: var(--p-vol); }
+  .tools-strip #drawTools .tbtn.on { border-color: var(--acc); color: var(--acc); }
+  .tools-strip .tbtn:disabled { opacity: .4; }
+  .tool-note-bar { font-size: 12px; color: var(--mut); line-height: 1.6; padding: 6px 2px 0; }
+  .set-fab { position: absolute; right: 8px; top: 44px; width: 36px; height: 36px; padding: 6px; background: rgba(13,19,32,.88); border: 1px solid var(--acc); border-radius: 10px; cursor: pointer; z-index: 5; }
+  .set-fab svg { width: 22px; height: 22px; display: block; }
+  .set-fab.on { background: rgba(240,106,21,.18); }
+  .settings-panel { display: none; position: absolute; top: 88px; right: 8px; bottom: 8px; width: 272px; max-width: calc(100% - 16px); overflow-y: auto; background: rgba(13,19,32,.97); border: 1px solid var(--line); border-radius: 12px; padding: 10px; z-index: 7; }
+  .settings-panel.open { display: block; }
+  .settings-panel::-webkit-scrollbar { width: 4px; }
+  .settings-panel::-webkit-scrollbar-thumb { background: rgba(124,138,160,.5); border-radius: 2px; }
+  .settings-panel-h { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+  .set-sec-h { font-size: 12px; font-weight: 700; color: var(--mut); margin: 10px 0 6px; }
+  .set-type-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .set-type { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px 4px; color: var(--txt); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 12px; }
+  .set-type svg { width: 22px; height: 22px; display: block; }
+  .set-type.on { border-color: var(--acc); color: var(--acc); }
+  .set-pal-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .set-pal { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px; cursor: pointer; display: flex; gap: 4px; align-items: center; }
+  .set-pal.on { border-color: var(--acc); }
+  .set-pal .sw { width: 16px; height: 22px; border-radius: 4px; display: block; }
+  .set-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 2px; font-size: 13px; border-bottom: 1px solid rgba(120,140,170,.08); }
+  .switch { width: 46px; height: 26px; border-radius: 13px; background: #2a3550; border: 1px solid var(--line); position: relative; cursor: pointer; flex: none; padding: 0; }
+  .switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: #e6e9ef; }
+  .switch.on { background: var(--acc); border-color: var(--acc); }
+  .switch.on::after { left: 22px; }
   .an-card .an-big { font-size: 17px; font-weight: 800; }
   .an-card .an-sub { font-size: 12px; color: var(--mut); margin-top: 2px; line-height: 1.6; }
   .an-card .row { padding: 6px 0; font-size: 13px; }

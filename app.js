@@ -1,5 +1,5 @@
 'use strict';
-/* Onella Nelora Lite v1.4.0 — منطق مینی‌اپ (صفحهٔ استاتیک؛ بدون سرور).
+/* Onella Nelora Lite v1.5.0 — منطق مینی‌اپ (صفحهٔ استاتیک؛ بدون سرور).
    دیزاین = کپیِ دیدنیِ خود اپ Onella Nelora (نه فقط الهام): همان توکن‌ها،
    همان چیدمان صفحهٔ چارت (گیج بالا، تب‌های بازار، نوار انتخاب نماد، تایم‌فریم
    بالای چارت)، همان مودال سرچ (تب بازار + باکس بزرگ + ردیف آیکون‌دار + ستاره).
@@ -1296,16 +1296,64 @@
     var TOOLS = [['fib', 'فیبوناچی', 'Fibonacci'], ['sr', 'حمایت/مقاومت', 'Support/Resistance'], ['tl', 'خط روند', 'Trendline'], ['bb', 'بولینگر', 'Bollinger'], ['pv', 'پیوت', 'Pivot'], ['ema', 'میانگین نمایی', 'EMA'], ['vwap', 'وی‌واپ', 'VWAP'], ['donch', 'دونچیان', 'Donchian'], ['kelt', 'کلتنر', 'Keltner'], ['super', 'سوپرترند', 'Supertrend'], ['sar', 'پارابولیک', 'SAR']];
     /* v1.4.0 — ۵ ابزار رسم تعاملی (مرحله ۳): در همان پنل شناور، زیر ابزارهای محاسبه‌شده. */
     var DRAW_TOOLS = [['trend', 'خط روند', 'Trendline'], ['hline', 'خط افقی', 'Horizontal'], ['rect', 'مستطیل', 'Rectangle'], ['fib', 'فیبوناچی', 'Fibonacci'], ['text', 'متن', 'Text']];
+    /* v1.5.0 — آیکون‌های نوار ابزار (SVG ساده، بدون self-closing تا ماک تست هم parse کند). */
+    var IC = function (inner) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + inner + '</svg>'; };
+    var TOOL_ICONS = {
+      fib: IC('<path d="M4 6h16"></path><path d="M4 11h12"></path><path d="M4 16h16"></path><path d="M4 21h8"></path>'),
+      sr: IC('<path d="M4 7h16"></path><path d="M4 17h16"></path><path d="M12 4v3"></path><path d="M12 17v3"></path>'),
+      tl: IC('<path d="M5 19L19 5"></path>'),
+      bb: IC('<path d="M4 8c4-3 12-3 16 0"></path><path d="M4 16c4 3 12 3 16 0"></path><path d="M4 12h16"></path>'),
+      pv: IC('<path d="M4 12h16"></path><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"></circle>'),
+      ema: IC('<path d="M3 14c3-6 6 4 9-2s6 4 9-2"></path>'),
+      vwap: IC('<path d="M4 11h16"></path><path d="M7 16v4"></path><path d="M12 14v6"></path><path d="M17 16v4"></path>'),
+      donch: IC('<path d="M4 6h16"></path><path d="M4 18h16"></path><path d="M4 6v12"></path><path d="M20 6v12"></path>'),
+      kelt: IC('<path d="M4 7h16"></path><path d="M4 17h16"></path><path d="M4 12h16" stroke-dasharray="3 3"></path>'),
+      super: IC('<path d="M4 18h6v-6h6v-4h4"></path>'),
+      sar: IC('<circle cx="6" cy="18" r="1.8" fill="currentColor" stroke="none"></circle><circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none"></circle><circle cx="18" cy="6" r="1.8" fill="currentColor" stroke="none"></circle>')
+    };
+    var DRAW_ICONS = {
+      trend: IC('<path d="M5 19L19 5"></path><circle cx="5" cy="19" r="2" fill="currentColor" stroke="none"></circle><circle cx="19" cy="5" r="2" fill="currentColor" stroke="none"></circle>'),
+      hline: IC('<path d="M3 12h18"></path>'),
+      rect: IC('<rect x="5" y="7" width="14" height="10" rx="1"></rect>'),
+      fib: IC('<path d="M5 5l14 14"></path><path d="M5 8h14"></path><path d="M5 13h14"></path><path d="M5 18h14"></path>'),
+      text: IC('<path d="M6 6h12"></path><path d="M12 6v12"></path>')
+    };
+    var TRASH_ICON = IC('<path d="M5 7h14"></path><path d="M9 7V5h6v2"></path><path d="M8 7l1 12h6l1-12"></path><path d="M10 11v5"></path><path d="M14 11v5"></path>');
+    var CLEAR_ICON = IC('<path d="M6 6l12 12"></path><path d="M18 6L6 18"></path>');
+    var SET_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="#f06a15" stroke-width="1.8" stroke-linecap="round"><path d="M7 3v4"></path><path d="M7 15v6"></path><rect x="4.5" y="7" width="5" height="8" rx="1" fill="#f06a15" stroke="none"></rect><path d="M17 3v3"></path><path d="M17 14v7"></path><rect x="14.5" y="6" width="5" height="8" rx="1" fill="#f06a15" stroke="none"></rect></svg>';
+    /* v1.5.0 — پنل تنظیمات چارت (مثل اپ اصلی): نوع چارت + رنگ کندل‌ها + کلیدها. */
+    var SET_TYPES = [['candle', 'کندل', 'Candles'], ['hollow', 'توخالی', 'Hollow'], ['bars', 'بار OHLC', 'OHLC'], ['line', 'خطی', 'Line'], ['area', 'ناحیه‌ای', 'Area'], ['ha', 'هیکین‌آشی', 'Heikin Ashi']];
+    var SET_TYPE_ICONS = {
+      candle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="7" width="6" height="10" rx="1" fill="currentColor" stroke="none"></rect><path d="M12 3v4"></path><path d="M12 17v4"></path></svg>',
+      hollow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="7" width="6" height="10" rx="1"></rect><path d="M12 3v4"></path><path d="M12 17v4"></path></svg>',
+      bars: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 4v16"></path><path d="M12 8H7"></path><path d="M12 15h5"></path></svg>',
+      line: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16l4-6 4 3 4-7 4 4"></path></svg>',
+      area: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16l4-6 4 3 4-7 4 4v10H4z" fill="currentColor" fill-opacity="0.25" stroke="none"></path><path d="M4 16l4-6 4 3 4-7 4 4"></path></svg>',
+      ha: '<span style="font-size:16px;font-weight:800;line-height:22px">HA</span>'
+    };
+    var SET_PALS = [['def', '#2ecc8f', '#ff5d6c', 'پیش‌فرض', 'Default'], ['tv', '#26a69a', '#ef5350', 'فیروزه‌ای/قرمز', 'Teal/Red'], ['cb', '#3b82f6', '#f59e0b', 'کم‌بینایی رنگ', 'Colorblind'], ['rv', '#ef5350', '#3b82f6', 'معکوس', 'Reversed'], ['mono', '#e6e9ef', '#6b7280', 'تک‌رنگ', 'Mono']];
+    var SET_TOGGLES = [['vol', 'حجم معاملات', 'Volume'], ['ma', 'میانگین ۲۰', 'MA20'], ['grid', 'شبکه', 'Grid'], ['last', 'خط قیمت زنده', 'Last price line'], ['pct', 'مقیاس درصدی', 'Percentage scale'], ['log', 'مقیاس لگاریتمی', 'Log scale'], ['lock', 'قفل مقیاس قیمت', 'Lock price scale'], ['rob', 'مقیاس مقاوم', 'Robust scale'], ['cd', 'شمارش معکوس کندل', 'Countdown']];
+    var st = { type: 'candle', vol: 1, ma: 1, grid: 1, last: 1, pct: 0, log: 0, lock: 0, rob: 0, cd: 1, pal: 'def' };
+    try { var _st = window.OnellaChartStyle.get(); if (_st) st = _st; } catch (e) {}
     $('tab-chart').innerHTML =
       '<div id="tfRow" class="seg">' + tfs.map(function (k) {
           return '<button data-tf="' + k + '"' + (state.tf === k ? ' class="on"' : '') + '>' + k + '</button>';
         }).join('') + '</div>'
       + '<div class="chartwrap" id="chartWrap"><div id="nv" style="position:relative;height:260px"><div id="px" class="px px-ov"></div><div id="lastPxTag" style="display:none"></div><div id="xhBox" class="xh-box" dir="ltr" style="display:none"></div><canvas id="cc" dir="ltr" style="width:100%;height:260px;display:block"></canvas><button class="axis-btn" id="tvAutoBtn" type="button" style="display:none">A</button><button class="axis-btn" id="tvLatestBtn" type="button" style="display:none">⏭</button><button class="tools-fab" id="toolsFab" type="button" title="' + esc(T('ابزارهای چارت', 'Chart tools')) + '">' + ICON.tools + '</button>'
-      + '<div class="tools-panel" id="toolsPanel"><div class="tools-panel-h"><span>' + esc(T('ابزارهای چارت', 'Chart tools')) + '</span><button class="tbtn" id="toolsClose" type="button">✕</button></div><div class="chart-tools" id="chartTools">' + TOOLS.map(function (t) {
-          return '<button class="tbtn' + (toolOn[t[0]] ? ' on' : '') + '" data-tool="' + t[0] + '" type="button">' + esc(lang === 'fa' ? t[1] : t[2]) + '</button>';
-        }).join('') + '</div><div class="draw-sec-h"><span>' + esc(T('ابزارهای رسم', 'Drawing tools')) + '</span></div><div class="chart-tools" id="drawTools">' + DRAW_TOOLS.map(function (t) {
-          return '<button class="tbtn" data-draw="' + t[0] + '" type="button">' + esc(lang === 'fa' ? t[1] : t[2]) + '</button>';
-        }).join('') + '</div><div class="draw-actions"><button class="tbtn" id="delDrawBtn" type="button" disabled>' + esc(T('حذف انتخاب‌شده', 'Delete selected')) + '</button><button class="tbtn" id="clearDrawBtn" type="button">' + esc(T('پاک کردن همه', 'Clear all')) + '</button></div><div class="tool-note" id="toolNote"></div></div></div></div>'
+      + '<button class="set-fab" id="setBtn" type="button" title="' + esc(T('تنظیمات چارت', 'Chart settings')) + '">' + SET_ICON + '</button>'
+      + '<div class="tools-strip" id="toolsStrip"><div class="strip-group" id="chartTools">' + TOOLS.map(function (t) {
+          return '<button class="tbtn' + (toolOn[t[0]] ? ' on' : '') + '" data-tool="' + t[0] + '" type="button" title="' + esc(lang === 'fa' ? t[1] : t[2]) + '">' + (TOOL_ICONS[t[0]] || esc(lang === 'fa' ? t[1] : t[2])) + '</button>';
+        }).join('') + '</div><div class="strip-sep"></div><div class="strip-group" id="drawTools">' + DRAW_TOOLS.map(function (t) {
+          return '<button class="tbtn" data-draw="' + t[0] + '" type="button" title="' + esc(lang === 'fa' ? t[1] : t[2]) + '">' + (DRAW_ICONS[t[0]] || esc(lang === 'fa' ? t[1] : t[2])) + '</button>';
+        }).join('') + '</div><div class="strip-sep"></div><div class="strip-group"><button class="tbtn" id="delDrawBtn" type="button" disabled title="' + esc(T('حذف انتخاب‌شده', 'Delete selected')) + '">' + TRASH_ICON + '</button><button class="tbtn" id="clearDrawBtn" type="button" title="' + esc(T('پاک کردن همه', 'Clear all')) + '">' + CLEAR_ICON + '</button></div></div>'
+      + '<div class="settings-panel" id="settingsPanel"><div class="settings-panel-h"><span>' + esc(T('تنظیمات چارت', 'Chart settings')) + '</span><button class="tbtn" id="setClose" type="button">✕</button></div><div class="set-sec-h">' + esc(T('نوع چارت', 'Chart type')) + '</div><div class="set-type-grid" id="setTypes">' + SET_TYPES.map(function (t) {
+          return '<button class="set-type' + (st.type === t[0] ? ' on' : '') + '" data-type="' + t[0] + '" type="button">' + (SET_TYPE_ICONS[t[0]] || '') + '<span>' + esc(lang === 'fa' ? t[1] : t[2]) + '</span></button>';
+        }).join('') + '</div><div class="set-sec-h">' + esc(T('رنگ کندل‌ها', 'Candle colors')) + '</div><div class="set-pal-row" id="setPals">' + SET_PALS.map(function (p) {
+          return '<button class="set-pal' + (st.pal === p[0] ? ' on' : '') + '" data-pal="' + p[0] + '" type="button" title="' + esc(lang === 'fa' ? p[3] : p[4]) + '"><span class="sw" style="background:' + p[1] + '"></span><span class="sw" style="background:' + p[2] + '"></span></button>';
+        }).join('') + '</div><div class="set-sec-h">' + esc(T('نمایش', 'Display')) + '</div><div id="setToggles">' + SET_TOGGLES.map(function (tg) {
+          return '<div class="set-row"><span>' + esc(lang === 'fa' ? tg[1] : tg[2]) + '</span><button class="switch' + (st[tg[0]] ? ' on' : '') + '" data-set="' + tg[0] + '" type="button" aria-label="' + esc(lang === 'fa' ? tg[1] : tg[2]) + '"></button></div>';
+        }).join('') + '</div></div></div></div>'
+      + '<div class="tool-note-bar" id="toolNote" style="display:none"></div>'
       + '<div class="panes" id="panes"><div class="pane-row" id="rsiRow"><div class="pane-h"><span>RSI (14)</span><b id="rsiVal">—</b></div><canvas id="rsiCv" class="pane-cv" dir="ltr"></canvas></div><div class="pane-row" id="macdRow"><div class="pane-h"><span>MACD (12, 26, 9)</span><b id="macdVal">—</b></div><canvas id="macdCv" class="pane-cv" dir="ltr"></canvas></div></div>'
       + '<div class="toolbar" id="chartToolbar">'
       + '<button class="tbtn" id="typeBtn" type="button">' + esc(chartTypeLabel(cur)) + '</button>'
@@ -1358,8 +1406,42 @@
     $('fsBtn').addEventListener('click', function () { toggleFs(); });
     $('tvAutoBtn').addEventListener('click', function () { autoScale(); });
     $('tvLatestBtn').addEventListener('click', function () { toLatest(); });
-    // ابزارهای دستی روی چارت — پشت دکمهٔ شناور (FAB) با همان SVG اپ اصلی؛
-    // پنل ۱۱ ابزار + خوانش ابزار. همان drawTools اپ؛ خوانش ابزار داخل پنل است.
+    // v1.5.0 — نوار ابزار عمودی + پنل تنظیمات چارت (مثل اپ اصلی): باز کردن یکی،
+    // دیگری را می‌بندد. خوانش ابزار حالا در نوار باریک زیر چارت است (#toolNote).
+    function syncSettingsUI() {
+      try {
+        var s2 = window.OnellaChartStyle.get();
+        document.querySelectorAll('#setTypes .set-type').forEach(function (b) { b.classList.toggle('on', b.dataset.type === s2.type); });
+        document.querySelectorAll('#setPals .set-pal').forEach(function (b) { b.classList.toggle('on', b.dataset.pal === s2.pal); });
+        document.querySelectorAll('#setToggles .switch').forEach(function (b) { b.classList.toggle('on', !!s2[b.dataset.set]); });
+        var tb = $('typeBtn'); if (tb) tb.textContent = chartTypeLabel(s2.type);
+        var mb = $('maBtn'); if (mb) mb.classList.toggle('on', !!s2.ma);
+        var vb = $('volBtn'); if (vb) vb.classList.toggle('on', !!s2.vol);
+      } catch (e) {}
+    }
+    document.querySelectorAll('#setTypes .set-type').forEach(function (b) {
+      b.addEventListener('click', function () {
+        try { window.OnellaChartStyle.set({ type: b.dataset.type }); } catch (e) {}
+        syncSettingsUI();
+      });
+    });
+    document.querySelectorAll('#setPals .set-pal').forEach(function (b) {
+      b.addEventListener('click', function () {
+        try { window.OnellaChartStyle.set({ pal: b.dataset.pal }); } catch (e) {}
+        syncSettingsUI();
+      });
+    });
+    document.querySelectorAll('#setToggles .switch').forEach(function (b) {
+      b.addEventListener('click', function () {
+        try {
+          var k = b.dataset.set, o = {};
+          o[k] = window.OnellaChartStyle.get()[k] ? 0 : 1;
+          window.OnellaChartStyle.set(o);
+        } catch (e) {}
+        syncSettingsUI();
+      });
+    });
+    // ابزارهای دستی روی چارت — نوار عمودی آیکون‌دار؛ خوانش ابزار در نوار زیر چارت.
     document.querySelectorAll('#chartTools .tbtn').forEach(function (b) {
       b.addEventListener('click', function () {
         var id = b.dataset.tool;
@@ -1374,6 +1456,7 @@
             note.textContent = other && typeof toolNote === 'function' ? toolNote(other) : '';
           }
         } catch (e) {}
+        try { if (note) note.style.display = (note.textContent || '') ? '' : 'none'; } catch (e) {}
         try { window.draw(); } catch (e) {}
       });
     });
@@ -1392,13 +1475,22 @@
       } catch (e) {}
     });
     try { if (window.OnellaDraw) window.OnellaDraw.syncUI(); } catch (e) {}
-    // دکمهٔ شناور ابزارها (FAB): باز/بسته کردن پنل ابزار روی چارت.
+    // دکمهٔ شناور ابزارها (FAB): باز/بسته کردن نوار ابزار؛ دکمهٔ تنظیمات: پنل تنظیمات.
     (function () {
-      var fab = $('toolsFab'), panel = $('toolsPanel');
-      if (!fab || !panel) return;
-      fab.addEventListener('click', function () { panel.classList.toggle('open'); });
-      var tc = $('toolsClose');
-      if (tc) tc.addEventListener('click', function () { panel.classList.remove('open'); });
+      var fab = $('toolsFab'), strip = $('toolsStrip'), setP = $('settingsPanel'), sb = $('setBtn');
+      if (fab && strip) fab.addEventListener('click', function () {
+        var open = !strip.classList.contains('open');
+        strip.classList.toggle('open', open);
+        if (open && setP) { setP.classList.remove('open'); if (sb) sb.classList.remove('on'); }
+      });
+      if (sb && setP) sb.addEventListener('click', function () {
+        var open2 = !setP.classList.contains('open');
+        setP.classList.toggle('open', open2);
+        sb.classList.toggle('on', open2);
+        if (open2 && strip) strip.classList.remove('open');
+      });
+      var sc = $('setClose');
+      if (sc && setP) sc.addEventListener('click', function () { setP.classList.remove('open'); if (sb) sb.classList.remove('on'); });
     })();
     document.addEventListener('fullscreenchange', function () {
       var on = !!document.fullscreenElement;
