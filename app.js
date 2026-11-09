@@ -1,11 +1,19 @@
 'use strict';
-/* Onella Nelora Lite v1.10.0 — منطق مینی‌اپ (صفحهٔ استاتیک؛ بدون سرور).
+/* Onella Nelora Lite v1.11.0 — منطق مینی‌اپ (صفحهٔ استاتیک؛ بدون سرور).
+   v1.11.0: (۱) آلرت سریع از ورکر — «📲 پیام تلگرام» اول به همین ورکر
+   (POST /alert-add با initData) می‌رود؛ ورکر همان لحظه تأیید می‌فرستد و
+   Cron هر دقیقه شلیک می‌کند (PC خاموش هم کار می‌کند). فقط اگر ورکر
+   در دسترس نباشد به sendData (ربات روی PC) برمی‌گردد — دو بار ثبت
+   نمی‌شود؛ (۲) جداسازی اکانت — کش آلرت فقط CloudStorage همان کاربر
+   است؛ localStorage مشترکِ دستگاه دیگر ادغام/مهاجرت نمی‌شود؛
+   (۳) فهرست هشدارها همهٔ نمادها را نشان می‌دهد (نماد فعلی اول، بعد
+   سایر نمادها)؛ قبلاً فقط نماد فعلی دیده می‌شد.
    v1.10.0: (۱) سیستم کش آلرت — ذخیره در CloudStorage تلگرام (سرور تلگرام،
    با بستن/باز کردن می‌ماند) + آینهٔ localStorage؛ علت: localStorage در WebView
    تلگرام پاک می‌شد و آلرت ذخیره نمی‌شد؛ خطای ذخیره هم دیگر بی‌صدا نیست؛
    (۲) آلرت مشترک با ربات — گزینهٔ «📲 پیام تلگرام» در دیالوگ آلرت (sendData):
-   آلرت به ربات می‌رسد، ربات نگهبانی می‌کند و وقتی قیمت برسد در چت پیام می‌دهد
-   (کامپیوتر روشن باشد)؛ کریپتو + سهام، ایران فعلاً فقط داخل مینی‌اپ.
+   آلرت به ربات می‌رسد، ربات نگهبانی می‌کند و وقتی قیمت برسد در چت پیام می‌دهد؛
+   کریپتو + سهام، ایران فعلاً فقط داخل مینی‌اپ.
    v1.9.1: (۱) دکمهٔ + روی محور قیمت (سبک تریدینگ‌ویو) + خط ردیابی قیمت — با حرکت
    روی محور، + دنبال قیمت می‌آید؛ زدن + منوی هشدار/خط افقی را باز می‌کند (long-press
    هم سر جایش هست)؛ (۲) گزینهٔ آخر نوار ابزار/تنظیمات دیگر زیر صفحه نمی‌ماند —
@@ -2207,7 +2215,7 @@
         ? T('برای پیام تلگرام، مینی‌اپ را از دکمهٔ ربات باز کن.', 'To get Telegram messages, open the Mini App from the bot button.')
         : !shareable
           ? T('پیام تلگرام فعلاً فقط برای کریپتو و سهام است؛ برای نمادهای ایران فقط داخل مینی‌اپ.', 'Telegram messages work for crypto and stocks for now; for Iran symbols, in-app only.')
-          : T('وقتی قیمت برسد، ربات در تلگرام پیام می‌دهد (نیازمند روشن بودن کامپیوتر و عضویت در کانال‌ها).', 'When the price gets there, the bot messages you on Telegram (needs the PC on and channel membership).');
+          : T('وقتی قیمت برسد، در تلگرام پیام می‌دهد — حتی اگر کامپیوتر خاموش باشد.', 'When the price gets there, you get a Telegram message — even if the PC is off.');
     }
     $('alErr').style.display = 'none';
     renderAlertList();
@@ -2222,7 +2230,11 @@
     var q = state.quote, A = window.OnellaAlerts;
     if (!A) { el.innerHTML = ''; return; }
     var canShare = (q.provider === 'binance' || q.provider === 'yahoo') && !!(tg && typeof tg.sendData === 'function');
-    var all = A.list(q.symbol);
+    /* v1.11.0 — همهٔ هشدارها دیده می‌شوند: نماد فعلی اول، بعد سایر نمادها.
+       قبلاً فقط A.list(q.symbol) بود و هشدار نمادهای دیگر اینجا دیده نمی‌شد. */
+    var all = A.list();
+    var cur = all.filter(function (x) { return x.sym === q.symbol; });
+    var others = all.filter(function (x) { return x.sym !== q.symbol; });
     function expTxt(a) {
       if (!a.expiresAt) return '';
       try { return ' • ' + T('تا ', 'until ') + new Date(a.expiresAt).toLocaleDateString('fa-IR'); } catch (e) { return ''; }
@@ -2237,7 +2249,10 @@
       var btns = '';
       if (kind === 'active') {
         btns = '<button class="tbtn" data-act="off" data-id="' + a.id + '" type="button">' + esc(T('خاموش', 'Off')) + '</button>';
-        if (canShare) {
+        /* v1.11.0 — دکمهٔ اشتراک بر اساس provider خودِ آلرت، نه نماد فعلی
+           (در بخش «سایر نمادها» نماد فعلی فرق می‌کند). */
+        var aShare = ((a.provider === 'binance' || a.provider === 'yahoo') || (!a.provider && canShare)) && !!(tg && typeof tg.sendData === 'function');
+        if (aShare) {
           btns += a.shared
             ? '<button class="tbtn" data-act="unshare" data-id="' + a.id + '" type="button">📵</button>'
             : '<button class="tbtn" data-act="share" data-id="' + a.id + '" type="button">📲</button>';
@@ -2246,15 +2261,22 @@
       btns += '<button class="tbtn" data-act="del" data-id="' + a.id + '" type="button">✕</button>';
       return '<div class="al-row"><div class="al-row-tx"><b>' + esc(a.msg || '') + tgBadge + '</b><span>' + esc(sub + fired) + '</span></div><div class="al-row-bt">' + btns + '</div></div>';
     }
-    var act = all.filter(function (a) { return a.active; });
-    var fired = all.filter(function (a) { return !a.active && a.firedAt; });
-    var other = all.filter(function (a) { return !a.active && !a.firedAt; });
+    var act = cur.filter(function (a) { return a.active; });
+    var fired = cur.filter(function (a) { return !a.active && a.firedAt; });
+    var other = cur.filter(function (a) { return !a.active && !a.firedAt; });
     var html = '';
-    if (!all.length) html = '<div class="na">' + esc(T('هنوز هشداری برای این نماد نساخته‌ای.', 'No alerts for this symbol yet.')) + '</div>';
+    if (!all.length) html = '<div class="na">' + esc(T('هنوز هشداری نساخته‌ای.', 'No alerts yet.')) + '</div>';
     else {
       if (act.length) html += '<div class="al-sec">' + esc(T('فعال', 'Active')) + '</div>' + act.map(function (a) { return row(a, 'active'); }).join('');
       if (fired.length) html += '<div class="al-sec">' + esc(T('فعال‌شده', 'Triggered')) + '</div>' + fired.map(function (a) { return row(a, 'fired'); }).join('');
       if (other.length) html += '<div class="al-sec">' + esc(T('خاموش / منقضی', 'Off / expired')) + '</div>' + other.map(function (a) { return row(a, 'other'); }).join('');
+      if (others.length) {
+        var oAct = others.filter(function (a) { return a.active; });
+        var oRest = others.filter(function (a) { return !a.active; });
+        html += '<div class="al-sec">' + esc(T('سایر نمادها', 'Other symbols') + ' (' + others.length + ')') + '</div>';
+        if (oAct.length) html += oAct.map(function (a) { return row(a, 'active'); }).join('');
+        if (oRest.length) html += oRest.map(function (a) { return row(a, a.firedAt ? 'fired' : 'other'); }).join('');
+      }
     }
     el.innerHTML = html;
     el.querySelectorAll('[data-act]').forEach(function (b) {
@@ -2282,7 +2304,7 @@
     var a = null;
     try {
       a = window.OnellaAlerts.add({
-        sym: q.symbol, label: q.display, mode: state.priceMode,
+        sym: q.symbol, label: q.display, mode: state.priceMode, provider: q.provider,
         cond: $('alCond').value, price: price, repeat: $('alRepeat').value,
         expiresAt: exp ? Date.now() + parseInt(exp, 10) : null,
         msg: $('alMsg').value
@@ -2299,9 +2321,11 @@
     else if (be && be.cloud && be.cloudError) showAlertNote(T('هشدار در گوشی ذخیره شد ولی در فضای ابری تلگرام نرفت — دفعهٔ بعد دوباره چک کن.', 'Alert saved on this phone but not to Telegram cloud — please check next time.'));
     try { window.draw(); } catch (e) {}
   }
-  /* v1.10.0 — آلرت مشترک با ربات: sendData تلگرام (بدون سرور جدا — پیام
-     web_app_data مستقیم به ربات می‌رسد). shared را پیش از sendData می‌زنیم،
-     چون sendData ممکن است مینی‌اپ را ببندد؛ تایید در چت ربات می‌آید. */
+  /* v1.11.0 — آلرت مشترک: اول ورکر (POST /alert-add با initData) — ورکر
+     همان لحظه تأیید تلگرام می‌فرستد و Cron شلیک می‌کند (PC خاموش هم کار
+     می‌کند). فقط اگر ورکر جواب ندهد/تنظیم نشده باشد، به sendData (ربات روی
+     PC) برمی‌گردد — هرگز هر دو با هم ثبت نمی‌شوند (دو پیام/دو شلیک نمی‌آید).
+     shared را پیش از sendData می‌زنیم، چون sendData ممکن است مینی‌اپ را ببندد. */
   function showAlertNote(text) {
     ensureAlertUI();
     var b = $('alertBanner');
@@ -2313,9 +2337,30 @@
     if (alertBannerTimer) { try { clearTimeout(alertBannerTimer); } catch (e) {} }
     alertBannerTimer = setTimeout(function () { try { b.style.display = 'none'; } catch (e) {} }, 15000);
   }
-  function shareAlertToBot(a) {
+  async function shareAlertToBot(a) {
     var A = window.OnellaAlerts;
     if (!a || !A) return false;
+    /* مسیر ۱ — ورکر: سریع و بدون PC. initData را می‌فرستیم تا ورکر هویت
+       تلگرام را اعتبارسنجی کند؛ توکن هرگز به مینی‌اپ نمی‌آید. */
+    if (PROXY_URL && tg && typeof tg.initData === 'string' && tg.initData) {
+      try {
+        var r = await fetch(PROXY_URL.replace(/\/$/, '') + '/alert-add', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ initData: tg.initData, alert: { miniAppId: a.id, sym: a.sym, label: a.label, provider: a.provider || (state.quote && state.quote.provider) || null, cond: a.cond, price: a.price, repeat: a.repeat, expiresAt: a.expiresAt, msg: a.msg } }),
+          signal: AbortSignal.timeout(10000)
+        });
+        if (r && r.ok) {
+          var j = null; try { j = await r.json(); } catch (e) { j = null; }
+          if (j && j.ok) { A.setShared(a.id, true, 'worker'); renderAlertList(); refreshAlertBadge(); return true; }
+          if (j && j.error === 'unsupported') {
+            showAlertNote(T('این نماد را فعلاً نمی‌توان نگهبانی کرد (فقط کریپتو و سهام) — هشدار داخل مینی‌اپ سر جایش هست.', 'This symbol cannot be watched yet (crypto and stocks only) — your in-app alert still works.'));
+            return false;
+          }
+          /* no_kv / no_token / bad_initdata / limit / bad → به مسیر ۲ می‌افتد. */
+        }
+      } catch (e) { /* به sendData می‌افتد */ }
+    }
+    /* مسیر ۲ — fallback: sendData به ربات روی PC (همان v1.10.0). */
     if (!(tg && typeof tg.sendData === 'function')) {
       showAlertNote(T('پیام تلگرام فرستاده نشد: مینی‌اپ را از دکمهٔ ربات باز کن.', 'Telegram message was not sent: open the Mini App from the bot button.'));
       return false;
@@ -2324,7 +2369,7 @@
       type: 'onella_alert_add', v: 1,
       alert: { miniAppId: a.id, sym: a.sym, label: a.label, cond: a.cond, price: a.price, repeat: a.repeat, expiresAt: a.expiresAt, msg: a.msg }
     };
-    A.setShared(a.id, true);
+    A.setShared(a.id, true, 'bot');
     try { tg.sendData(JSON.stringify(payload)); } catch (e) {
       A.setShared(a.id, false);
       showAlertNote(T('پیام تلگرام فرستاده نشد — دوباره امتحان کن.', 'Telegram message was not sent — please try again.'));
@@ -2333,10 +2378,18 @@
     renderAlertList(); refreshAlertBadge();
     return true;
   }
-  function unshareAlertToBot(a) {
+  async function unshareAlertToBot(a) {
     var A = window.OnellaAlerts;
     if (!a || !A) return false;
-    if (tg && typeof tg.sendData === 'function') {
+    if (a.sharedVia === 'worker' && PROXY_URL && tg && typeof tg.initData === 'string' && tg.initData) {
+      try {
+        await fetch(PROXY_URL.replace(/\/$/, '') + '/alert-del', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ initData: tg.initData, miniAppId: a.id }),
+          signal: AbortSignal.timeout(10000)
+        });
+      } catch (e) { /* بهترین تلاش؛ حذف محلی حتماً انجام می‌شود */ }
+    } else if (tg && typeof tg.sendData === 'function') {
       try { tg.sendData(JSON.stringify({ type: 'onella_alert_del', v: 1, miniAppId: a.id })); } catch (e) {}
     }
     A.setShared(a.id, false);

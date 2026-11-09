@@ -1,16 +1,18 @@
-/* Mini App v1.10.0 — هشدار قیمت (به سبک دیالوگ تریدینگ‌ویو، ولی با موتور خود اپ):
+/* Mini App v1.11.0 — هشدار قیمت (به سبک دیالوگ تریدینگ‌ویو، ولی با موتور خود اپ):
    - شرط: عبور (هر جهت) / عبور به بالا / عبور به پایین / بالاتر از / پایین‌تر از.
    - تکرار: فقط یک بار / هر بار. انقضا: ۱ روز / ۱ هفته / ۱ ماه / بدون انقضا (پیش‌فرض ۱ ماه).
    - پیام: خودکار «نماد + شرط + قیمت»، قابل ویرایش.
-   - ذخیره (v1.10.0 — «سیستم کش»): اول CloudStorage تلگرام (سرور تلگرام، وابسته به
-     کاربر+ربات — با بستن/باز کردن مینی‌اپ و حتی نصب دوباره می‌ماند) و localStorage
-     هم‌زمان آینه می‌شود؛ اگر CloudStorage نبود (مرورگر بیرون تلگرام) فقط
-     localStorage. علت: localStorage در WebView تلگرام قابل‌اعتماد نیست و پاک
-     می‌شد (گزارش کاربر ۲۰۲۶-۱۱-۰۹: آلرت ذخیره نمی‌شد) — و خطای ذخیره قبلاً
-     بی‌صدا قورت داده می‌شد؛ حالا backend() خطا را نشان می‌دهد.
+   - ذخیره (v1.11.0 — جداسازی هر اکانت، رفع نشت v1.10.0): منبع حقیقت فقط
+     CloudStorage تلگرام است (سرور تلگرام، وابسته به کاربر+ربات). بارگذاری
+     هرگز localStorage را با cloud ادغام نمی‌کند و local را به cloud مهاجرت
+     نمی‌دهد — چون localStorage در WebView یک گوشی بین دو اکانت تلگرام
+     مشترک است و همان ادغام/مهاجرت باعث می‌شد اکانت دوم آلرت‌های اکانت اول
+     را ببیند (گزارش کاربر ۲۰۲۶-۱۱-۰۹: دو اکانت، اعلان‌ها یکی بود).
+     localStorage فقط آینهٔ همان کاربر است (کلید با userId) و فقط وقتی
+     CloudStorage نیست (مرورگر بیرون تلگرام) خوانده می‌شود.
    - هر آلرت یک کلید جدا در CloudStorage دارد (سقف ۴۰۹۶ نویسه برای هر مقدار):
-     onella_al_<id> + یک فهرست onella_alerts_idx. بارگذاری، ادغام است (جدیدترین
-     updatedAt می‌برد؛ حذف‌های همین جلسه با tombstone زنده نمی‌شوند).
+     onella_al_<id> + یک فهرست onella_alerts_idx. بارگذاری، جایگزینی است
+     (حذف‌های همین جلسه با tombstone زنده نمی‌شوند).
    - بررسی فقط وقتی مینی‌اپ باز است (قیمت زنده/پولینگ) — وقتی بسته است هیچ هشداری
      نمی‌رسد؛ برای پیام تلگرام، آلرت با «📲 پیام تلگرام» به ربات فرستاده می‌شود
      (ربات نگهبانی می‌کند؛ نیازمند روشن بودن کامپیوتر).
@@ -21,6 +23,14 @@
   var KEY = 'onella_alerts_v1';
   var IDX_KEY = 'onella_alerts_idx';
   var ITEM_PREFIX = 'onella_al_';
+  /* v1.11.0 — شناسهٔ کاربر تلگرام (برای کلید localِ همان کاربر؛ CloudStorage
+     خودش به کاربر وابسته است و نیازی به این ندارد). */
+  var USER_ID = null;
+  try {
+    var _u = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user;
+    if (_u && typeof _u.id === 'number') USER_ID = String(_u.id);
+  } catch (_) { USER_ID = null; }
+  function localKey() { return USER_ID ? KEY + '_' + USER_ID : KEY; }
   var MAX = 50;
   var CONDS = ['cross', 'crossUp', 'crossDown', 'above', 'below'];
   var store = [];
@@ -60,26 +70,8 @@
     });
   }
   function readLocal() {
-    try { var r = JSON.parse(localStorage.getItem(KEY) || 'null'); return Array.isArray(r) ? r : []; }
+    try { var r = JSON.parse(localStorage.getItem(localKey()) || 'null'); return Array.isArray(r) ? r : []; }
     catch (_) { return []; }
-  }
-  /* اجتماع دو فهرست بر اساس id — جدیدترین updatedAt می‌برد؛ حذف‌های همین جلسه زنده نمی‌شوند. */
-  function unionById(a, b) {
-    var byId = {};
-    var out = [];
-    [a, b].forEach(function (arr) {
-      (arr || []).forEach(function (x) {
-        if (!x || !x.id || tombstones.indexOf(x.id) >= 0) return;
-        var cur = byId[x.id];
-        if (!cur) { byId[x.id] = x; out.push(x); }
-        else if ((x.updatedAt || 0) >= (cur.updatedAt || 0)) {
-          var i = out.indexOf(cur);
-          if (i >= 0) out[i] = x;
-          byId[x.id] = x;
-        }
-      });
-    });
-    return out;
   }
   var ready, readyResolve;
   var loadStarted = false;
@@ -93,21 +85,30 @@
     /* بارگذاری یعنی جایگزینی با دادهٔ خوانده‌شده — نه ادغام با حافظهٔ قدیمی
        (وگرنه «پاک‌کردن» هیچ‌وقت خالی نمی‌کند). فقط اگر حین بارگذاری چیزی
        اضافه/حذف شده باشد، همان تغییر روی نتیجه ادغام می‌شود. */
-    function finish(cloudArr) {
-      var merged = unionById(cloudArr || [], local);
+    /* v1.11.0 — منبع حقیقت یکی است، نه ادغام دو تا: اگر CloudStorage هست،
+       فقط cloud خوانده می‌شود (localِ دستگاهِ مشترک هرگز وارد نمی‌شود)؛
+       اگر نیست (مرورگر بیرون تلگرام)، فقط localِ همان کاربر. مهاجرت
+       local→cloud حذف شد — همان مهاجرت، نشت بین دو اکانت بود. */
+    function finish(arr) {
+      var src = (arr || []).filter(function (x) { return x && x.id && tombstones.indexOf(x.id) < 0; });
       var mutated = store.some(function (a) { return snapIds.indexOf(a.id) < 0; }) ||
         tombstones.some(function (t) { return snapTombs.indexOf(t) < 0; });
-      store = mutated ? unionById(store, merged) : merged;
+      if (mutated) {
+        var byId = {};
+        src.forEach(function (x) { byId[x.id] = x; });
+        store.forEach(function (x) { if (x && x.id && tombstones.indexOf(x.id) < 0) byId[x.id] = x; });
+        src = Object.keys(byId).map(function (k) { return byId[k]; });
+      }
+      store = src;
       readyResolve(true);
     }
-    if (!tgCS) { finish([]); return ready; }
+    if (!tgCS) { finish(local); return ready; }
     csGetItem(IDX_KEY).then(function (idxRaw) {
       var ids = [];
       try { ids = JSON.parse(idxRaw || 'null') || []; } catch (_) { ids = []; }
       if (!Array.isArray(ids)) ids = [];
       if (!ids.length) {
         finish([]);
-        if (local.length) { dirty = true; save(); } // مهاجرت یک‌بارهٔ local به cloud
         return;
       }
       return csGetItems(ids.map(function (id) { return ITEM_PREFIX + id; })).then(function (vals) {
@@ -124,7 +125,7 @@
   function save() {
     if (!dirty) return;
     dirty = false;
-    try { localStorage.setItem(KEY, JSON.stringify(store)); lastLocalError = null; }
+    try { localStorage.setItem(localKey(), JSON.stringify(store)); lastLocalError = null; }
     catch (e) { lastLocalError = String((e && e.message) || e); }
     if (!tgCS) return;
     var idx = store.map(function (a) { return a.id; });
@@ -164,11 +165,12 @@
     var now = Date.now();
     var it = {
       id: mkId(), sym: a.sym, label: a.label || a.sym, mode: a.mode || 'usd',
+      provider: (a.provider === 'yahoo' || a.provider === 'binance') ? a.provider : null,
       cond: a.cond, price: price, repeat: a.repeat === 'every' ? 'every' : 'once',
       expiresAt: (typeof a.expiresAt === 'number' && a.expiresAt > now) ? a.expiresAt : null,
       msg: (typeof a.msg === 'string' && a.msg.trim()) ? a.msg.trim().slice(0, 120) : '',
       active: true, armed: true, lastSide: 0, createdAt: now, firedAt: null, firedPrice: null,
-      shared: false, sharedAt: null, updatedAt: now
+      shared: false, sharedAt: null, sharedVia: null, updatedAt: now
     };
     if (!it.msg) it.msg = defaultMsg(it, 'fa');
     store.push(it); dirty = true; save();
@@ -193,11 +195,12 @@
     a.updatedAt = Date.now(); dirty = true; save();
     return true;
   }
-  function setShared(id, on) {
+  function setShared(id, on, via) {
     var a = find(id);
     if (!a) return false;
     a.shared = !!on;
     a.sharedAt = a.shared ? Date.now() : null;
+    a.sharedVia = a.shared ? (via === 'worker' ? 'worker' : 'bot') : null;
     a.updatedAt = Date.now(); dirty = true; save();
     return true;
   }
@@ -260,7 +263,7 @@
     list: list, listActive: listActive,
     check: check, pruneExpired: pruneExpired, condLabel: condLabel, defaultMsg: defaultMsg,
     reload: function () { loadStarted = false; return loadAll(); },
-    backend: function () { return { cloud: !!tgCS, local: true, cloudError: lastCloudError, localError: lastLocalError }; },
+    backend: function () { return { cloud: !!tgCS, local: true, cloudError: lastCloudError, localError: lastLocalError, userId: USER_ID }; },
     MAX: MAX
   };
   Object.defineProperty(api, 'ready', { get: function () { return ready; } });
