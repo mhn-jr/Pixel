@@ -72,6 +72,8 @@ function draw(){const cv=$("cc");if(!cv.clientWidth||!cv.clientHeight)return;con
  for(let i=0;i<n;i++){const k=off+i;if(k<19)continue;let a=0;for(let j=k-19;j<=k;j++)a+=cs[j].c;a/=20;s?g.lineTo(X(i),Y(a)):g.moveTo(X(i),Y(a));s=true}g.stroke();}
  g.restore();CS.axisFront(g,K);
  drawTools(g,{v,off,n,X,Y,cw});
+ /* v1.4.0 — رسم‌های کاربر (chart-draw.js): با همان پنجرهٔ دیده‌شده؛ بر اساس زمان کندل، نه ایندکس */
+ try{if(window.OnellaDraw)window.OnellaDraw.draw(g,{v:v,off:off,n:n,X:X,Y:Y,cw:cw,ph:ph,W:W});}catch(e){}
  if(cur>=0&&cur<n){g.strokeStyle="rgba(200,215,240,.4)";g.lineWidth=1;g.beginPath();g.moveTo(X(cur),0);g.lineTo(X(cur),ph);g.stroke();
   /* v1.3.0 — خط افقی کراس‌هیر روی بستهٔ کندل زیر نشانگر (خط‌چین؛ خط قیمت آخرِ
      axisFront سر جایش می‌ماند و برچسب محور را #lastPxTag نشان می‌دهد) */
@@ -79,7 +81,7 @@ function draw(){const cv=$("cc");if(!cv.clientWidth||!cv.clientHeight)return;con
  /* v1.3.0 — پنل‌های RSI/MACD (chart-panes.js) با همان پنجرهٔ دیده‌شده رسم می‌شوند */
  try{if(window.drawPanes)window.drawPanes()}catch(e){}}
 let __onellaLoadSeq=0;
-async function loadNative(){const __seq=++__onellaLoadSeq;const __requestedSym=pair.sym,__requestedTF=tf;nInit=true;cs=[];try{window.__ov.pm=null;window.__ov.pan=0}catch(_){}draw();$("px").textContent="...";const x=await candlesFor();if(__seq!==__onellaLoadSeq||pair.sym!==__requestedSym||tf!==__requestedTF)return;cs=x.d||[];demo=false;window.__onellaDataState=x;cur=-1;
+async function loadNative(){const __seq=++__onellaLoadSeq;const __requestedSym=pair.sym,__requestedTF=tf;nInit=true;cs=[];try{window.__ov.pm=null;window.__ov.pan=0}catch(_){}try{if(window.OnellaDraw)window.OnellaDraw.resetSession();}catch(_){}draw();$("px").textContent="...";const x=await candlesFor();if(__seq!==__onellaLoadSeq||pair.sym!==__requestedSym||tf!==__requestedTF)return;cs=x.d||[];demo=false;window.__onellaDataState=x;cur=-1;
  if(window.OnellaLiveSeconds&&window.OnellaLiveSeconds.isSub(tf)){try{window.__onellaLastSub={tf:tf,sym:pair.sym,x:x}}catch(_){}}
  if(!cs.length&&window.OnellaLiveSeconds&&window.OnellaLiveSeconds.isSub(tf)){$("px").textContent=window.OnellaLiveSeconds.emptyMsg(x)}
   else if(!cs.length){$("px").textContent=T("داده زنده در دسترس نیست؛ برای تحلیل چارت به اینترنت وصل شو.","Live chart data is unavailable; connect to the internet to load the chart.")+(x&&x.error?" ["+String(x.error).replace(/\s+/g," ").slice(0,140)+"]":"")+(x&&x.detail?" — "+String(x.detail).replace(/\s+/g," ").slice(0,260):"");}

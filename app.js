@@ -1,5 +1,5 @@
 'use strict';
-/* Onella Nelora Lite v1.3.0 — منطق مینی‌اپ (صفحهٔ استاتیک؛ بدون سرور).
+/* Onella Nelora Lite v1.4.0 — منطق مینی‌اپ (صفحهٔ استاتیک؛ بدون سرور).
    دیزاین = کپیِ دیدنیِ خود اپ Onella Nelora (نه فقط الهام): همان توکن‌ها،
    همان چیدمان صفحهٔ چارت (گیج بالا، تب‌های بازار، نوار انتخاب نماد، تایم‌فریم
    بالای چارت)، همان مودال سرچ (تب بازار + باکس بزرگ + ردیف آیکون‌دار + ستاره).
@@ -1294,6 +1294,8 @@
     /* v1.2.2 — ۱۱ ابزار: ۵ قبلی + EMA، VWAP، دونچیان، کلتنر، سوپرترند، SAR.
        همه پشت دکمهٔ شناور (FAB) روی چارت باز می‌شوند، نه ردیف زیر چارت. */
     var TOOLS = [['fib', 'فیبوناچی', 'Fibonacci'], ['sr', 'حمایت/مقاومت', 'Support/Resistance'], ['tl', 'خط روند', 'Trendline'], ['bb', 'بولینگر', 'Bollinger'], ['pv', 'پیوت', 'Pivot'], ['ema', 'میانگین نمایی', 'EMA'], ['vwap', 'وی‌واپ', 'VWAP'], ['donch', 'دونچیان', 'Donchian'], ['kelt', 'کلتنر', 'Keltner'], ['super', 'سوپرترند', 'Supertrend'], ['sar', 'پارابولیک', 'SAR']];
+    /* v1.4.0 — ۵ ابزار رسم تعاملی (مرحله ۳): در همان پنل شناور، زیر ابزارهای محاسبه‌شده. */
+    var DRAW_TOOLS = [['trend', 'خط روند', 'Trendline'], ['hline', 'خط افقی', 'Horizontal'], ['rect', 'مستطیل', 'Rectangle'], ['fib', 'فیبوناچی', 'Fibonacci'], ['text', 'متن', 'Text']];
     $('tab-chart').innerHTML =
       '<div id="tfRow" class="seg">' + tfs.map(function (k) {
           return '<button data-tf="' + k + '"' + (state.tf === k ? ' class="on"' : '') + '>' + k + '</button>';
@@ -1301,7 +1303,9 @@
       + '<div class="chartwrap" id="chartWrap"><div id="nv" style="position:relative;height:260px"><div id="px" class="px px-ov"></div><div id="lastPxTag" style="display:none"></div><div id="xhBox" class="xh-box" dir="ltr" style="display:none"></div><canvas id="cc" dir="ltr" style="width:100%;height:260px;display:block"></canvas><button class="axis-btn" id="tvAutoBtn" type="button" style="display:none">A</button><button class="axis-btn" id="tvLatestBtn" type="button" style="display:none">⏭</button><button class="tools-fab" id="toolsFab" type="button" title="' + esc(T('ابزارهای چارت', 'Chart tools')) + '">' + ICON.tools + '</button>'
       + '<div class="tools-panel" id="toolsPanel"><div class="tools-panel-h"><span>' + esc(T('ابزارهای چارت', 'Chart tools')) + '</span><button class="tbtn" id="toolsClose" type="button">✕</button></div><div class="chart-tools" id="chartTools">' + TOOLS.map(function (t) {
           return '<button class="tbtn' + (toolOn[t[0]] ? ' on' : '') + '" data-tool="' + t[0] + '" type="button">' + esc(lang === 'fa' ? t[1] : t[2]) + '</button>';
-        }).join('') + '</div><div class="tool-note" id="toolNote"></div></div></div></div>'
+        }).join('') + '</div><div class="draw-sec-h"><span>' + esc(T('ابزارهای رسم', 'Drawing tools')) + '</span></div><div class="chart-tools" id="drawTools">' + DRAW_TOOLS.map(function (t) {
+          return '<button class="tbtn" data-draw="' + t[0] + '" type="button">' + esc(lang === 'fa' ? t[1] : t[2]) + '</button>';
+        }).join('') + '</div><div class="draw-actions"><button class="tbtn" id="delDrawBtn" type="button" disabled>' + esc(T('حذف انتخاب‌شده', 'Delete selected')) + '</button><button class="tbtn" id="clearDrawBtn" type="button">' + esc(T('پاک کردن همه', 'Clear all')) + '</button></div><div class="tool-note" id="toolNote"></div></div></div></div>'
       + '<div class="panes" id="panes"><div class="pane-row" id="rsiRow"><div class="pane-h"><span>RSI (14)</span><b id="rsiVal">—</b></div><canvas id="rsiCv" class="pane-cv" dir="ltr"></canvas></div><div class="pane-row" id="macdRow"><div class="pane-h"><span>MACD (12, 26, 9)</span><b id="macdVal">—</b></div><canvas id="macdCv" class="pane-cv" dir="ltr"></canvas></div></div>'
       + '<div class="toolbar" id="chartToolbar">'
       + '<button class="tbtn" id="typeBtn" type="button">' + esc(chartTypeLabel(cur)) + '</button>'
@@ -1373,6 +1377,21 @@
         try { window.draw(); } catch (e) {}
       });
     });
+    // v1.4.0 — ابزارهای رسم (مرحله ۳): انتخاب ابزار، حذف رسم انتخاب‌شده، پاک کردن همهٔ رسم‌های نماد.
+    document.querySelectorAll('#drawTools .tbtn').forEach(function (b) {
+      b.addEventListener('click', function () { try { if (window.OnellaDraw) window.OnellaDraw.setTool(b.dataset.draw); } catch (e) {} });
+    });
+    var delDrawBtn = $('delDrawBtn');
+    if (delDrawBtn) delDrawBtn.addEventListener('click', function () { try { if (window.OnellaDraw) { window.OnellaDraw.removeSelected(); window.draw(); } } catch (e) {} });
+    var clearDrawBtn = $('clearDrawBtn');
+    if (clearDrawBtn) clearDrawBtn.addEventListener('click', function () {
+      try {
+        if (!window.OnellaDraw) return;
+        var ok = (typeof confirm === 'function') ? confirm(T('همهٔ رسم‌های این نماد پاک شوند؟', 'Clear all drawings for this symbol?')) : true;
+        if (ok) { window.OnellaDraw.clearCurrent(); window.draw(); }
+      } catch (e) {}
+    });
+    try { if (window.OnellaDraw) window.OnellaDraw.syncUI(); } catch (e) {}
     // دکمهٔ شناور ابزارها (FAB): باز/بسته کردن پنل ابزار روی چارت.
     (function () {
       var fab = $('toolsFab'), panel = $('toolsPanel');
@@ -1394,7 +1413,8 @@
     var cvs = $('cc');
     var pointers = new Map(), pinchD = 0, pinchSt = 0, dragX = null, dragY = null, dragPan = 0;
     var pm0 = null, gMode = null, gVert = false, gMoved = false, gx0 = 0, gy0 = 0, gs0 = 7, gPan0 = 0, gLastTap = { t: 0, x: 0, y: 0 };
-    var lpTimer = null, lpX = 0, lpY = 0, xhActive = false;
+    var lpTimer = null, lpX = 0, lpY = 0, xhActive = false, drawAnchor = null;
+    function DW() { try { return window.OnellaDraw || null; } catch (e) { return null; } }
     function ptrPos(e) { var r = cvs.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top, w: r.width, h: r.height }; }
     function setCurFromX(p) { var st2 = ((window.__ov || {}).st || 7); var n = Math.min(cs.length, Math.floor((p.w - 46) / st2)); var i = Math.floor(p.x / st2); window.cur = (i >= 0 && i < n) ? i : -1; }
     function axisW() { var G = window.__geo || {}; return Math.max(56, G.pw || 46); }
@@ -1416,9 +1436,20 @@
       var G = window.__geo || {};
       pm0 = (window.__ov && window.__ov.pm) ? { hi: window.__ov.pm.hi, lo: window.__ov.pm.lo } : (G.hi != null ? { hi: G.hi, lo: G.lo } : null);
       gMode = zoneOf(p) === 'p' ? 'pscale' : 'pan';
+      /* v1.4.0 — حالت رسم (مرحله ۳): اگر ابزار رسم فعال است، لمس چارت رسم است نه pan؛
+         اگر انگشت روی رسمِ موجود فرود آمد، کشیدن آن را جابه‌جا می‌کند (ضربه = انتخاب). */
+      drawAnchor = null;
+      var dw0 = DW();
+      if (zoneOf(p) === 'c' && dw0) {
+        if (dw0.tool()) { gMode = 'draw'; drawAnchor = dw0.pointFromXY(p.x, p.y); if (lpTimer) { try { clearTimeout(lpTimer); } catch (err) {} lpTimer = null; } }
+        else {
+          var hit0 = dw0.hitTestXY(p.x, p.y);
+          if (hit0) { dw0.select(hit0.id); gMode = 'move'; dw0.startMove(p.x, p.y); }
+        }
+      }
       /* v1.3.0 — نگه‌داشتن انگشت (long-press) روی چارت = کراس‌هیر (مرحله ۱)؛
          اگر انگشت زود حرکت کند، تایمر لغو می‌شود و همان pan قبلی است. */
-      if (zoneOf(p) === 'c') {
+      if (zoneOf(p) === 'c' && gMode === 'pan') {
         lpX = p.x; lpY = p.y;
         if (lpTimer) { try { clearTimeout(lpTimer); } catch (err) {} }
         lpTimer = setTimeout(function () {
@@ -1451,6 +1482,9 @@
         /* v1.3.0 — حرکت زودهنگام = لغو long-press (همان pan قبلی)؛ در حالت
            کراس‌هیر، حرکت انگشت فقط نشانگر را جابه‌جا می‌کند، نه چارت را. */
         if (lpTimer && Math.hypot(p.x - lpX, p.y - lpY) > 10) { try { clearTimeout(lpTimer); } catch (err) {} lpTimer = null; }
+        /* v1.4.0 — حالت رسم: کشیدن = خط راهنمای رسم؛ حالت جابه‌جایی: کشیدن = حرکت رسم. */
+        if (gMode === 'draw') { var dwM = DW(); if (dwM) dwM.setPreview(dwM.pointFromXY(p.x, p.y)); try { window.draw(); } catch (err) {} return; }
+        if (gMode === 'move') { var dwV = DW(); if (dwV) dwV.moveTo(p.x, p.y); try { window.draw(); } catch (err) {} return; }
         if (gMode === 'xh') { setCurFromX(p); try { window.head(); window.draw(); } catch (err) {} return; }
         if (gMode === 'pscale' && pm0) {
           try {
@@ -1494,7 +1528,31 @@
         dragX = null; dragY = null;
         /* v1.3.0 — رها کردن انگشت در حالت کراس‌هیر: نشانگر پنهان می‌شود. */
         if (wasMode === 'xh') { xhActive = false; window.cur = -1; try { window.head(); window.draw(); } catch (err) {} }
-        if (!gMoved && wasMode) {
+        /* v1.4.0 — پایان رسم/جابه‌جایی (مرحله ۳): کشیدن = رسم از نقطهٔ شروع تا رها؛
+           ضربه = نقطهٔ رسم (یا انتخاب رسم، وقتی ابزاری فعال نیست). */
+        if (wasMode === 'draw') {
+          var dwE = DW();
+          if (dwE) {
+            var rp = dwE.pointFromXY(ptrPos(e).x, ptrPos(e).y);
+            if (rp) {
+              if (gMoved && drawAnchor) dwE.completeDrag(drawAnchor, rp);
+              else dwE.tap(rp);
+            }
+            dwE.setPreview(null);
+            try { window.draw(); window.head(); } catch (err) {}
+          }
+          drawAnchor = null;
+        } else if (wasMode === 'move') {
+          var dwM2 = DW();
+          if (dwM2) { dwM2.endMove(); try { window.draw(); } catch (err) {} }
+        } else if (!gMoved && wasMode === 'pan') {
+          var dwT = DW(), pt2 = ptrPos(e);
+          if (dwT && zoneOf(pt2) === 'c') {
+            var tp = dwT.pointFromXY(pt2.x, pt2.y);
+            if (tp) { dwT.tap(tp); try { window.draw(); } catch (err) {} }
+          }
+        }
+        if (!gMoved && wasMode && wasMode !== 'draw' && wasMode !== 'move') {
           var now = Date.now(), p = ptrPos(e), z = zoneOf(p);
           if (now - gLastTap.t < 330 && Math.hypot(p.x - gLastTap.x, p.y - gLastTap.y) < 30) {
             gLastTap.t = 0;
@@ -1508,7 +1566,7 @@
     }
     cvs.addEventListener('pointerup', ptrEnd);
     cvs.addEventListener('pointercancel', ptrEnd);
-    cvs.addEventListener('pointerleave', function () { if (lpTimer) { try { clearTimeout(lpTimer); } catch (err) {} lpTimer = null; } if (pointers.size === 0) { window.cur = -1; try { window.head(); window.draw(); } catch (err) {} } });
+    cvs.addEventListener('pointerleave', function () { if (lpTimer) { try { clearTimeout(lpTimer); } catch (err) {} lpTimer = null; } var dwL = DW(); if (dwL) dwL.setPreview(null); if (pointers.size === 0) { window.cur = -1; try { window.head(); window.draw(); } catch (err) {} } });
     cvs.addEventListener('wheel', function (e) {
       try { e.preventDefault(); } catch (err) {}
       var G = window.__geo || {}, r = cvs.getBoundingClientRect(), x = e.clientX - r.left;
