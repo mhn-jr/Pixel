@@ -86,9 +86,17 @@
   .live-dot { font-size: 11px; font-weight: 700; }
   .live-ws { color: var(--up); }
   .live-poll { color: #ffb347; }
-  #tab-chart:fullscreen, #tab-chart.fs { background: var(--bg); padding: 12px; }
+  #tab-chart:fullscreen, #tab-chart.fs { background: var(--bg); padding: 12px; overflow-y: auto; }
   #tab-chart:fullscreen #nv, #tab-chart.fs #nv { height: calc(100dvh - 200px) !important; }
   #tab-chart:fullscreen #cc, #tab-chart.fs #cc { height: 100% !important; }
+  /* v1.3.0 — جعبهٔ OHLC کراس‌هیر + پنل‌های RSI/MACD */
+  .xh-box { position: absolute; top: 30px; right: 8px; z-index: 4; background: rgba(13,19,32,.88); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; font-size: 11px; line-height: 1.7; color: var(--txt); pointer-events: none; text-align: left; white-space: nowrap; }
+  .xh-box b { color: var(--txt); }
+  .panes { margin-top: 8px; }
+  .pane-row { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin-bottom: 8px; }
+  .pane-h { display: flex; justify-content: space-between; padding: 6px 10px 0; font-size: 12px; color: var(--mut); }
+  .pane-h b { color: var(--txt); font-weight: 700; }
+  .pane-cv { width: 100%; height: 84px; display: block; touch-action: none; }
   /* v1.2.0 — دو تب اصلی (چارت / داشبورد) + مودال سرچ + گیج + داشبورد */
   main { padding-bottom: 84px; }
   #mainTabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: flex; gap: 8px; padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); background: rgba(5,7,12,.96); border-top: 1px solid var(--line); }
@@ -269,6 +277,7 @@
 <script src="chart-tools.js"></script>
 <script src="native-chart.js"></script>
 <script src="analysis-src.js"></script>
+<script src="chart-panes.js"></script>
 <script src="news-src.js"></script>
 <script src="asset-icons.js"></script>
 <script src="app.js"></script>

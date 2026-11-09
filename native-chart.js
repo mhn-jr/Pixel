@@ -43,7 +43,17 @@ function dataStateBadge(x){
   return "";
 }
 function head(){if(!cs.length)return;const W=$("cc").clientWidth,stH=((window.__ov||{}).st||7),sourceEnd=(window.onellaReplay&&window.onellaReplay.active)?Math.max(1,Math.min(window.onellaReplay.end,cs.length)):cs.length,source=cs.slice(0,sourceEnd),n=Math.min(source.length,Math.floor((W-46)/stH)),i=cur>=0&&cur<n?source.length-n+cur:source.length-1,c=source[i],p=source[i-1]||c,ch=(c.c-p.c)/p.c*100;
- $("px").innerHTML=marketPairName()+"<b>"+fmt(c.c)+"</b><span style='color:"+(window.OnellaChartStyle&&OnellaChartStyle.pc?OnellaChartStyle.pc(ch>=0?"#2ecc8f":"#ff5d6c"):(ch>=0?"#2ecc8f":"#ff5d6c"))+"'>"+(ch>=0?"+":"")+ch.toFixed(2)+"%</span>"+dataStateBadge()}
+ $("px").innerHTML=marketPairName()+"<b>"+fmt(c.c)+"</b><span style='color:"+(window.OnellaChartStyle&&OnellaChartStyle.pc?OnellaChartStyle.pc(ch>=0?"#2ecc8f":"#ff5d6c"):(ch>=0?"#2ecc8f":"#ff5d6c"))+"'>"+(ch>=0?"+":"")+ch.toFixed(2)+"%</span>"+dataStateBadge();
+ /* v1.3.0 — جعبهٔ OHLC کراس‌هیر (مرحله ۱): فقط وقتی کراس‌هیر فعال است (cur>=0)؛
+    وگرنه پنهان. MA20 همان میانگین ۲۰ خط MA روی چارت است؛ Vol فقط وقتی عدد دارد. */
+ try{var xb=$("xhBox");if(xb){
+   if(cur>=0&&cur<n&&window.__xhIdx!==i){
+     window.__xhIdx=i;
+     var ma20=null;if(i>=19){var s20=0;for(var j=i-19;j<=i;j++)s20+=source[j].c;ma20=s20/20}
+     xb.innerHTML='<span>O <b>'+fmt(c.o)+'</b></span> <span>H <b>'+fmt(c.h)+'</b></span> <span>L <b>'+fmt(c.l)+'</b></span> <span>C <b>'+fmt(c.c)+'</b></span> <span style="color:'+(ch>=0?'#2ecc8f':'#ff5d6c')+'">'+(ch>=0?'+':'')+ch.toFixed(2)+'%</span>'+(typeof c.v==='number'?' <span>Vol <b>'+fmt(c.v)+'</b></span>':'')+(ma20!=null?' <span>MA20 <b>'+fmt(ma20)+'</b></span>':'');
+     xb.style.display='';
+   }else if(!(cur>=0&&cur<n)){window.__xhIdx=-1;xb.style.display='none';}
+ }}catch(e){}}
 function draw(){const cv=$("cc");if(!cv.clientWidth||!cv.clientHeight)return;const D=Math.min(devicePixelRatio||1,2),W=cv.clientWidth,H=cv.clientHeight;cv.width=W*D;cv.height=H*D;const g=cv.getContext("2d");g.setTransform(D,0,0,D,0,0);
  if(!cs.length)return;
  const CS=window.OnellaChartStyle,pw=CS.pw(g,cs),cw=W-pw,st=((window.__ov||{}).st||7),sourceEnd=Math.max(1,((window.onellaReplay&&window.onellaReplay.active)?Math.max(1,Math.min(window.onellaReplay.end,cs.length)):cs.length)-Math.round((window.__ov||{}).pan||0)),source=cs.slice(0,sourceEnd),n=Math.min(source.length,Math.floor(cw/st)),v=source.slice(-n),off=sourceEnd-n;
@@ -62,7 +72,12 @@ function draw(){const cv=$("cc");if(!cv.clientWidth||!cv.clientHeight)return;con
  for(let i=0;i<n;i++){const k=off+i;if(k<19)continue;let a=0;for(let j=k-19;j<=k;j++)a+=cs[j].c;a/=20;s?g.lineTo(X(i),Y(a)):g.moveTo(X(i),Y(a));s=true}g.stroke();}
  g.restore();CS.axisFront(g,K);
  drawTools(g,{v,off,n,X,Y,cw});
- if(cur>=0&&cur<n){g.strokeStyle="rgba(200,215,240,.4)";g.lineWidth=1;g.beginPath();g.moveTo(X(cur),0);g.lineTo(X(cur),ph);g.stroke()}}
+ if(cur>=0&&cur<n){g.strokeStyle="rgba(200,215,240,.4)";g.lineWidth=1;g.beginPath();g.moveTo(X(cur),0);g.lineTo(X(cur),ph);g.stroke();
+  /* v1.3.0 — خط افقی کراس‌هیر روی بستهٔ کندل زیر نشانگر (خط‌چین؛ خط قیمت آخرِ
+     axisFront سر جایش می‌ماند و برچسب محور را #lastPxTag نشان می‌دهد) */
+  g.save();g.setLineDash([4,4]);g.strokeStyle="rgba(200,215,240,.35)";g.beginPath();g.moveTo(0,Math.round(Y(v[cur].c))+.5);g.lineTo(cw,Math.round(Y(v[cur].c))+.5);g.stroke();g.restore();}
+ /* v1.3.0 — پنل‌های RSI/MACD (chart-panes.js) با همان پنجرهٔ دیده‌شده رسم می‌شوند */
+ try{if(window.drawPanes)window.drawPanes()}catch(e){}}
 let __onellaLoadSeq=0;
 async function loadNative(){const __seq=++__onellaLoadSeq;const __requestedSym=pair.sym,__requestedTF=tf;nInit=true;cs=[];try{window.__ov.pm=null;window.__ov.pan=0}catch(_){}draw();$("px").textContent="...";const x=await candlesFor();if(__seq!==__onellaLoadSeq||pair.sym!==__requestedSym||tf!==__requestedTF)return;cs=x.d||[];demo=false;window.__onellaDataState=x;cur=-1;
  if(window.OnellaLiveSeconds&&window.OnellaLiveSeconds.isSub(tf)){try{window.__onellaLastSub={tf:tf,sym:pair.sym,x:x}}catch(_){}}

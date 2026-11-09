@@ -1,5 +1,5 @@
 'use strict';
-/* Onella Nelora Lite v1.2.0 — منطق مینی‌اپ (صفحهٔ استاتیک؛ بدون سرور).
+/* Onella Nelora Lite v1.3.0 — منطق مینی‌اپ (صفحهٔ استاتیک؛ بدون سرور).
    دیزاین = کپیِ دیدنیِ خود اپ Onella Nelora (نه فقط الهام): همان توکن‌ها،
    همان چیدمان صفحهٔ چارت (گیج بالا، تب‌های بازار، نوار انتخاب نماد، تایم‌فریم
    بالای چارت)، همان مودال سرچ (تب بازار + باکس بزرگ + ردیف آیکون‌دار + ستاره).
@@ -1298,14 +1298,17 @@
       '<div id="tfRow" class="seg">' + tfs.map(function (k) {
           return '<button data-tf="' + k + '"' + (state.tf === k ? ' class="on"' : '') + '>' + k + '</button>';
         }).join('') + '</div>'
-      + '<div class="chartwrap" id="chartWrap"><div id="nv" style="position:relative;height:260px"><div id="px" class="px px-ov"></div><div id="lastPxTag" style="display:none"></div><canvas id="cc" dir="ltr" style="width:100%;height:260px;display:block"></canvas><button class="axis-btn" id="tvAutoBtn" type="button" style="display:none">A</button><button class="axis-btn" id="tvLatestBtn" type="button" style="display:none">⏭</button><button class="tools-fab" id="toolsFab" type="button" title="' + esc(T('ابزارهای چارت', 'Chart tools')) + '">' + ICON.tools + '</button>'
+      + '<div class="chartwrap" id="chartWrap"><div id="nv" style="position:relative;height:260px"><div id="px" class="px px-ov"></div><div id="lastPxTag" style="display:none"></div><div id="xhBox" class="xh-box" dir="ltr" style="display:none"></div><canvas id="cc" dir="ltr" style="width:100%;height:260px;display:block"></canvas><button class="axis-btn" id="tvAutoBtn" type="button" style="display:none">A</button><button class="axis-btn" id="tvLatestBtn" type="button" style="display:none">⏭</button><button class="tools-fab" id="toolsFab" type="button" title="' + esc(T('ابزارهای چارت', 'Chart tools')) + '">' + ICON.tools + '</button>'
       + '<div class="tools-panel" id="toolsPanel"><div class="tools-panel-h"><span>' + esc(T('ابزارهای چارت', 'Chart tools')) + '</span><button class="tbtn" id="toolsClose" type="button">✕</button></div><div class="chart-tools" id="chartTools">' + TOOLS.map(function (t) {
           return '<button class="tbtn' + (toolOn[t[0]] ? ' on' : '') + '" data-tool="' + t[0] + '" type="button">' + esc(lang === 'fa' ? t[1] : t[2]) + '</button>';
         }).join('') + '</div><div class="tool-note" id="toolNote"></div></div></div></div>'
+      + '<div class="panes" id="panes"><div class="pane-row" id="rsiRow"><div class="pane-h"><span>RSI (14)</span><b id="rsiVal">—</b></div><canvas id="rsiCv" class="pane-cv" dir="ltr"></canvas></div><div class="pane-row" id="macdRow"><div class="pane-h"><span>MACD (12, 26, 9)</span><b id="macdVal">—</b></div><canvas id="macdCv" class="pane-cv" dir="ltr"></canvas></div></div>'
       + '<div class="toolbar" id="chartToolbar">'
       + '<button class="tbtn" id="typeBtn" type="button">' + esc(chartTypeLabel(cur)) + '</button>'
       + '<button class="tbtn' + (maOn ? ' on' : '') + '" id="maBtn" type="button">MA20</button>'
       + '<button class="tbtn' + (volOn ? ' on' : '') + '" id="volBtn" type="button">' + esc(T('حجم', 'Vol')) + '</button>'
+      + '<button class="tbtn on" id="rsiBtn" type="button">RSI</button>'
+      + '<button class="tbtn on" id="macdBtn" type="button">MACD</button>'
       + '<button class="tbtn" id="zoomOutBtn" type="button">−</button>'
       + '<button class="tbtn" id="zoomInBtn" type="button">+</button>'
       + '<button class="tbtn" id="fsBtn" type="button">⛶</button>'
@@ -1341,6 +1344,11 @@
         window.draw();
       } catch (e) {}
     });
+    // v1.3.0 — پنل‌های RSI/MACD (مرحله ۲): خاموش/روشن از نوار ابزار؛ حالت در
+    // localStorage می‌ماند (chart-panes.js).
+    $('rsiBtn').addEventListener('click', function () { try { window.OnellaPanes.toggle('rsi'); } catch (e) {} });
+    $('macdBtn').addEventListener('click', function () { try { window.OnellaPanes.toggle('macd'); } catch (e) {} });
+    try { if (window.OnellaPanes) window.OnellaPanes.applyVis(); } catch (e) {}
     $('zoomInBtn').addEventListener('click', function () { zoomBy(1.4); });
     $('zoomOutBtn').addEventListener('click', function () { zoomBy(1 / 1.4); });
     $('fsBtn').addEventListener('click', function () { toggleFs(); });
@@ -1386,7 +1394,9 @@
     var cvs = $('cc');
     var pointers = new Map(), pinchD = 0, pinchSt = 0, dragX = null, dragY = null, dragPan = 0;
     var pm0 = null, gMode = null, gVert = false, gMoved = false, gx0 = 0, gy0 = 0, gs0 = 7, gPan0 = 0, gLastTap = { t: 0, x: 0, y: 0 };
+    var lpTimer = null, lpX = 0, lpY = 0, xhActive = false;
     function ptrPos(e) { var r = cvs.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top, w: r.width, h: r.height }; }
+    function setCurFromX(p) { var st2 = ((window.__ov || {}).st || 7); var n = Math.min(cs.length, Math.floor((p.w - 46) / st2)); var i = Math.floor(p.x / st2); window.cur = (i >= 0 && i < n) ? i : -1; }
     function axisW() { var G = window.__geo || {}; return Math.max(56, G.pw || 46); }
     function zoneOf(p) { if (p.y > p.h - 22) return 't'; if (p.x > p.w - axisW()) return 'p'; return 'c'; }
     cvs.addEventListener('pointerdown', function (e) {
@@ -1394,6 +1404,7 @@
       pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       var p = ptrPos(e);
       if (pointers.size === 2) {
+        if (lpTimer) { try { clearTimeout(lpTimer); } catch (err) {} lpTimer = null; }
         gMode = 'pinch'; gMoved = true;
         var pts = Array.from(pointers.values());
         pinchD = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
@@ -1405,6 +1416,19 @@
       var G = window.__geo || {};
       pm0 = (window.__ov && window.__ov.pm) ? { hi: window.__ov.pm.hi, lo: window.__ov.pm.lo } : (G.hi != null ? { hi: G.hi, lo: G.lo } : null);
       gMode = zoneOf(p) === 'p' ? 'pscale' : 'pan';
+      /* v1.3.0 — نگه‌داشتن انگشت (long-press) روی چارت = کراس‌هیر (مرحله ۱)؛
+         اگر انگشت زود حرکت کند، تایمر لغو می‌شود و همان pan قبلی است. */
+      if (zoneOf(p) === 'c') {
+        lpX = p.x; lpY = p.y;
+        if (lpTimer) { try { clearTimeout(lpTimer); } catch (err) {} }
+        lpTimer = setTimeout(function () {
+          lpTimer = null;
+          if (pointers.size !== 1 || gMode !== 'pan' || gMoved) return;
+          xhActive = true; gMode = 'xh'; gMoved = true;
+          setCurFromX({ x: lpX, w: cvs.clientWidth });
+          try { window.head(); window.draw(); } catch (err) {}
+        }, 380);
+      }
     });
     cvs.addEventListener('pointermove', function (e) {
       var p = ptrPos(e);
@@ -1424,6 +1448,10 @@
       if (pointers.size === 1 && gMode) {
         var dx = e.clientX - dragX, dy = e.clientY - dragY;
         if (!gMoved && Math.hypot(p.x - gx0, p.y - gy0) > 8) gMoved = true;
+        /* v1.3.0 — حرکت زودهنگام = لغو long-press (همان pan قبلی)؛ در حالت
+           کراس‌هیر، حرکت انگشت فقط نشانگر را جابه‌جا می‌کند، نه چارت را. */
+        if (lpTimer && Math.hypot(p.x - lpX, p.y - lpY) > 10) { try { clearTimeout(lpTimer); } catch (err) {} lpTimer = null; }
+        if (gMode === 'xh') { setCurFromX(p); try { window.head(); window.draw(); } catch (err) {} return; }
         if (gMode === 'pscale' && pm0) {
           try {
             window.__ov = window.__ov || {};
@@ -1460,9 +1488,12 @@
     function ptrEnd(e) {
       var wasMode = gMode;
       pointers.delete(e.pointerId);
+      if (lpTimer) { try { clearTimeout(lpTimer); } catch (err) {} lpTimer = null; }
       if (pointers.size < 2) pinchD = 0;
       if (pointers.size === 0) {
         dragX = null; dragY = null;
+        /* v1.3.0 — رها کردن انگشت در حالت کراس‌هیر: نشانگر پنهان می‌شود. */
+        if (wasMode === 'xh') { xhActive = false; window.cur = -1; try { window.head(); window.draw(); } catch (err) {} }
         if (!gMoved && wasMode) {
           var now = Date.now(), p = ptrPos(e), z = zoneOf(p);
           if (now - gLastTap.t < 330 && Math.hypot(p.x - gLastTap.x, p.y - gLastTap.y) < 30) {
@@ -1477,7 +1508,7 @@
     }
     cvs.addEventListener('pointerup', ptrEnd);
     cvs.addEventListener('pointercancel', ptrEnd);
-    cvs.addEventListener('pointerleave', function () { if (pointers.size === 0) { window.cur = -1; try { window.head(); window.draw(); } catch (err) {} } });
+    cvs.addEventListener('pointerleave', function () { if (lpTimer) { try { clearTimeout(lpTimer); } catch (err) {} lpTimer = null; } if (pointers.size === 0) { window.cur = -1; try { window.head(); window.draw(); } catch (err) {} } });
     cvs.addEventListener('wheel', function (e) {
       try { e.preventDefault(); } catch (err) {}
       var G = window.__geo || {}, r = cvs.getBoundingClientRect(), x = e.clientX - r.left;
