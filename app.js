@@ -1,5 +1,13 @@
 'use strict';
-/* Onella Nelora Lite v1.9.0 — منطق مینی‌اپ (صفحهٔ استاتیک؛ بدون سرور).
+/* Onella Nelora Lite v1.9.1 — منطق مینی‌اپ (صفحهٔ استاتیک؛ بدون سرور).
+   v1.9.1: (۱) دکمهٔ + روی محور قیمت (سبک تریدینگ‌ویو) + خط ردیابی قیمت — با حرکت
+   روی محور، + دنبال قیمت می‌آید؛ زدن + منوی هشدار/خط افقی را باز می‌کند (long-press
+   هم سر جایش هست)؛ (۲) گزینهٔ آخر نوار ابزار/تنظیمات دیگر زیر صفحه نمی‌ماند —
+   پنل‌ها به ارتفاع چارت محدود شدند + دکمهٔ ﹀ برای اسکرول؛ (۳) کراس‌هیر تریدینگ‌ویو:
+   خط افقی آزادانه قیمتِ زیر انگشت را نشان می‌دهد با آهنربای نرم به O/H/L/C، خط
+   عمودی روی پنل‌های RSI/MACD هم ادامه می‌یابد، برچسب محور قیمتِ نشانگر را می‌گوید؛
+   (۴) جعبهٔ OHLC در صفحه جا می‌شود، سمت مخالف انگشت می‌نشیند و بعد از برداشتن
+   انگشت می‌ماند (با یک ضربه روی چارت خاموش می‌شود).
    v1.9.0: (۱) نام هیچ منبع/سرویس در UI نمی‌آید — برچسب‌ها و hintها عمومی‌اند؛
    (۲) ابزارهای چارت بیشتر شد: ایچیموکو + روبان EMA، پنل استوکاستیک + OBV،
    رسم پرتو افقی + خط عمودی؛ (۳) هشدار قیمت به سبک تریدینگ‌ویو: دیالوگ
@@ -1350,6 +1358,9 @@
     setTimeout(function () { try { window.draw(); window.head(); } catch (e) {} }, 120);
   }
   function renderChartShell() {
+    /* v1.9.1 — با هر بار ساخت دوبارهٔ چارت، وضعیت + محور قیمت و کراس‌هیر ریست می‌شود. */
+    axisPlusPrice = null; xhPinned = false;
+    try { window.__xhPrice = null; } catch (e) {}
     var types = (window.OnellaChartStyle && window.OnellaChartStyle.types) || ['candle'];
     var cur = 'candle';
     try { cur = window.OnellaChartStyle.get().type || 'candle'; } catch (e) {}
@@ -1425,12 +1436,12 @@
       + '<div id="tfPanel" class="tf-panel">' + tfs.map(function (k) {
           return '<button data-tf="' + k + '"' + (state.tf === k ? ' class="on"' : '') + ' type="button">' + k + '</button>';
         }).join('') + '</div></div>'
-      + '<div class="chartwrap" id="chartWrap"><div id="nv" style="position:relative;height:260px"><div id="px" class="px px-ov"></div><div id="lastPxTag" style="display:none"></div><div id="xhBox" class="xh-box" dir="ltr" style="display:none"></div><canvas id="cc" dir="ltr" style="width:100%;height:260px;display:block"></canvas><button class="axis-btn" id="tvAutoBtn" type="button" style="display:none">A</button><button class="axis-btn" id="tvLatestBtn" type="button" style="display:none">⏭</button>'
+      + '<div class="chartwrap" id="chartWrap"><div id="nv" style="position:relative;height:260px"><div id="px" class="px px-ov"></div><div id="lastPxTag" style="display:none"></div><div id="xhBox" class="xh-box" dir="ltr" style="display:none"></div><canvas id="cc" dir="ltr" style="width:100%;height:260px;display:block"></canvas><button class="axis-btn" id="tvAutoBtn" type="button" style="display:none">A</button><button class="axis-btn" id="tvLatestBtn" type="button" style="display:none">⏭</button><button class="axis-plus" id="axisPlusBtn" type="button" style="display:none">+</button><div class="axis-track" id="axisTrack" style="display:none"></div>'
       + '<div class="tools-strip" id="toolsStrip"><div class="strip-group" id="chartTools">' + TOOLS.map(function (t) {
           return '<button class="tbtn' + (toolOn[t[0]] ? ' on' : '') + '" data-tool="' + t[0] + '" type="button" title="' + esc(lang === 'fa' ? t[1] : t[2]) + '">' + (TOOL_ICONS[t[0]] || esc(lang === 'fa' ? t[1] : t[2])) + '</button>';
         }).join('') + '</div><div class="strip-sep"></div><div class="strip-group" id="drawTools">' + DRAW_TOOLS.map(function (t) {
           return '<button class="tbtn" data-draw="' + t[0] + '" type="button" title="' + esc(lang === 'fa' ? t[1] : t[2]) + '">' + (DRAW_ICONS[t[0]] || esc(lang === 'fa' ? t[1] : t[2])) + '</button>';
-        }).join('') + '</div><div class="strip-sep"></div><div class="strip-group"><button class="tbtn" id="delDrawBtn" type="button" disabled title="' + esc(T('حذف انتخاب‌شده', 'Delete selected')) + '">' + TRASH_ICON + '</button><button class="tbtn" id="clearDrawBtn" type="button" title="' + esc(T('پاک کردن همه', 'Clear all')) + '">' + CLEAR_ICON + '</button></div></div>'
+        }).join('') + '</div><div class="strip-sep"></div><div class="strip-group"><button class="tbtn" id="delDrawBtn" type="button" disabled title="' + esc(T('حذف انتخاب‌شده', 'Delete selected')) + '">' + TRASH_ICON + '</button><button class="tbtn" id="clearDrawBtn" type="button" title="' + esc(T('پاک کردن همه', 'Clear all')) + '">' + CLEAR_ICON + '</button></div><button class="strip-more" id="stripMore" type="button" style="display:none">﹀</button></div>'
       + '<div class="settings-panel" id="settingsPanel"><div class="settings-panel-h"><span>' + esc(T('تنظیمات چارت', 'Chart settings')) + '</span><button class="tbtn" id="setClose" type="button">✕</button></div><div class="set-sec-h">' + esc(T('نوع چارت', 'Chart type')) + '</div><div class="set-type-grid" id="setTypes">' + SET_TYPES.map(function (t) {
           return '<button class="set-type' + (st.type === t[0] ? ' on' : '') + '" data-type="' + t[0] + '" type="button">' + (SET_TYPE_ICONS[t[0]] || '') + '<span>' + esc(lang === 'fa' ? t[1] : t[2]) + '</span></button>';
         }).join('') + '</div><div class="set-sec-h">' + esc(T('رنگ کندل‌ها', 'Candle colors')) + '</div><div class="set-pal-row" id="setPals">' + SET_PALS.map(function (p) {
@@ -1608,12 +1619,30 @@
         var open = !strip.classList.contains('open');
         strip.classList.toggle('open', open);
         if (open && setP) { setP.classList.remove('open'); if (sb) sb.classList.remove('on'); }
+        if (open) { try { var onBtn = strip.querySelector('.tbtn.on'); if (onBtn && onBtn.scrollIntoView) onBtn.scrollIntoView({ block: 'nearest' }); } catch (e) {} }
+        updateStripMore();
+      });
+      if (strip) strip.addEventListener('scroll', updateStripMore);
+      var more = $('stripMore');
+      if (more && strip) more.addEventListener('click', function () {
+        try { var sh = strip.scrollHeight || 0, ch = strip.clientHeight || 0; strip.scrollTop = Math.min(Math.max(0, sh - ch), (strip.scrollTop || 0) + 200); } catch (e) {}
+        updateStripMore();
+      });
+      /* v1.9.1 — دکمه + محور قیمت: زدن + منوی هشدار/خط افقی را با همان قیمت باز می‌کند. */
+      var apb = $('axisPlusBtn');
+      if (apb) apb.addEventListener('click', function (e) {
+        try { if (e && e.stopPropagation) e.stopPropagation(); } catch (e2) {}
+        if (axisPlusPrice == null) return;
+        var r = null;
+        try { r = apb.getBoundingClientRect(); } catch (e3) {}
+        showPriceAxisMenu(axisPlusPrice, r ? (r.left + r.width / 2) : 100, r ? (r.top + r.height / 2) : 100);
       });
       if (sb && setP) sb.addEventListener('click', function () {
         var open2 = !setP.classList.contains('open');
         setP.classList.toggle('open', open2);
         sb.classList.toggle('on', open2);
         if (open2 && strip) strip.classList.remove('open');
+        updateStripMore();
       });
       var sc = $('setClose');
       if (sc && setP) sc.addEventListener('click', function () { setP.classList.remove('open'); if (sb) sb.classList.remove('on'); });
@@ -1642,6 +1671,8 @@
       try { cvs.setPointerCapture(e.pointerId); } catch (err) {}
       pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       var p = ptrPos(e);
+      /* v1.9.1 — با رفتن انگشت روی چارت، + محور قیمت پنهان می‌شود. */
+      if (zoneOf(p) !== 'p') hideAxisPlus();
       if (pointers.size === 2) {
         if (lpTimer) { try { clearTimeout(lpTimer); } catch (err) {} lpTimer = null; }
         gMode = 'pinch'; gMoved = true;
@@ -1666,6 +1697,14 @@
           if (hit0) { dw0.select(hit0.id); gMode = 'move'; dw0.startMove(p.x, p.y); }
         }
       }
+      /* v1.9.1 — کراس‌هیرِ پین‌شده: ضربهٔ بعدی روی چارت (بدون ابزار رسم و بدون
+         برخورد به رسم) کراس‌هیر را از سر می‌گیرد؛ ضربهٔ سریعِ بدون حرکت خاموشش
+         می‌کند (در ptrEnd). */
+      if (zoneOf(p) === 'c' && gMode === 'pan' && xhPinned) {
+        gMode = 'xh'; xhActive = true;
+        setCurFromX(p); xhPriceAtY(p.y);
+        try { window.head(); window.draw(); } catch (err) {}
+      }
       /* v1.3.0 — نگه‌داشتن انگشت (long-press) روی چارت = کراس‌هیر (مرحله ۱)؛
          اگر انگشت زود حرکت کند، تایمر لغو می‌شود و همان pan قبلی است. */
       if (zoneOf(p) === 'c' && gMode === 'pan') {
@@ -1676,6 +1715,7 @@
           if (pointers.size !== 1 || gMode !== 'pan' || gMoved) return;
           xhActive = true; gMode = 'xh'; gMoved = true;
           setCurFromX({ x: lpX, w: cvs.clientWidth });
+          xhPriceAtY(lpY);
           try { window.head(); window.draw(); } catch (err) {}
         }, 380);
       }
@@ -1686,6 +1726,7 @@
         if (Gp.inv && Gp.ph) {
           lpAxisX = p.x; lpAxisY = p.y; lpAxisCX = e.clientX; lpAxisCY = e.clientY;
           lpAxisPrice = Gp.inv(Math.max(0, Math.min(Gp.ph, p.y)));
+          showAxisPlus(lpAxisPrice); // v1.9.1 — + همان لحظهٔ لمس محور دیده می‌شود.
           if (lpAxisTimer) { try { clearTimeout(lpAxisTimer); } catch (err) {} }
           lpAxisTimer = setTimeout(function () {
             lpAxisTimer = null;
@@ -1720,12 +1761,13 @@
         /* v1.4.0 — حالت رسم: کشیدن = خط راهنمای رسم؛ حالت جابه‌جایی: کشیدن = حرکت رسم. */
         if (gMode === 'draw') { var dwM = DW(); if (dwM) dwM.setPreview(dwM.pointFromXY(p.x, p.y)); try { window.draw(); } catch (err) {} return; }
         if (gMode === 'move') { var dwV = DW(); if (dwV) dwV.moveTo(p.x, p.y); try { window.draw(); } catch (err) {} return; }
-        if (gMode === 'xh') { setCurFromX(p); try { window.head(); window.draw(); } catch (err) {} return; }
+        if (gMode === 'xh') { setCurFromX(p); xhPriceAtY(p.y); try { window.head(); window.draw(); } catch (err) {} return; }
         if (gMode === 'pscale' && pm0) {
           try {
             window.__ov = window.__ov || {};
             window.__ov.pm = pmScale(pm0, Math.exp(dy / 170), window.__geo || {});
             window.draw(); window.head(); refreshAxisBtns();
+            var prA = axisPriceAtY(p.y); if (prA != null) showAxisPlus(prA); // v1.9.1 — + با انگشت روی محور حرکت می‌کند.
           } catch (err) {}
           return;
         }
@@ -1747,6 +1789,10 @@
       }
       // کراس‌هِر: همان pointermove اپ (native-chart.js).
       if (pointers.size === 0) {
+        /* v1.9.1 — هاور ماوس روی محور قیمت: + دنبال نشانگر می‌آید (دسکتاپ)؛
+           با رفتن نشانگر از محور، + پنهان می‌شود. */
+        if (zoneOf(p) === 'p') { var prH = axisPriceAtY(p.y); if (prH != null) showAxisPlus(prH); }
+        else hideAxisPlus();
         var st2 = ((window.__ov || {}).st || 7);
         var n = Math.min(cs.length, Math.floor((p.w - 46) / st2));
         var i = Math.floor(p.x / st2);
@@ -1762,8 +1808,13 @@
       if (pointers.size < 2) pinchD = 0;
       if (pointers.size === 0) {
         dragX = null; dragY = null;
-        /* v1.3.0 — رها کردن انگشت در حالت کراس‌هیر: نشانگر پنهان می‌شود. */
-        if (wasMode === 'xh') { xhActive = false; window.cur = -1; try { window.head(); window.draw(); } catch (err) {} }
+        /* v1.3.0 — رها کردن انگشت در حالت کراس‌هیر.
+           v1.9.1 — کراس‌هیر بعد از برداشتن انگشت می‌ماند (پین) تا جعبهٔ OHLC خوانده
+           شود؛ ضربهٔ سریعِ بعدی روی چارت خاموشش می‌کند. کشیدن = جابه‌جایی نشانگر. */
+        if (wasMode === 'xh') {
+          if (!gMoved) { xhActive = false; xhPinned = false; window.cur = -1; window.__xhPrice = null; try { window.head(); window.draw(); } catch (err) {} }
+          else { xhPinned = true; }
+        }
         /* v1.4.0 — پایان رسم/جابه‌جایی (مرحله ۳): کشیدن = رسم از نقطهٔ شروع تا رها؛
            ضربه = نقطهٔ رسم (یا انتخاب رسم، وقتی ابزاری فعال نیست). */
         if (wasMode === 'draw') {
@@ -1802,7 +1853,7 @@
     }
     cvs.addEventListener('pointerup', ptrEnd);
     cvs.addEventListener('pointercancel', ptrEnd);
-    cvs.addEventListener('pointerleave', function () { if (lpTimer) { try { clearTimeout(lpTimer); } catch (err) {} lpTimer = null; } var dwL = DW(); if (dwL) dwL.setPreview(null); if (pointers.size === 0) { window.cur = -1; try { window.head(); window.draw(); } catch (err) {} } });
+    cvs.addEventListener('pointerleave', function (e) { if (lpTimer) { try { clearTimeout(lpTimer); } catch (err) {} lpTimer = null; } if (lpAxisTimer) { try { clearTimeout(lpAxisTimer); } catch (err) {} lpAxisTimer = null; } if (e && e.pointerType === 'mouse') hideAxisPlus(); var dwL = DW(); if (dwL) dwL.setPreview(null); if (pointers.size === 0 && !xhPinned) { window.cur = -1; window.__xhPrice = null; try { window.head(); window.draw(); } catch (err) {} } });
     cvs.addEventListener('wheel', function (e) {
       try { e.preventDefault(); } catch (err) {}
       var G = window.__geo || {}, r = cvs.getBoundingClientRect(), x = e.clientX - r.left;
@@ -1868,10 +1919,13 @@
     var i = (typeof cur === 'number' && cur >= 0 && cur < n) ? cs.length - n + cur : cs.length - 1;
     var c = cs[i];
     if (!c || typeof c.c !== 'number') { tag.style.display = 'none'; return; }
-    var y = G.Y(c.c);
+    /* v1.9.1 — با کراس‌هیر فعال، برچسب قیمتِ زیر نشانگر (آهنربا/آزاد) را نشان می‌دهد، نه بستهٔ کندل. */
+    var xhP = (typeof cur === 'number' && cur >= 0 && typeof window.__xhPrice === 'number' && isFinite(window.__xhPrice)) ? window.__xhPrice : null;
+    var px = (xhP != null) ? xhP : c.c;
+    var y = G.Y(px);
     if (!Number.isFinite(y)) { tag.style.display = 'none'; return; }
     tag.style.top = Math.max(9, Math.min((G.ph || 240) - 9, y)) + 'px';
-    tag.textContent = (typeof window.__pfmt === 'function' ? window.__pfmt(c.c) : fmt(c.c));
+    tag.textContent = (typeof window.__pfmt === 'function' ? window.__pfmt(px) : fmt(px));
     tag.className = (c.c >= c.o) ? '' : 'dn';
     tag.style.display = '';
   }
@@ -1882,6 +1936,7 @@
     window.head = function () {
       var r = _head.apply(this, arguments);
       try { positionLastPxTag(); } catch (e) {}
+      try { refreshAxisPlus(); } catch (e2) {} // v1.9.1 — + محور قیمت با هر رسم سر قیمتش می‌ماند.
       return r;
     };
   }
@@ -2003,6 +2058,8 @@
      ۳۰ ثانیه‌ای وقتی هشدار فعال دارند. وقتی بسته است هیچ هشداری نمی‌رسد. */
   var alertTimer = null;
   var alertBannerTimer = null, axisMenuPrice = null;
+  /* v1.9.1 — وضعیت + محور قیمت و کراس‌هیر (سطح بیرونی تا تست و head هم ببینند). */
+  var axisPlusPrice = null, xhPinned = false;
   function curAlertPrice() {
     if (state.priceMode === 'iran' && state.priceIran) return state.priceIran.price;
     return state.priceUsd ? state.priceUsd.price : null;
@@ -2200,8 +2257,85 @@
     refreshAlertBadge(); startAlertPoll();
     try { window.draw(); } catch (e) {}
   }
+  /* v1.9.1 — دکمه + روی محور قیمت (سبک تریدینگ‌ویو): با حرکت روی محور، + و یک
+     خط‌چین نارنجیِ سراسری روی همان قیمت می‌نشینند؛ زدن + منوی هشدار/خط افقی را
+     باز می‌کند. + به قیمت گره خورده است (نه به y) — با زوم/اسکرول مقیاس، سر جایش
+     روی همان قیمت می‌ماند (refreshAxisPlus از head فراخوانی می‌شود). */
+  function axisPriceAtY(y) {
+    var G = window.__geo;
+    if (!G || typeof G.inv !== 'function' || !(G.ph > 0)) return null;
+    var p = G.inv(Math.max(0, Math.min(G.ph, y)));
+    return (typeof p === 'number' && isFinite(p)) ? p : null;
+  }
+  function showAxisPlus(price) {
+    if (price == null || !isFinite(price) || !state.quote) return;
+    var G = window.__geo;
+    if (!G || typeof G.Y !== 'function' || !(G.ph > 0)) return;
+    var y = G.Y(price);
+    if (!isFinite(y) || y < -11 || y > G.ph + 11) { hideAxisPlus(); return; }
+    axisPlusPrice = price;
+    var b = $('axisPlusBtn'), t = $('axisTrack');
+    if (b) { b.style.top = Math.max(11, Math.min(G.ph - 11, y)) + 'px'; b.style.display = ''; }
+    if (t) { t.style.top = Math.max(0, Math.min(G.ph, y)) + 'px'; t.style.display = ''; }
+  }
+  function hideAxisPlus() {
+    axisPlusPrice = null;
+    var b = $('axisPlusBtn'), t = $('axisTrack');
+    if (b) b.style.display = 'none';
+    if (t) t.style.display = 'none';
+  }
+  function refreshAxisPlus() {
+    if (axisPlusPrice == null) return;
+    showAxisPlus(axisPlusPrice);
+  }
+  /* v1.9.1 — آهنربای نرم کراس‌هیر (سبک تریدینگ‌ویو): خط افقی آزادانه قیمتِ زیر
+     انگشت را نشان می‌دهد، ولی اگر تا ۱۰ پیکسلِ یکی از O/H/L/C کندلِ زیر نشانگر
+     باشد، نرم روی همان قیمت می‌نشیند («قفل کوچک») — قفلِ کامل نیست، با کمی
+     جابه‌جایی رها می‌شود و دوباره آزاد می‌شود. */
+  function snapXhPrice(price, candle) {
+    if (price == null || !isFinite(price) || !candle) return price;
+    var G = window.__geo;
+    if (!G || !(G.hi > G.lo) || !(G.ph > 0)) return price;
+    var span = (G.ph - (G.vh || 0)) || G.ph;
+    var thr = Math.abs(G.hi - G.lo) * 10 / Math.max(1, span);
+    var best = null, bd = Infinity;
+    ['o', 'h', 'l', 'c'].forEach(function (k) {
+      var v = candle[k];
+      if (typeof v !== 'number' || !isFinite(v)) return;
+      var d = Math.abs(v - price);
+      if (d < bd) { bd = d; best = v; }
+    });
+    return (best != null && bd <= thr) ? best : price;
+  }
+  function xhPriceAtY(y) {
+    var raw = axisPriceAtY(y);
+    if (raw == null) { window.__xhPrice = null; return null; }
+    var G = window.__geo, c = null;
+    try {
+      var idx = (G && typeof G.off === 'number' && typeof window.cur === 'number') ? G.off + window.cur : -1;
+      if (idx >= 0 && state.candles && state.candles[idx]) c = state.candles[idx];
+    } catch (e) {}
+    var p = snapXhPrice(raw, c);
+    window.__xhPrice = p;
+    return p;
+  }
+  function dismissCrosshair() {
+    xhPinned = false;
+    window.cur = -1;
+    window.__xhPrice = null;
+    try { window.head(); window.draw(); } catch (e) {}
+  }
+  /* v1.9.1 — «﹀» پایین نوار ابزار: تا وقتی گزینهٔ پایین‌تر هست دیده می‌شود. */
+  function updateStripMore() {
+    var strip = $('toolsStrip'), more = $('stripMore');
+    if (!strip || !more) return;
+    if (!strip.classList.contains('open')) { more.style.display = 'none'; return; }
+    var sh = strip.scrollHeight || 0, ch = strip.clientHeight || 0, st = strip.scrollTop || 0;
+    more.style.display = (sh > ch + 4 && st + ch < sh - 4) ? '' : 'none';
+  }
   function showPriceAxisMenu(price, clientX, clientY) {
     if (price == null || !isFinite(price) || !state.quote) return;
+    hideAxisPlus(); // v1.9.1 — منو جای + را می‌گیرد.
     ensureAlertUI();
     axisMenuPrice = price;
     var m = $('axisMenu');
@@ -3017,6 +3151,7 @@
     yahooSearch: yahooSearch, mofidResolve: mofidResolve, rememberQuote: rememberQuote,
     iranRate: iranRate, perfFromDaily: perfFromDaily, frankfurterWeek: frankfurterWeek, iranRatesBulk: iranRatesBulk, dailyCandlesFor: dailyCandlesFor,
     openAlertModal: openAlertModal, showPriceAxisMenu: showPriceAxisMenu, checkAlertsNow: checkAlertsNow, refreshAlertBadge: refreshAlertBadge, renderAlertList: renderAlertList,
+    showAxisPlus: showAxisPlus, hideAxisPlus: hideAxisPlus, refreshAxisPlus: refreshAxisPlus, snapXhPrice: snapXhPrice, updateStripMore: updateStripMore, dismissCrosshair: dismissCrosshair, isXhPinned: function () { return xhPinned; }, getAxisPlusPrice: function () { return axisPlusPrice; },
     pmScale: pmScale, pmPan: pmPan, autoScale: autoScale, toLatest: toLatest, refreshAxisBtns: refreshAxisBtns,
     toggleFav: toggleFav, isFav: isFav, lookupQuote: lookupQuote, yahooMulti: yahooMulti, mofidBulk: mofidBulk, cgMarkets: cgMarkets };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

@@ -57,6 +57,10 @@ function head(){if(!cs.length)return;const W=$("cc").clientWidth,stH=((window.__
      var ma20=null;if(i>=19){var s20=0;for(var j=i-19;j<=i;j++)s20+=source[j].c;ma20=s20/20}
      xb.innerHTML='<span>O <b>'+pfmt(c.o)+'</b></span> <span>H <b>'+pfmt(c.h)+'</b></span> <span>L <b>'+pfmt(c.l)+'</b></span> <span>C <b>'+pfmt(c.c)+'</b></span> <span style="color:'+(ch>=0?'#2ecc8f':'#ff5d6c')+'">'+(ch>=0?'+':'')+ch.toFixed(2)+'%</span>'+(typeof c.v==='number'?' <span>Vol <b>'+fmt(c.v)+'</b></span>':'')+(ma20!=null?' <span>MA20 <b>'+pfmt(ma20)+'</b></span>':'');
      xb.style.display='';
+     /* v1.9.1 — جعبه سمتِ مخالفِ نشانگر می‌نشیند (زیر انگشت نمی‌ماند)؛ اگر نوار
+        ابزار باز است، از جلوی آن کنار می‌رود. */
+     var vx=cur*stH+stH/2, stEl=$('toolsStrip'), stripOpen=!!(stEl&&stEl.classList&&stEl.classList.contains&&stEl.classList.contains('open'));
+     if(vx>W/2){xb.style.left=stripOpen?'60px':'10px';xb.style.right='auto';}else{xb.style.right='8px';xb.style.left='auto';}
    }else if(!(cur>=0&&cur<n)){window.__xhIdx=-1;xb.style.display='none';}
  }}catch(e){}}
 function draw(){const cv=$("cc");if(!cv.clientWidth||!cv.clientHeight)return;const D=Math.min(devicePixelRatio||1,2),W=cv.clientWidth,H=cv.clientHeight;cv.width=W*D;cv.height=H*D;const g=cv.getContext("2d");g.setTransform(D,0,0,D,0,0);
@@ -80,9 +84,10 @@ function draw(){const cv=$("cc");if(!cv.clientWidth||!cv.clientHeight)return;con
  /* v1.4.0 — رسم‌های کاربر (chart-draw.js): با همان پنجرهٔ دیده‌شده؛ بر اساس زمان کندل، نه ایندکس */
  try{if(window.OnellaDraw)window.OnellaDraw.draw(g,{v:v,off:off,n:n,X:X,Y:Y,cw:cw,ph:ph,W:W});}catch(e){}
  if(cur>=0&&cur<n){g.strokeStyle="rgba(200,215,240,.4)";g.lineWidth=1;g.beginPath();g.moveTo(X(cur),0);g.lineTo(X(cur),ph);g.stroke();
-  /* v1.3.0 — خط افقی کراس‌هیر روی بستهٔ کندل زیر نشانگر (خط‌چین؛ خط قیمت آخرِ
-     axisFront سر جایش می‌ماند و برچسب محور را #lastPxTag نشان می‌دهد) */
-  g.save();g.setLineDash([4,4]);g.strokeStyle="rgba(200,215,240,.35)";g.beginPath();g.moveTo(0,Math.round(Y(v[cur].c))+.5);g.lineTo(cw,Math.round(Y(v[cur].c))+.5);g.stroke();g.restore();}
+  /* v1.3.0 — خط افقی کراس‌هیر روی قیمتِ زیر نشانگر (خط‌چین؛ خط قیمت آخرِ
+     axisFront سر جایش می‌ماند و برچسب محور را #lastPxTag نشان می‌دهد).
+     v1.9.1 — قیمت از window.__xhPrice می‌آید (آهنربای نرم/آزاد)؛ اگر نیست، بستهٔ کندل. */
+  g.save();g.setLineDash([4,4]);g.strokeStyle="rgba(200,215,240,.35)";g.beginPath();var _xp=(typeof window.__xhPrice==='number'&&isFinite(window.__xhPrice))?window.__xhPrice:v[cur].c;g.moveTo(0,Math.round(Y(_xp))+.5);g.lineTo(cw,Math.round(Y(_xp))+.5);g.stroke();g.restore();}
  /* v1.3.0 — پنل‌های RSI/MACD (chart-panes.js) با همان پنجرهٔ دیده‌شده رسم می‌شوند */
  try{if(window.drawPanes)window.drawPanes()}catch(e){}}
 let __onellaLoadSeq=0;

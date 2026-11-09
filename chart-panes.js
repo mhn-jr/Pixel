@@ -113,6 +113,16 @@
     }
     g.stroke();
   }
+  /* v1.9.1 — خط عمودی کراس‌هیر روی پنل‌ها هم ادامه می‌یابد (سبک تریدینگ‌ویو:
+     نشانگر فقط روی چارت اصلی نیست؛ در همهٔ صفحه حرکت می‌کند). */
+  function xhLineInPane(g, H, X, n) {
+    var cur = window.cur;
+    if (typeof cur !== 'number' || cur < 0 || cur >= n) return;
+    try {
+      g.strokeStyle = 'rgba(200,215,240,.4)'; g.lineWidth = 1;
+      g.beginPath(); g.moveTo(X(cur), 0); g.lineTo(X(cur), H); g.stroke();
+    } catch (_) {}
+  }
 
   function drawRsi(cs, off, n, st, cw) {
     var c = paneCtx('rsiCv'), valEl = document.getElementById('rsiVal');
@@ -134,6 +144,7 @@
     drawLine(g, s, off, n, X, Y, '#a58fd6', 1.4);
     var lv2 = s[off + n - 1];
     if (lv2 != null && isFinite(lv2)) { g.fillStyle = '#a58fd6'; g.beginPath(); g.arc(X(n - 1), Y(lv2), 2.5, 0, 7); g.fill(); }
+    xhLineInPane(g, H, X, n);
   }
 
   function drawMacd(cs, off, n, st, cw) {
@@ -169,6 +180,7 @@
     g.fillStyle = '#7c8aa0'; g.font = '10px sans-serif'; g.textAlign = 'start';
     g.fillText(fmtNum(mx), cw + 5, 12);
     g.fillText(fmtNum(mn), cw + 5, H - 4);
+    xhLineInPane(g, H, X, n);
   }
 
   function drawStoch(cs, off, n, st, cw) {
@@ -192,6 +204,7 @@
     drawLine(g, s.d, off, n, X, Y, '#d6a55f', 1.2);
     var lv2 = s.k[off + n - 1];
     if (lv2 != null && isFinite(lv2)) { g.fillStyle = '#a58fd6'; g.beginPath(); g.arc(X(n - 1), Y(lv2), 2.5, 0, 7); g.fill(); }
+    xhLineInPane(g, H, X, n);
   }
   function drawObv(cs, off, n, st, cw) {
     var c = paneCtx('obvCv'), valEl = document.getElementById('obvVal');
@@ -210,6 +223,7 @@
     drawLine(g, s, off, n, X, Y, '#5fb8a6', 1.4);
     var lv2 = s[off + n - 1];
     if (lv2 != null && isFinite(lv2)) { g.fillStyle = '#5fb8a6'; g.beginPath(); g.arc(X(n - 1), Y(lv2), 2.5, 0, 7); g.fill(); }
+    xhLineInPane(g, H, X, n);
   }
 
   function drawPanes() {
