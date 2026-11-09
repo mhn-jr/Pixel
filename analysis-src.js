@@ -95,6 +95,148 @@ function atr(candles, n) {
   return s / n;
 }
 
+/* v1.2.2 — شاخص‌های بیشتر برای تحلیل قوی‌تر: همه از روی همان کندل‌ها حساب
+   می‌شوند؛ عدد جدیدی ساخته نمی‌شود. توصیفی‌اند — نه سیگنال، نه پیش‌بینی. */
+
+// ADX وایلدر (۱۴) + DI+ و DI- — قدرت روند و جهتش.
+function adx(candles, n) {
+  n = n || 14;
+  if (!Array.isArray(candles) || candles.length < n * 2 + 1) return null;
+  var tr = [], pdm = [], mdm = [];
+  for (var i = 1; i < candles.length; i++) {
+    var c = candles[i], p = candles[i - 1];
+    tr.push(Math.max(c.h - c.l, Math.abs(c.h - p.c), Math.abs(c.l - p.c)));
+    var up = c.h - p.h, dn = p.l - c.l;
+    pdm.push(up > 0 && up > dn ? up : 0);
+    mdm.push(dn > 0 && dn > up ? dn : 0);
+  }
+  function wilder(arr) {
+    var out = [], s = 0, i;
+    for (i = 0; i < n; i++) s += arr[i];
+    out[n - 1] = s;
+    for (i = n; i < arr.length; i++) out[i] = out[i - 1] - out[i - 1] / n + arr[i];
+    return out;
+  }
+  var atrS = wilder(tr), pS = wilder(pdm), mS = wilder(mdm);
+  var dx = [], k;
+  for (k = n - 1; k < tr.length; k++) {
+    var dip = atrS[k] > 0 ? 100 * pS[k] / atrS[k] : 0;
+    var dim = atrS[k] > 0 ? 100 * mS[k] / atrS[k] : 0;
+    dx[k] = (dip + dim) > 0 ? 100 * Math.abs(dip - dim) / (dip + dim) : 0;
+  }
+  var first = 2 * n - 2;
+  if (dx.length <= first) return null;
+  var s2 = 0, q;
+  for (q = n - 1; q < n - 1 + n; q++) s2 += dx[q];
+  var adxV = s2 / n;
+  for (q = n - 1 + n; q < dx.length; q++) adxV = (adxV * (n - 1) + dx[q]) / n;
+  var last = tr.length - 1;
+  return {
+    adx: adxV,
+    diPlus: atrS[last] > 0 ? 100 * pS[last] / atrS[last] : 0,
+    diMinus: atrS[last] > 0 ? 100 * mS[last] / atrS[last] : 0
+  };
+}
+
+// استوکاستیک (۱۴، ۳) — %K و %D.
+function stoch(candles, n, smooth) {
+  n = n || 14; smooth = smooth || 3;
+  if (!Array.isArray(candles) || candles.length < n + smooth) return null;
+  var ks = [];
+  for (var i = n - 1; i < candles.length; i++) {
+    var w = candles.slice(i - n + 1, i + 1);
+    var hi = Math.max.apply(null, w.map(function (c) { return c.h; }));
+    var lo = Math.min.apply(null, w.map(function (c) { return c.l; }));
+    ks.push(hi > lo ? 100 * (candles[i].c - lo) / (hi - lo) : 50);
+  }
+  return { k: ks[ks.length - 1], d: sma(ks, smooth) };
+}
+
+// آخرین کراس EMA9/EMA21 — طلایی (صعودی) یا مرگ (نزولی) + چند کندل پیش.
+function emaCross(closes) {
+  var e9 = emaSeries(closes, 9), e21 = emaSeries(closes, 21);
+  if (!e9 || !e21) return null;
+  var last = e9.length - 1, prev = null;
+  for (var i = 1; i < e9.length; i++) {
+    var d0 = e9[i - 1] - e21[i - 1], d1 = e9[i] - e21[i];
+    if (d0 <= 0 && d1 > 0) prev = { type: 'golden', barsAgo: last - i };
+    else if (d0 >= 0 && d1 < 0) prev = { type: 'death', barsAgo: last - i };
+  }
+  return prev;
+}
+
+// جهت OBV (حجم تجمعی) — بدون حجم معتبر null.
+function obvDir(candles) {
+  var vols = candles.map(function (c) { return c.v; });
+  if (!vols.length) return null;
+  for (var i = 0; i < vols.length; i++) if (typeof vols[i] !== 'number' || vols[i] <= 0) return null;
+  var obv = [vols[0]];
+  for (var j = 1; j < candles.length; j++) {
+    var d = candles[j].c - candles[j - 1].c;
+    obv.push(obv[j - 1] + (d > 0 ? vols[j] : d < 0 ? -vols[j] : 0));
+  }
+  if (obv.length < 21) return null;
+  var diff = obv[obv.length - 1] - obv[obv.length - 21];
+  return diff > 0 ? 'up' : diff < 0 ? 'down' : 'flat';
+}
+
+// روند حجم: میانگین ۵ کندل در برابر میانگین ۲۰ کندل.
+function volTrend(candles) {
+  var vols = candles.map(function (c) { return c.v; }).filter(function (v) { return typeof v === 'number' && v > 0; });
+  if (vols.length < 20) return null;
+  var s5 = sma(vols.slice(-5), 5), s20 = sma(vols.slice(-20), 20);
+  if (s5 == null || s20 == null || s20 === 0) return null;
+  return s5 > s20 * 1.05 ? 'up' : s5 < s20 * 0.95 ? 'down' : 'flat';
+}
+
+// خوانش کندل آخر: بدنه، فیتیله‌ها، شکل (دوجی/چکش/شهاب/ماروبوزو/معمولی).
+function candleRead(c) {
+  if (!c) return null;
+  var range = c.h - c.l;
+  if (!(range > 0)) return { bodyPct: 0, upperWickPct: 0, lowerWickPct: 0, shape: 'flat', dir: 'flat' };
+  var body = Math.abs(c.c - c.o);
+  var upper = c.h - Math.max(c.o, c.c), lower = Math.min(c.o, c.c) - c.l;
+  var bodyPct = body / range * 100, upPct = upper / range * 100, loPct = lower / range * 100;
+  var dir = c.c > c.o ? 'up' : c.c < c.o ? 'down' : 'flat';
+  var shape = 'normal';
+  if (bodyPct < 10) shape = 'doji';
+  else if (loPct > bodyPct * 2 && upPct < bodyPct * 0.5) shape = 'hammer';
+  else if (upPct > bodyPct * 2 && loPct < bodyPct * 0.5) shape = 'shooting';
+  else if (bodyPct > 80) shape = 'marubozu';
+  return { bodyPct: bodyPct, upperWickPct: upPct, lowerWickPct: loPct, shape: shape, dir: dir };
+}
+
+// ساختار سقف/کف‌های پیوت: HH/HL = صعودی، LH/LL = نزولی، بقیه مختلط.
+function structure(candles) {
+  if (!Array.isArray(candles) || candles.length < 10) return null;
+  var ph = [], pl = [];
+  for (var i = 1; i < candles.length - 1; i++) {
+    if (candles[i].h >= candles[i - 1].h && candles[i].h >= candles[i + 1].h) ph.push(candles[i].h);
+    if (candles[i].l <= candles[i - 1].l && candles[i].l <= candles[i + 1].l) pl.push(candles[i].l);
+  }
+  if (ph.length < 2 || pl.length < 2) return null;
+  var h1 = ph[ph.length - 1], h0 = ph[ph.length - 2], l1 = pl[pl.length - 1], l0 = pl[pl.length - 2];
+  var ht = h1 > h0 ? 'HH' : h1 < h0 ? 'LH' : 'EQ';
+  var lt = l1 > l0 ? 'HL' : l1 < l0 ? 'LL' : 'EQ';
+  return (ht === 'HH' && lt === 'HL') ? 'bull' : (ht === 'LH' && lt === 'LL') ? 'bear' : 'mixed';
+}
+
+// سری ATR وایلدر (۱۴) — برای رژیم نوسان (ATR فعلی در برابر میانگین ۲۰تایی‌اش).
+function atrSeries(candles, n) {
+  n = n || 14;
+  if (!Array.isArray(candles) || candles.length < n + 1) return null;
+  var tr = [];
+  for (var i = 1; i < candles.length; i++) {
+    var c = candles[i], p = candles[i - 1];
+    tr.push(Math.max(c.h - c.l, Math.abs(c.h - p.c), Math.abs(c.l - p.c)));
+  }
+  var out = [], s = 0, i;
+  for (i = 0; i < n; i++) s += tr[i];
+  out[n - 1] = s / n;
+  for (i = n; i < tr.length; i++) out[i] = (out[i - 1] * (n - 1) + tr[i]) / n;
+  return out; // اندیس i یعنی کندل i+1
+}
+
 /* Mini App: display.js ربات به‌صورت inline در app.js است (window.__miniDisplay) */
 const { esc, code, section } = window.__miniDisplay;
 
@@ -158,12 +300,83 @@ function analyze(candles, market) {
   const bb = bollinger(closes, 20, 2);
   const rangePct = last.c ? ((hi20 - lo20) / last.c) * 100 : null;
   const volRatio = (volAvg !== null && volAvg > 0 && volLast !== null) ? volLast / volAvg : null;
+  // v1.2.2 — شاخص‌های بیشتر (همه از همان کندل‌ها):
+  const adxV = adx(candles, 14);
+  const st = stoch(candles, 14, 3);
+  const e9 = ema(closes, 9), e21 = ema(closes, 21);
+  const cross = emaCross(closes);
+  const obvD = obvDir(candles);
+  const volT = volTrend(candles);
+  const cndl = candleRead(last);
+  const struct = structure(candles);
+  // رژیم نوسان: ATR٪ فعلی در برابر میانگین ۲۰تایی‌اش.
+  var atrRegime = null;
+  var atrS = atrSeries(candles, 14);
+  if (atrS) {
+    var ap = [];
+    for (var ai = 13; ai < atrS.length; ai++) { var cc = candles[ai + 1]; if (cc && cc.c) ap.push(atrS[ai] / cc.c * 100); }
+    if (ap.length >= 20) {
+      var apAvg = sma(ap.slice(-20), 20), apNow = ap[ap.length - 1], apPrev = ap[ap.length - 6];
+      if (apAvg !== null && apAvg > 0) atrRegime = { level: apNow > apAvg * 1.25 ? 'high' : apNow < apAvg * 0.8 ? 'low' : 'normal', rising: apPrev != null ? apNow > apPrev : null };
+    }
+  }
+  // فشردگی بولینگر: پهنای فعلی در برابر میانگین ۲۰تایی‌اش.
+  var bbSq = null;
+  if (bb && bb.widthPct !== null) {
+    var wps = [];
+    for (var bi = Math.max(19, closes.length - 20); bi < closes.length; bi++) {
+      var bbi = bollinger(closes.slice(0, bi + 1), 20, 2);
+      if (bbi && bbi.widthPct !== null) wps.push(bbi.widthPct);
+    }
+    if (wps.length >= 10) {
+      var wAvg = sma(wps, wps.length);
+      if (wAvg !== null && wAvg > 0) bbSq = bb.widthPct < wAvg * 0.7 ? 'squeeze' : bb.widthPct > wAvg * 1.4 ? 'wide' : 'normal';
+    }
+  }
+  // MACD: هیستوگرام در برابر هیستوگرام قبلی.
+  var macdHistRising = null, macdAboveZero = null;
+  if (m) {
+    macdAboveZero = m.line > 0;
+    var e12s = emaSeries(closes, 12), e26s = emaSeries(closes, 26);
+    if (e12s && e26s && e12s.length >= 2) {
+      var lineS = e12s.map(function (v, i) { return v - e26s[i]; });
+      var sigS = emaSeries(lineS, 9);
+      if (sigS && sigS.length >= 2) {
+        var hNow = lineS[lineS.length - 1] - sigS[sigS.length - 1];
+        var hPrev = lineS[lineS.length - 2] - sigS[sigS.length - 2];
+        macdHistRising = hNow > hPrev;
+      }
+    }
+  }
+  // آرای موافق/مخالف — برای کارت خلاصه: هر شاخص یک رأی می‌دهد.
+  var votes = { bull: 0, bear: 0, items: [] };
+  function vote(v, label) {
+    if (v > 0) { votes.bull++; votes.items.push({ label: label, v: 1 }); }
+    else if (v < 0) { votes.bear++; votes.items.push({ label: label, v: -1 }); }
+    else votes.items.push({ label: label, v: 0 });
+  }
+  vote(last.c > e20 ? 1 : last.c < e20 ? -1 : 0, 'EMA20');
+  vote(e20 !== null && e50 !== null ? (e20 > e50 ? 1 : -1) : 0, 'EMA20/50');
+  vote(e200 !== null ? (last.c > e200 ? 1 : -1) : 0, 'EMA200');
+  vote(m ? (m.hist > 0 ? 1 : -1) : 0, 'MACD');
+  vote(r !== null ? (r > 55 ? 1 : r < 45 ? -1 : 0) : 0, 'RSI');
+  vote(st ? (st.k > 50 ? 1 : st.k < 50 ? -1 : 0) : 0, 'Stoch');
+  vote(adxV ? (adxV.diPlus > adxV.diMinus ? 1 : -1) : 0, 'ADX/DI');
+  vote(struct === 'bull' ? 1 : struct === 'bear' ? -1 : 0, 'Structure');
+  vote(volRatio !== null && volRatio > 1.2 ? (last.c > closes[closes.length - 2] ? 1 : -1) : 0, 'Volume');
+  vote(bb && bb.mid !== null ? (last.c > bb.mid ? 1 : -1) : 0, 'BB-mid');
+  vote(cndl ? (cndl.dir === 'up' ? 1 : cndl.dir === 'down' ? -1 : 0) : 0, 'Candle');
   return {
     market, last, e20, e50, e200, macd: m, rsi: r, bb,
     atrPct: (a !== null && last.c) ? (a / last.c) * 100 : null,
     hi20, lo20, pos, volAvg, volLast, volRatio, rangePct,
     trend,
-    longTrend: (e200 === null) ? null : (last.c > e200 ? 'up' : (last.c < e200 ? 'down' : 'neutral'))
+    longTrend: (e200 === null) ? null : (last.c > e200 ? 'up' : (last.c < e200 ? 'down' : 'neutral')),
+    adx: adxV, stoch: st, e9: e9, e21: e21, emaCross: cross,
+    obvDir: obvD, volTrend: volT, candle: cndl, structure: struct,
+    atrRegime: atrRegime, bbSqueeze: bbSq,
+    macdHistRising: macdHistRising, macdAboveZero: macdAboveZero,
+    votes: votes
   };
 }
 
@@ -242,6 +455,6 @@ function formatAnalysis(quote, candles, tf, lang, quoteRes) {
     fa ? '⚠️ فقط تحلیل است — نه سیگنال، نه پیش‌بینی، نه توصیهٔ معامله.' : '⚠️ Analysis only — not a signal, not a prediction, not trading advice.');
 }
 
-window.OnellaAnalysis = { sma, ema, emaSeries, rsi, macd, atr, stdev, bollinger, changeBack, analyze, formatAnalysis, marketOf, MARKET_INDICATORS };
+window.OnellaAnalysis = { sma, ema, emaSeries, rsi, macd, atr, stdev, bollinger, changeBack, analyze, formatAnalysis, marketOf, MARKET_INDICATORS, adx, stoch, emaCross, obvDir, volTrend, candleRead, structure, atrSeries };
 
 })();

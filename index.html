@@ -6,7 +6,10 @@
 <title>Onella Nelora Lite</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
-  :root { color-scheme: dark; --bg: #05070c; --card: #0d1320; --line: #1c2740; --txt: #e6e9ef; --mut: #7c8aa0; --up: #2ecc8f; --dn: #ff5d6c; --acc: #f06a15; }
+  :root { color-scheme: dark; --bg: #05070c; --card: #0d1320; --line: #1c2740; --txt: #e6e9ef; --mut: #7c8aa0; --up: #2ecc8f; --dn: #ff5d6c; --acc: #f06a15;
+    /* v1.2.2 — پالت مینیمال (دستور مالک ۲۰۲۶-۱۱-۰۹): رنگ‌های مکملِ کم‌اشباع با
+       نقش ثابت؛ نارنجی همچنان برند و رنگ اصلی است، این‌ها فقط لهجه‌اند. */
+    --p-trend: #7aa2d6; --p-mom: #a58fd6; --p-vol: #5fb8a6; --p-vola: #d6a55f; --p-lvl: #8fa3b8; --p-cndl: #d68a8a; --p-etf: #7fb98a; }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--txt); font-family: -apple-system, "Segoe UI", Tahoma, sans-serif; }
   header { padding: 12px 14px 6px; display: flex; align-items: center; gap: 10px; }
@@ -159,6 +162,25 @@
   .an-card.wide { grid-column: 1 / -1; }
   .an-card h4 { margin: 0 0 8px; font-size: 13px; display: flex; align-items: center; gap: 6px; }
   .an-card h4 svg { width: 16px; height: 16px; color: var(--acc); flex: none; }
+  /* v1.2.2 — پالت مینیمال: آیکون هر کارت تحلیل رنگ ثابت خودش را دارد. */
+  .an-card.an-trend h4 svg { color: var(--p-trend); }
+  .an-card.an-mom h4 svg { color: var(--p-mom); }
+  .an-card.an-vola h4 svg { color: var(--p-vola); }
+  .an-card.an-vol h4 svg { color: var(--p-vol); }
+  .an-card.an-cndl h4 svg { color: var(--p-cndl); }
+  .an-card.an-lvl h4 svg { color: var(--p-lvl); }
+  /* v1.2.2 — نقطهٔ رنگ بازار (تب‌ها) + دکمهٔ شناور ابزارها + پنل ابزار روی چارت. */
+  .mkt-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-inline-end: 2px; vertical-align: 1px; }
+  .tools-fab { position: absolute; left: 8px; top: 44px; width: 44px; height: 44px; padding: 7px; background: rgba(13,19,32,.88); border: 1px solid var(--line); border-radius: 12px; cursor: pointer; z-index: 5; }
+  .tools-fab svg { width: 28px; height: 28px; display: block; }
+  .tools-fab:active { border-color: var(--acc); }
+  .tools-panel { display: none; position: absolute; left: 8px; right: 8px; bottom: 8px; max-height: 224px; overflow-y: auto; background: rgba(13,19,32,.97); border: 1px solid var(--line); border-radius: 12px; padding: 10px; z-index: 6; }
+  .tools-panel.open { display: block; }
+  .tools-panel-h { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+  .tools-panel .chart-tools { display: grid; grid-template-columns: repeat(3, 1fr); margin: 0 0 6px; }
+  .tools-panel .chart-tools .tbtn { text-align: center; }
+  .tools-panel .chart-tools .tbtn.on { border-color: var(--p-vol); color: var(--p-vol); }
+  .tools-panel .tool-note { font-size: 12px; color: var(--mut); line-height: 1.6; padding: 4px 2px 0; }
   .an-card .an-big { font-size: 17px; font-weight: 800; }
   .an-card .an-sub { font-size: 12px; color: var(--mut); margin-top: 2px; line-height: 1.6; }
   .an-card .row { padding: 6px 0; font-size: 13px; }

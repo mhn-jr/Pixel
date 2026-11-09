@@ -46,8 +46,7 @@
       onlyAnalysis: 'Analysis only — not a signal, not a prediction, not trading advice.',
       impactEst: 'Impact is a keyword estimate, not certain.', openInBot: 'Open in bot', chooseMarket: 'Choose a market:', chooseSymbol: 'Choose a symbol:',
       chartTab: 'Chart', dashTab: 'Dashboard', dashboard: 'Dashboard', marketHeat: 'Market heat', topGainers: 'Top 5 gainers', topLosers: 'Top 5 losers',
-      importantNews: 'Important news', searchIn: 'Search in', watchlist: 'Watchlist', noFavs: 'No starred symbols yet — tap the star on any symbol.',
-      impactPct: 'Impact', impactEstPct: 'Impact % is an estimate from headline keywords, not measured.', refresh: 'Refresh',
+      importantNews: 'Important news', searchIn: 'Search in', watchlist: 'Watchlist', noFavs: 'No starred symbols yet — tap the star on any symbol.', refresh: 'Refresh',
       evidence: 'Evidence confluence', bullish: 'Bullish', bearish: 'Bearish', neutral: 'Neutral',
       autoScale: 'Auto scale', latest: 'Latest candle', tools: 'Tools', fib: 'Fibonacci', sr: 'Support / Resistance', tl: 'Trendline', bb: 'Bollinger', pv: 'Pivot',
       noChangeData: 'No daily-change data for this market in the source.', needsWorker120: 'Needs the new Worker (v1.2.0) — redeploy worker.js on Cloudflare.' },
@@ -61,8 +60,7 @@
       onlyAnalysis: 'فقط تحلیل است — نه سیگنال، نه پیش‌بینی، نه توصیهٔ معامله.',
       impactEst: 'تاثیر از روی کلیدواژهٔ تیتر تخمین زده شده؛ قطعی نیست.', openInBot: 'باز کردن در ربات', chooseMarket: 'بازار را انتخاب کن:', chooseSymbol: 'نماد را انتخاب کن:',
       chartTab: 'چارت', dashTab: 'داشبورد', dashboard: 'داشبورد', marketHeat: 'حرارت بازار', topGainers: '۵ نماد صعودی', topLosers: '۵ نماد نزولی',
-      importantNews: 'اخبار مهم', searchIn: 'جستجو در', watchlist: 'واچ‌لیست', noFavs: 'هنوز نمادی ستاره‌دار نکردی — روی ستارهٔ هر نماد بزن.',
-      impactPct: 'تاثیر', impactEstPct: 'درصد تاثیر از روی کلیدواژهٔ تیتر تخمین زده شده؛ اندازه‌گیری واقعی نیست.', refresh: 'تازه‌کردن',
+      importantNews: 'اخبار مهم', searchIn: 'جستجو در', watchlist: 'واچ‌لیست', noFavs: 'هنوز نمادی ستاره‌دار نکردی — روی ستارهٔ هر نماد بزن.', refresh: 'تازه‌کردن',
       evidence: 'همگرایی شواهد', bullish: 'صعودی', bearish: 'نزولی', neutral: 'خنثی',
       autoScale: 'مقیاس خودکار', latest: 'آخرین کندل', tools: 'ابزار', fib: 'فیبوناچی', sr: 'حمایت/مقاومت', tl: 'خط روند', bb: 'بولینگر', pv: 'پیوت',
       noChangeData: 'برای این بازار تغییر روزانه در منبع نیست.', needsWorker120: 'ورکر جدید (v1.2.0) لازم است — worker.js را در کلودفلیر دوباره دیپلوی کن.' }
@@ -553,6 +551,8 @@
   function lookupQuote(provider, symbol) { return QUOTE_LOOKUP[provider + '|' + symbol] || null; }
   /* ترتیب تب‌های بازار (مثل اپ اصلی + ایران). */
   var MARKET_ORDER = ['crypto', 'stocks', 'etf', 'forex', 'commodities', 'iran', 'indices', 'boorse', 'farabourse'];
+  /* v1.2.2 — پالت مینیمال: رنگ ثابت هر بازار (نقطهٔ تب + آیکون سربرگ بخش). */
+  var MKT_COLOR = { crypto: 'var(--p-vol)', stocks: 'var(--p-trend)', etf: 'var(--p-etf)', forex: 'var(--p-mom)', commodities: 'var(--p-vola)', iran: 'var(--p-cndl)', indices: 'var(--p-lvl)', boorse: 'var(--p-cndl)', farabourse: 'var(--p-cndl)' };
   /* v1.2.1 — آیکون‌های SVG اپ (به‌جای ایموجی؛ stroke currentColor، هماهنگ با تم). */
   var ICON = {
     chart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 21h18"/><path d="M7 17v-6"/><path d="M12 17V7"/><path d="M17 17v-3"/></svg>',
@@ -568,7 +568,11 @@
     volume: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>',
     levels: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 2v4"/><path d="M12 18v4"/><path d="M2 12h4"/><path d="M18 12h4"/></svg>',
     waves: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 12c2-3 4-3 6 0s4 3 6 0 4-3 6 0"/></svg>',
-    fund: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.2 15.9A10 10 0 1 1 8 2.8"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>'
+    fund: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.2 15.9A10 10 0 1 1 8 2.8"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>',
+    /* v1.2.2 — دکمهٔ شناور ابزارهای چارت: دقیقاً همان SVG اپ اصلی
+       (js/54-onella-v68-protools.js:154 — دکمهٔ «ابزارهای Onella»): قاب
+       گرد با گرادیان نارنجی→بنفش، شعلهٔ گرادیانی، خط صعودی سفید. */
+    tools: '<svg viewBox="0 0 24 24" width="24" height="24"><defs><linearGradient id="oplg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff8a1f"/><stop offset="1" stop-color="#b07cff"/></linearGradient></defs><rect x="1.5" y="1.5" width="21" height="21" rx="6.5" fill="rgba(255,140,40,.12)" stroke="url(#oplg)" stroke-width="1.6"/><path d="M12 3.6c.9 3 4.6 4.8 4.6 8.7a4.6 4.6 0 0 1-9.2 0c0-1.8.9-2.9 1.8-3.8.2 1.2.8 2 1.5 2.3C10.3 8.2 10.6 5.8 12 3.6z" fill="url(#oplg)"/><path d="M5 18.5l5-4 3 2.2 6-6" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="5" cy="18.5" r="1.7" fill="#fff"/><circle cx="19" cy="12.7" r="1.7" fill="#fff"/></svg>'
   };
 
   /* ---- سیم‌کشی چارت اونلا (chart-style + native-chart) ---- */
@@ -623,7 +627,7 @@
     $('catalogTitle').textContent = T('کاتولوگ', 'Catalog');
     var tabsHtml = '';
     MARKET_ORDER.forEach(function (k) {
-      tabsHtml += '<button type="button" data-mkt="' + k + '"' + (state.catalogMarket === k ? ' class="on"' : '') + '>' + esc(marketLabel(k)) + '</button>';
+      tabsHtml += '<button type="button" data-mkt="' + k + '"' + (state.catalogMarket === k ? ' class="on"' : '') + '><span class="mkt-dot" style="background:' + (MKT_COLOR[k] || 'var(--mut)') + '"></span>' + esc(marketLabel(k)) + '</button>';
     });
     tabsHtml += '<button type="button" data-mkt="wl"' + (state.catalogMarket === 'wl' ? ' class="on"' : '') + '>' + ICON.star + ' ' + esc(T('واچ‌لیست', 'Watchlist')) + '</button>';
     $('catalogTabs').innerHTML = tabsHtml;
@@ -649,7 +653,7 @@
     }
     var m = MARKETS[state.catalogMarket];
     if (!m) { state.catalogMarket = 'crypto'; renderCatalog(); return; }
-    html = '<div class="mkt"><div class="mkt-h"><span class="mkt-ic">' + (MARKET_SVG[state.catalogMarket] || '') + '</span>' + esc(marketLabel(state.catalogMarket)) + '</div><div class="syms">';
+    html = '<div class="mkt"><div class="mkt-h"><span class="mkt-ic" style="color:' + (MKT_COLOR[state.catalogMarket] || 'var(--acc)') + '">' + (MARKET_SVG[state.catalogMarket] || '') + '</span>' + esc(marketLabel(state.catalogMarket)) + '</div><div class="syms">';
     m.quotes.forEach(function (q) {
       html += '<button class="sym" data-provider="' + q.provider + '" data-symbol="' + esc(q.symbol) + '"><span class="sym-ic">' + iconHtml(q) + '</span><span class="sym-lb">' + esc(q.label) + '</span></button>';
     });
@@ -682,7 +686,7 @@
         return hay.indexOf(nq) !== -1;
       });
       if (!hits.length) return;
-      html += '<div class="mkt"><div class="mkt-h"><span class="mkt-ic">' + (MARKET_SVG[k] || '') + '</span>' + esc(marketLabel(k)) + '</div><div class="srows">';
+      html += '<div class="mkt"><div class="mkt-h"><span class="mkt-ic" style="color:' + (MKT_COLOR[k] || 'var(--acc)') + '">' + (MARKET_SVG[k] || '') + '</span>' + esc(marketLabel(k)) + '</div><div class="srows">';
       hits.slice(0, 15).forEach(function (x) {
         total++;
         html += '<button class="srow" data-provider="' + x.provider + '" data-symbol="' + esc(x.symbol) + '"><span class="sym-ic">' + iconHtml(x) + '</span><span class="srow-lb">' + esc(x.label) + '</span><span class="srow-ds">' + esc(x.display) + '</span></button>';
@@ -730,7 +734,7 @@
   function renderSmTabs() {
     var html = '';
     MARKET_ORDER.forEach(function (k) {
-      html += '<button type="button" data-mkt="' + k + '"' + (sm.market === k ? ' class="on"' : '') + '>' + esc(marketLabel(k)) + '</button>';
+      html += '<button type="button" data-mkt="' + k + '"' + (sm.market === k ? ' class="on"' : '') + '><span class="mkt-dot" style="background:' + (MKT_COLOR[k] || 'var(--mut)') + '"></span>' + esc(marketLabel(k)) + '</button>';
     });
     html += '<button type="button" data-mkt="wl"' + (sm.market === 'wl' ? ' class="on"' : '') + '>' + ICON.star + ' ' + esc(T('واچ‌لیست', 'Watchlist')) + '</button>';
     $('smTabs').innerHTML = html;
@@ -1126,13 +1130,17 @@
     var ang = Math.PI * (1 - c.score / 100);
     var nx = cx + r * Math.cos(ang), ny = cy - r * Math.sin(ang);
     var ex = cx + r * Math.cos(ang), ey = cy - r * Math.sin(ang);
-    // نیم‌دایرهٔ بالا: از (11,42) تا انتهای کمان — هر دو پرچم ۰ (کمان کوتاه، خلاف عقربه‌ها در مختصات صفحه).
-    // اشتباه v1.2.0: sweep=1 بود و largeArc برای score>50 یک می‌شد — کمان رنگی از پایینِ دایره می‌رفت،
-    // در حالی که عقربه از بالا می‌رفت؛ برای همین سبز «سر جاش نبود».
-    var arc = 'M 11 42 A 34 34 0 0 0 ' + ex.toFixed(1) + ' ' + ey.toFixed(1);
+    // نیم‌دایرهٔ بالا: از (11,42) تا انتهای کمان — largeArc همیشه ۰ (بازهٔ کمان
+    // score×1.8 درجه است، حداکثر ۱۸۰ درجه) و sweep=1 (جهت زاویهٔ مثبت در
+    // مختصات SVG با y رو به پایین = روی نیم‌دایرهٔ بالا).
+    // اشتباه v1.2.0: برای score>50، largeArc=1 می‌شد → کمان ۲۳۴ درجه‌ای که از
+    // viewBox بیرون می‌زد (بالاترین نقطه y=-19). اشتباه v1.2.1 (من): جهت sweep
+    // را برعکس خواندم و ۰ گذاشتم → هر دو کمان رفتند پایینِ دایره، در حالی که
+    // عقربه بالا را نشان می‌داد. با ریاضیِ کمان SVG ثابت شد: sweep=1 بالا است.
+    var arc = 'M 11 42 A 34 34 0 0 1 ' + ex.toFixed(1) + ' ' + ey.toFixed(1);
     var sym = state.quote ? state.quote.display : '';
     box.innerHTML = '<div class="gauge">'
-      + '<svg width="90" height="48" viewBox="0 0 90 48"><path d="M 11 42 A 34 34 0 0 0 79 42" fill="none" stroke="#1c2740" stroke-width="6" stroke-linecap="round"/>'
+      + '<svg width="90" height="48" viewBox="0 0 90 48"><path d="M 11 42 A 34 34 0 0 1 79 42" fill="none" stroke="#1c2740" stroke-width="6" stroke-linecap="round"/>'
       + (c.score > 0 ? '<path d="' + arc + '" fill="none" stroke="' + col + '" stroke-width="6" stroke-linecap="round"/>' : '')
       + '<line x1="' + cx + '" y1="' + cy + '" x2="' + nx.toFixed(1) + '" y2="' + ny.toFixed(1) + '" stroke="#e6e9ef" stroke-width="2" stroke-linecap="round"/>'
       + '<circle cx="' + cx + '" cy="' + cy + '" r="3" fill="#e6e9ef"/></svg>'
@@ -1181,12 +1189,17 @@
     try { maOn = !!window.OnellaChartStyle.get().ma; volOn = !!window.OnellaChartStyle.get().vol; } catch (e) {}
     var tfs = TFS[state.quote.provider] || [];
     var toolOn = window.on || {};
-    var TOOLS = [['fib', 'فیبوناچی', 'Fibonacci'], ['sr', 'حمایت/مقاومت', 'Support/Resistance'], ['tl', 'خط روند', 'Trendline'], ['bb', 'بولینگر', 'Bollinger'], ['pv', 'پیوت', 'Pivot']];
+    /* v1.2.2 — ۱۱ ابزار: ۵ قبلی + EMA، VWAP، دونچیان، کلتنر، سوپرترند، SAR.
+       همه پشت دکمهٔ شناور (FAB) روی چارت باز می‌شوند، نه ردیف زیر چارت. */
+    var TOOLS = [['fib', 'فیبوناچی', 'Fibonacci'], ['sr', 'حمایت/مقاومت', 'Support/Resistance'], ['tl', 'خط روند', 'Trendline'], ['bb', 'بولینگر', 'Bollinger'], ['pv', 'پیوت', 'Pivot'], ['ema', 'میانگین نمایی', 'EMA'], ['vwap', 'وی‌واپ', 'VWAP'], ['donch', 'دونچیان', 'Donchian'], ['kelt', 'کلتنر', 'Keltner'], ['super', 'سوپرترند', 'Supertrend'], ['sar', 'پارابولیک', 'SAR']];
     $('tab-chart').innerHTML =
       '<div id="tfRow" class="seg">' + tfs.map(function (k) {
           return '<button data-tf="' + k + '"' + (state.tf === k ? ' class="on"' : '') + '>' + k + '</button>';
         }).join('') + '</div>'
-      + '<div class="chartwrap" id="chartWrap"><div id="nv" style="position:relative;height:260px"><div id="px" class="px px-ov"></div><div id="lastPxTag" style="display:none"></div><canvas id="cc" style="width:100%;height:260px;display:block"></canvas><button class="axis-btn" id="tvAutoBtn" type="button" style="display:none">A</button><button class="axis-btn" id="tvLatestBtn" type="button" style="display:none">⏭</button></div></div>'
+      + '<div class="chartwrap" id="chartWrap"><div id="nv" style="position:relative;height:260px"><div id="px" class="px px-ov"></div><div id="lastPxTag" style="display:none"></div><canvas id="cc" style="width:100%;height:260px;display:block"></canvas><button class="axis-btn" id="tvAutoBtn" type="button" style="display:none">A</button><button class="axis-btn" id="tvLatestBtn" type="button" style="display:none">⏭</button><button class="tools-fab" id="toolsFab" type="button" title="' + esc(T('ابزارهای چارت', 'Chart tools')) + '">' + ICON.tools + '</button>'
+      + '<div class="tools-panel" id="toolsPanel"><div class="tools-panel-h"><span>' + esc(T('ابزارهای چارت', 'Chart tools')) + '</span><button class="tbtn" id="toolsClose" type="button">✕</button></div><div class="chart-tools" id="chartTools">' + TOOLS.map(function (t) {
+          return '<button class="tbtn' + (toolOn[t[0]] ? ' on' : '') + '" data-tool="' + t[0] + '" type="button">' + esc(lang === 'fa' ? t[1] : t[2]) + '</button>';
+        }).join('') + '</div><div class="tool-note" id="toolNote"></div></div></div></div>'
       + '<div class="toolbar" id="chartToolbar">'
       + '<button class="tbtn" id="typeBtn" type="button">' + esc(chartTypeLabel(cur)) + '</button>'
       + '<button class="tbtn' + (maOn ? ' on' : '') + '" id="maBtn" type="button">MA20</button>'
@@ -1195,10 +1208,7 @@
       + '<button class="tbtn" id="zoomInBtn" type="button">+</button>'
       + '<button class="tbtn" id="fsBtn" type="button">⛶</button>'
       + '</div>'
-      + '<div class="chart-tools" id="chartTools">' + TOOLS.map(function (t) {
-          return '<button class="tbtn' + (toolOn[t[0]] ? ' on' : '') + '" data-tool="' + t[0] + '" type="button">' + esc(lang === 'fa' ? t[1] : t[2]) + '</button>';
-        }).join('') + '</div>'
-      + '<div class="tool-note" id="toolNote"></div>';
+      + '</div>';
     document.querySelectorAll('#tfRow button').forEach(function (b) {
       b.addEventListener('click', function () { setTf(b.dataset.tf); });
     });
@@ -1234,7 +1244,8 @@
     $('fsBtn').addEventListener('click', function () { toggleFs(); });
     $('tvAutoBtn').addEventListener('click', function () { autoScale(); });
     $('tvLatestBtn').addEventListener('click', function () { toLatest(); });
-    // ابزارهای دستی روی چارت (fib/sr/tl/bb/pv — همان drawTools اپ؛ خوانش ابزار زیر چارت).
+    // ابزارهای دستی روی چارت — پشت دکمهٔ شناور (FAB) با همان SVG اپ اصلی؛
+    // پنل ۱۱ ابزار + خوانش ابزار. همان drawTools اپ؛ خوانش ابزار داخل پنل است.
     document.querySelectorAll('#chartTools .tbtn').forEach(function (b) {
       b.addEventListener('click', function () {
         var id = b.dataset.tool;
@@ -1252,6 +1263,14 @@
         try { window.draw(); } catch (e) {}
       });
     });
+    // دکمهٔ شناور ابزارها (FAB): باز/بسته کردن پنل ابزار روی چارت.
+    (function () {
+      var fab = $('toolsFab'), panel = $('toolsPanel');
+      if (!fab || !panel) return;
+      fab.addEventListener('click', function () { panel.classList.toggle('open'); });
+      var tc = $('toolsClose');
+      if (tc) tc.addEventListener('click', function () { panel.classList.remove('open'); });
+    })();
     document.addEventListener('fullscreenchange', function () {
       var on = !!document.fullscreenElement;
       var btn = $('fsBtn');
@@ -1567,25 +1586,60 @@
     if (vols.length >= 20) { var vs = 0; for (var vi = vols.length - 20; vi < vols.length; vi++) vs += vols[vi]; avgVol = vs / 20; }
     var cs2 = null;
     try { cs2 = window.analyzeCS ? window.analyzeCS() : null; } catch (e) {}
-    /* v1.2.1 — تحلیل گسترده‌تر: ۵ کارت (روند / مومنتوم / نوسان / حجم / سطوح) از همان
-       دادهٔ analyze()/analyzeCS() — عدد جدیدی ساخته نمی‌شود، فقط نمایش کامل‌تر است. */
+    /* v1.2.2 — تحلیل قوی: ۷ کارت + خلاصه. شاخص‌های تازه (ADX، استوکاستیک،
+       کراس EMA9/21، OBV، روند حجم، خوانش کندل، ساختار، رژیم نوسان/فشردگی،
+       آرای موافق/مخالف) همه از همان کندل‌ها حساب می‌شوند — عدد ساختگی نیست.
+       توصیفی است: نه سیگنال، نه پیش‌بینی، نه توصیهٔ معامله. */
+    var adxW = a.adx == null ? null : a.adx.adx >= 25 ? T('قوی', 'strong') : a.adx.adx >= 20 ? T('متوسط', 'moderate') : T('ضعیف', 'weak');
+    var stW = a.stoch == null ? null : a.stoch.k >= 80 ? T('اشباع خرید', 'overbought') : a.stoch.k <= 20 ? T('اشباع فروش', 'oversold') : a.stoch.k >= 50 ? T('بالای ۵۰', 'above 50') : T('زیر ۵۰', 'below 50');
+    var structW = a.structure === 'bull' ? T('سقف‌ها و کف‌های بالاتر', 'higher highs & lows') : a.structure === 'bear' ? T('سقف‌ها و کف‌های پایین‌تر', 'lower highs & lows') : a.structure === 'mixed' ? T('مختلط', 'mixed') : null;
+    var crossTxt = a.emaCross == null ? T('کراس تازه‌ای نیست', 'no recent cross') : (a.emaCross.type === 'golden' ? T('کراس طلایی', 'golden cross') : T('کراس مرگ', 'death cross')) + ' · ' + a.emaCross.barsAgo + ' ' + T('کندل پیش', 'candles ago');
+    var shapeW = a.candle == null ? null : a.candle.shape === 'doji' ? T('دوجی', 'doji') : a.candle.shape === 'hammer' ? T('چکش', 'hammer') : a.candle.shape === 'shooting' ? T('شهاب', 'shooting star') : a.candle.shape === 'marubozu' ? T('ماروبوزو', 'marubozu') : a.candle.shape === 'flat' ? T('بدون بدنه', 'flat') : T('معمولی', 'normal');
+    var volTW = a.volTrend === 'up' ? T('در حال افزایش', 'rising') : a.volTrend === 'down' ? T('در حال کاهش', 'falling') : a.volTrend === 'flat' ? T('ثابت', 'flat') : null;
+    var obvW = a.obvDir === 'up' ? T('رو به بالا', 'rising') : a.obvDir === 'down' ? T('رو به پایین', 'falling') : a.obvDir === 'flat' ? T('ثابت', 'flat') : null;
+    var atrRW = a.atrRegime == null ? null : a.atrRegime.level === 'high' ? T('بالاتر از معمول', 'above usual') : a.atrRegime.level === 'low' ? T('پایین‌تر از معمول', 'below usual') : T('معمولی', 'usual');
+    var sqW = a.bbSqueeze === 'squeeze' ? T('فشرده', 'squeezed') : a.bbSqueeze === 'wide' ? T('باز', 'wide') : a.bbSqueeze === 'normal' ? T('معمولی', 'normal') : null;
+    var vTot = a.votes.bull + a.votes.bear;
+    var vDir = a.votes.bull > a.votes.bear ? T('صعود', 'up') : a.votes.bear > a.votes.bull ? T('نزول', 'down') : T('توافق نیست', 'no agreement');
+    var vLead = a.votes.bull > a.votes.bear ? a.votes.bull : a.votes.bear;
+    var sumTxt = esc(T('روند', 'Trend')) + ' ' + esc(trendTxt)
+      + (adxW ? ' · ' + esc(T('قدرت روند', 'trend strength')) + ' ' + esc(adxW) + (a.adx ? ' (ADX ' + a.adx.adx.toFixed(0) + ')' : '') : '')
+      + '<br>' + esc(T('همگرایی شاخص‌ها', 'Indicator agreement')) + ': ' + (vTot ? vLead + ' ' + esc(T('از', 'of')) + ' ' + vTot + ' ' + esc(T('موافق', 'agree on')) + ' ' + esc(vDir) : '—')
+      + (structW ? '<br>' + esc(T('ساختار', 'Structure')) + ': ' + esc(structW) : '')
+      + '<br>' + esc(T('نزدیک‌ترین سطح', 'Nearest level')) + ': ' + esc(T('مقاومت', 'Resistance')) + ' ' + fmt(cs2 ? cs2.R1 : a.hi20) + ' · ' + esc(T('حمایت', 'Support')) + ' ' + fmt(cs2 ? cs2.S1 : a.lo20);
     var html = '<div class="an-grid">'
-      + '<div class="an-card"><h4>' + ICON.trendUp + esc(T('روند', 'Trend')) + '</h4>'
+      + '<div class="an-card wide an-sum"><h4>' + ICON.book + esc(T('خلاصهٔ تحلیل', 'Analysis summary')) + '</h4>'
+      + '<div class="an-big ' + trendCls + '">' + esc(trendTxt) + '</div>'
+      + '<div class="an-sub">' + sumTxt + '</div></div>'
+      + '<div class="an-card an-trend"><h4>' + ICON.trendUp + esc(T('روند', 'Trend')) + '</h4>'
       + '<div class="an-big ' + trendCls + '">' + esc(trendTxt) + '</div>'
       + '<div class="an-sub">EMA20 ' + fmt(a.e20) + ' · EMA50 ' + fmt(a.e50)
       + (a.e200 != null ? '<br>EMA200 ' + fmt(a.e200) + ' (' + (a.longTrend === 'up' ? T('صعودی', 'up') : a.longTrend === 'down' ? T('نزولی', 'down') : T('خنثی', 'neutral')) + ')' : '')
+      + (a.e9 != null && a.e21 != null ? '<br>EMA9 ' + fmt(a.e9) + ' · EMA21 ' + fmt(a.e21) + ' — ' + esc(crossTxt) : '')
+      + (adxW ? '<br>ADX ' + a.adx.adx.toFixed(1) + ' (' + esc(adxW) + ') · DI+ ' + a.adx.diPlus.toFixed(0) + ' / DI− ' + a.adx.diMinus.toFixed(0) : '')
+      + (structW ? '<br>' + esc(structW) : '')
       + '<br>' + esc(T('تغییر', 'Change')) + ' ' + fmtPct(chgS) + ' · ' + fmtPct(chgL) + '</div></div>'
-      + '<div class="an-card"><h4>' + ICON.activity + 'RSI / MACD</h4>'
+      + '<div class="an-card an-mom"><h4>' + ICON.activity + 'RSI / MACD / Stoch</h4>'
       + '<div class="an-big">' + (a.rsi == null ? '—' : a.rsi.toFixed(1)) + ' <small style="font-size:12px;color:var(--mut)">' + esc(rsiWord) + '</small></div>'
-      + '<div class="an-sub">MACD ' + esc(macdTxt) + '</div></div>'
-      + (ind.atr ? '<div class="an-card"><h4>' + ICON.waves + esc(T('نوسان', 'Volatility')) + '</h4>'
+      + '<div class="an-sub">MACD ' + esc(macdTxt)
+      + (a.macd ? (a.macdAboveZero ? ' · ' + esc(T('بالای صفر', 'above zero')) : ' · ' + esc(T('زیر صفر', 'below zero'))) + (a.macdHistRising != null ? ' · ' + esc(T('هیستوگرام', 'histogram')) + ' ' + (a.macdHistRising ? esc(T('در حال رشد', 'growing')) : esc(T('در حال کوچک شدن', 'shrinking'))) : '') + '<br>' + esc(T('خط', 'Line')) + ' ' + fmt(a.macd.line, 4) + ' · ' + esc(T('سیگنال', 'Signal')) + ' ' + fmt(a.macd.signal, 4) : '')
+      + (a.stoch ? '<br>Stoch %K ' + a.stoch.k.toFixed(1) + ' · %D ' + (a.stoch.d == null ? '—' : a.stoch.d.toFixed(1)) + ' (' + esc(stW) + ')' : '')
+      + '</div></div>'
+      + (ind.atr ? '<div class="an-card an-vola"><h4>' + ICON.waves + esc(T('نوسان', 'Volatility')) + '</h4>'
       + '<div class="an-big">' + (a.atrPct == null ? '—' : a.atrPct.toFixed(2) + '%') + ' <small style="font-size:12px;color:var(--mut)">ATR</small></div>'
-      + '<div class="an-sub">' + (a.bb ? esc(T('بولینگر', 'Bollinger')) + ' ' + fmt(a.bb.upper) + ' / ' + fmt(a.bb.mid) + ' / ' + fmt(a.bb.lower) + ' (' + Math.round(a.bb.pos) + '٪)<br>' + esc(T('پهنا', 'Width')) + ' ' + (a.bb.widthPct == null ? '—' : a.bb.widthPct.toFixed(2) + '%') + '<br>' : '')
+      + '<div class="an-sub">' + (atrRW ? esc(T('رژیم نوسان', 'Volatility regime')) + ': ' + esc(atrRW) + (a.atrRegime.rising != null ? ' (' + (a.atrRegime.rising ? esc(T('در حال افزایش', 'rising')) : esc(T('در حال کاهش', 'falling'))) + ')' : '') + '<br>' : '')
+      + (a.bb ? esc(T('بولینگر', 'Bollinger')) + ' ' + fmt(a.bb.upper) + ' / ' + fmt(a.bb.mid) + ' / ' + fmt(a.bb.lower) + ' (' + Math.round(a.bb.pos) + '٪)' + (sqW ? ' — ' + esc(T('باند', 'band')) + ' ' + esc(sqW) : '') + '<br>' + esc(T('پهنا', 'Width')) + ' ' + (a.bb.widthPct == null ? '—' : a.bb.widthPct.toFixed(2) + '%') + '<br>' : '')
       + esc(T('دامنهٔ ۲۰ کندل', '20-candle range')) + ' ' + (a.rangePct == null ? '—' : a.rangePct.toFixed(2) + '%') + '</div></div>' : '')
-      + (ind.volume ? '<div class="an-card"><h4>' + ICON.volume + esc(T('حجم', 'Volume')) + '</h4>'
+      + (ind.volume ? '<div class="an-card an-vol"><h4>' + ICON.volume + esc(T('حجم', 'Volume')) + '</h4>'
       + '<div class="an-big">' + (a.volRatio == null ? '—' : a.volRatio.toFixed(2) + '×') + '</div>'
-      + '<div class="an-sub">' + esc(T('حجم آخر', 'Last volume')) + ' ' + fmt(lastVol) + ' · ' + esc(T('میانگین ۲۰', '20 avg')) + ' ' + fmt(avgVol) + '</div></div>' : '')
-      + '<div class="an-card wide"><h4>' + ICON.levels + esc(T('سطوح', 'Levels')) + '</h4>'
+      + '<div class="an-sub">' + esc(T('حجم آخر', 'Last volume')) + ' ' + fmt(lastVol) + ' · ' + esc(T('میانگین ۲۰', '20 avg')) + ' ' + fmt(avgVol)
+      + (volTW ? '<br>' + esc(T('روند حجم', 'Volume trend')) + ': ' + esc(volTW) : '')
+      + (obvW ? '<br>OBV: ' + esc(obvW) : '')
+      + '</div></div>' : '')
+      + '<div class="an-card an-cndl"><h4>' + ICON.chart + esc(T('کندل آخر', 'Last candle')) + '</h4>'
+      + '<div class="an-big">' + (shapeW || '—') + '</div>'
+      + '<div class="an-sub">' + (a.candle ? esc(T('بدنه', 'Body')) + ' ' + a.candle.bodyPct.toFixed(0) + '% · ' + esc(T('فیتیلهٔ بالا', 'upper wick')) + ' ' + a.candle.upperWickPct.toFixed(0) + '% · ' + esc(T('فیتیلهٔ پایین', 'lower wick')) + ' ' + a.candle.lowerWickPct.toFixed(0) + '%' + '<br>' + esc(T('جهت کندل', 'Candle direction')) + ': ' + (a.candle.dir === 'up' ? esc(T('صعودی', 'up')) : a.candle.dir === 'down' ? esc(T('نزولی', 'down')) : esc(T('خنثی', 'flat'))) : '—') + '</div></div>'
+      + '<div class="an-card wide an-lvl"><h4>' + ICON.levels + esc(T('سطوح', 'Levels')) + '</h4>'
       + row(T('مقاومت ۱', 'Resistance 1'), fmt(cs2 ? cs2.R1 : a.hi20))
       + row(T('مقاومت ۲', 'Resistance 2'), fmt(cs2 ? cs2.R2 : a.hi20))
       + row(T('حمایت ۱', 'Support 1'), fmt(cs2 ? cs2.S1 : a.lo20))
@@ -1811,12 +1865,6 @@
     var j = await fetchJSON(PROXY_URL.replace(/\/$/, '') + '/mofid?kind=bulk&symbols=' + encodeURIComponent(symbols.join(',')), 20000);
     return (j && Array.isArray(j.quotes)) ? j.quotes : [];
   }
-  function impactPctFor(newsObj, level, title) {
-    var base = level === 'high' ? 85 : level === 'medium' ? 60 : 35;
-    var tag = null;
-    try { tag = newsObj ? newsObj.detectSymbolTag(title) : null; } catch (e) {}
-    return Math.min(95, base + (tag ? 10 : 0));
-  }
   async function loadDash(force) {
     var now = Date.now();
     if (!force && dashCache.data && now - dashCache.at < 60000) { renderDash(dashCache.data); return; }
@@ -1923,14 +1971,15 @@
       data.news.forEach(function (it) {
         var tag = lang === 'fa' ? 'بازار' : 'Market', lv = 'low';
         try { tag = (N && N.detectSymbolTag(it.title)) || tag; lv = N ? N.impactOf(it.title) : 'low'; } catch (e) {}
-        var pct = impactPctFor(N, lv, it.title);
-        var cls = lv === 'high' ? 'high' : lv === 'medium' ? 'med' : 'low';
-        newsHtml += '<div class="news-card"><div class="news-tag"><span class="news-chip">[' + esc(tag) + ']</span><span class="imp ' + cls + '">' + esc(T('تاثیر', 'Impact')) + ' ٪' + pct + '</span></div>'
+        /* v1.2.2 — درصد تاثیر حذف شد (دستور مالک: ۹۵٪/۴۵٪ عددهای ساختگی و
+           گمراه‌کننده بودند): مثل تب خبرِ نماد، فقط سطح تاثیر با بج نشان داده
+           می‌شود — بالا/متوسط/کم — بدون هیچ درصدی. */
+        newsHtml += '<div class="news-card"><div class="news-tag"><span class="news-chip">[' + esc(tag) + ']</span>' + impactBadge(lv) + '</div>'
           + '<div class="news-title">' + esc(it.title) + '</div>'
           + (it.time ? '<div class="news-time">' + new Date(it.time).toUTCString().slice(5, 22) + ' UTC</div>' : '')
           + '</div>';
       });
-      newsHtml += '<div class="warn">' + esc(T('درصد تاثیر از روی کلیدواژهٔ تیتر تخمین زده شده؛ اندازه‌گیری واقعی نیست.', 'Impact % is an estimate from headline keywords, not measured.')) + '</div>';
+      newsHtml += '<div class="warn">' + esc(T('تاثیر از روی کلیدواژهٔ تیتر تخمین زده شده؛ قطعی نیست.', 'Impact is a keyword estimate, not certain.')) + '</div>';
     }
     newsHtml += '</div>';
     $('dashNews').innerHTML = newsHtml;
@@ -1977,7 +2026,7 @@
     showMainTab: showMainTab, openSearchModal: openSearchModal, closeSearchModal: closeSearchModal, renderSmBody: renderSmBody, renderSmTabs: renderSmTabs, sm: sm,
     loadDash: loadDash, renderDash: renderDash, confluence: confluence, renderGauge: renderGauge, renderDepth: renderDepth, fetchDepth: fetchDepth, stopDepthPoll: stopDepthPoll, positionLastPxTag: positionLastPxTag,
     pmScale: pmScale, pmPan: pmPan, autoScale: autoScale, toLatest: toLatest, refreshAxisBtns: refreshAxisBtns,
-    toggleFav: toggleFav, isFav: isFav, lookupQuote: lookupQuote, yahooMulti: yahooMulti, mofidBulk: mofidBulk, cgMarkets: cgMarkets, impactPctFor: impactPctFor };
+    toggleFav: toggleFav, isFav: isFav, lookupQuote: lookupQuote, yahooMulti: yahooMulti, mofidBulk: mofidBulk, cgMarkets: cgMarkets };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 })();

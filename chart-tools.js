@@ -13,6 +13,97 @@ function emaSeriesLocal(cl, n) {
   return out;
 }
 var ema = window.ema;
+/* v1.2.2 — سری‌های ابزارهای تازه (همه از روی همان کندل‌ها؛ بدون دادهٔ جدید). */
+function vwapSeries(candles) {
+  var cumPV = 0, cumV = 0, out = [];
+  for (var i = 0; i < candles.length; i++) {
+    var c = candles[i];
+    if (typeof c.v !== 'number' || c.v <= 0) return null;
+    cumPV += ((c.h + c.l + c.c) / 3) * c.v; cumV += c.v;
+    out.push(cumV > 0 ? cumPV / cumV : null);
+  }
+  return out;
+}
+function donchianSeries(candles, n) {
+  var u = [], l = [];
+  for (var i = 0; i < candles.length; i++) {
+    if (i < n - 1) { u.push(null); l.push(null); continue; }
+    var w = candles.slice(i - n + 1, i + 1), hi = -Infinity, lo = Infinity, j;
+    for (j = 0; j < w.length; j++) { if (w[j].h > hi) hi = w[j].h; if (w[j].l < lo) lo = w[j].l; }
+    u.push(hi); l.push(lo);
+  }
+  return { u: u, l: l };
+}
+function keltnerSeries(candles, n, mult) {
+  var cl = candles.map(function (c) { return c.c; });
+  var e = emaSeriesLocal(cl, n);
+  if (!e.length) return null;
+  var tr = [], i;
+  for (i = 1; i < candles.length; i++) { var c = candles[i], p = candles[i - 1]; tr.push(Math.max(c.h - c.l, Math.abs(c.h - p.c), Math.abs(c.l - p.c))); }
+  var a = [], s = 0;
+  for (i = 0; i < 14 && i < tr.length; i++) s += tr[i];
+  if (tr.length < 14) return null;
+  a[13] = s / 14;
+  for (i = 14; i < tr.length; i++) a[i] = (a[i - 1] * 13 + tr[i]) / 14;
+  var u = [], l = [];
+  for (var j = 0; j < candles.length; j++) {
+    var av = a[j - 1];
+    if (e[j] == null || av == null) { u.push(null); l.push(null); }
+    else { u.push(e[j] + mult * av); l.push(e[j] - mult * av); }
+  }
+  return { u: u, l: l };
+}
+function supertrendSeries(candles, period, mult) {
+  period = period || 10; mult = mult || 3;
+  if (!Array.isArray(candles) || candles.length < period + 1) return null;
+  var tr = [], i;
+  for (i = 1; i < candles.length; i++) { var c = candles[i], p = candles[i - 1]; tr.push(Math.max(c.h - c.l, Math.abs(c.h - p.c), Math.abs(c.l - p.c))); }
+  var atr = [], s = 0;
+  for (i = 0; i < period && i < tr.length; i++) s += tr[i];
+  if (tr.length < period) return null;
+  atr[period - 1] = s / period;
+  for (i = period; i < tr.length; i++) atr[i] = (atr[i - 1] * (period - 1) + tr[i]) / period;
+  var out = [], fU = null, fL = null, st = null, dir = 1;
+  for (var j = 0; j < candles.length; j++) {
+    var av = atr[j - 1];
+    if (av == null) { out.push(null); continue; }
+    var cc = candles[j], pc = j > 0 ? candles[j - 1].c : cc.c;
+    var hl2 = (cc.h + cc.l) / 2, bU = hl2 + mult * av, bL = hl2 - mult * av;
+    fU = (fU == null) ? bU : ((bU < fU || pc > fU) ? bU : fU);
+    fL = (fL == null) ? bL : ((bL > fL || pc < fL) ? bL : fL);
+    if (st == null) { st = fU; dir = -1; }
+    else if (st === fU) { if (cc.c <= fU) { st = fU; dir = -1; } else { st = fL; dir = 1; } }
+    else { if (cc.c >= fL) { st = fL; dir = 1; } else { st = fU; dir = -1; } }
+    out.push({ v: st, dir: dir });
+  }
+  return out;
+}
+function sarSeries(candles) {
+  if (!Array.isArray(candles) || candles.length < 3) return null;
+  var out = [], i;
+  var up = candles[1].c >= candles[0].c;
+  var sar = up ? Math.min(candles[0].l, candles[1].l) : Math.max(candles[0].h, candles[1].h);
+  var ep = up ? Math.max(candles[0].h, candles[1].h) : Math.min(candles[0].l, candles[1].l);
+  var af = 0.02;
+  out.push(null); out.push(sar);
+  for (i = 2; i < candles.length; i++) {
+    var c = candles[i], p = candles[i - 1], p2 = candles[i - 2];
+    var ns = sar + af * (ep - sar);
+    if (up) {
+      ns = Math.min(ns, p.l, p2.l);
+      if (c.l < ns) { up = false; sar = ep; ep = c.l; af = 0.02; out.push(sar); continue; }
+      sar = ns;
+      if (c.h > ep) { ep = c.h; af = Math.min(0.2, af + 0.02); }
+    } else {
+      ns = Math.max(ns, p.h, p2.h);
+      if (c.h > ns) { up = true; sar = ep; ep = c.h; af = 0.02; out.push(sar); continue; }
+      sar = ns;
+      if (c.l < ep) { ep = c.l; af = Math.min(0.2, af + 0.02); }
+    }
+    out.push(sar);
+  }
+  return out;
+}
 if (typeof window.analyzeCS !== 'function') window.analyzeCS = function () { return analyzeCSLocal(); };
 function analyzeCSLocal() {
   var z = { l: 0, R1: 0, R2: 0, S1: 0, S2: 0, s20: 0, s50: 0, pb: 0.5, bw: 0, atr: 0, hist: 0 };
@@ -82,6 +173,17 @@ function drawTools(g,o){const{off,n,X,Y,cw}=o;if(cs.length<60)return;try{
   if(on.bb){const bd=(k,sg)=>{const m=sm(k,20);if(m==null)return null;return m+sg*2*Math.sqrt(cl.slice(k-19,k+1).reduce((a,b)=>a+(b-m)**2,0)/20)};line(k=>bd(k,1),"rgba(120,170,255,.75)");line(k=>bd(k,-1),"rgba(120,170,255,.75)")}}
  if(on.tl){const r=reg();[[0,"#ffb347",0],[1.5*r.sd,"rgba(255,179,71,.55)",1],[-1.5*r.sd,"rgba(255,179,71,.55)",1]].forEach(([d,col,dash])=>{g.strokeStyle=col;g.lineWidth=1.2;g.setLineDash(dash?[4,4]:[]);g.beginPath();g.moveTo(X(n-r.m),Y(r.ic+d));g.lineTo(X(n-1),Y(r.ic+r.sl*(r.m-1)+d));g.stroke()});g.setLineDash([])}
  if(!replayOn&&on.pv){const c=cs[cs.length-2],P=(c.h+c.l+c.c)/3,r=c.h-c.l;[[P,"P","#c8d2e6"],[2*P-c.l,"R1",(window.OnellaChartStyle?OnellaChartStyle.pc("#ff5d6c"):"#ff5d6c")],[2*P-c.h,"S1",(window.OnellaChartStyle?OnellaChartStyle.pc("#2ecc8f"):"#2ecc8f")],[P+r,"R2",(window.OnellaChartStyle?OnellaChartStyle.pc("#ff5d6c"):"#ff5d6c")],[P-r,"S2",(window.OnellaChartStyle?OnellaChartStyle.pc("#2ecc8f"):"#2ecc8f")]].forEach(([p,l,col])=>hl(g,Y,p,0,cw,col,l,1))}
+ /* v1.2.2 — ابزارهای تازه (پالت مینیمال: هر ابزار رنگ ثابت خودش را دارد). */
+ if(!replayOn&&(on.ema||on.vwap||on.donch||on.kelt)){
+  const line2=(f,col,wd)=>{g.strokeStyle=col;g.lineWidth=wd||1.2;g.beginPath();let s=0;for(let i=0;i<n;i++){const y=f(off+i);if(y==null||!isFinite(y))continue;s?g.lineTo(X(i),Y(y)):g.moveTo(X(i),Y(y));s=1}g.stroke()};
+  const cl2=cs.map(x=>x.c);
+  if(on.ema){const e20=emaSeriesLocal(cl2,20),e50=emaSeriesLocal(cl2,50),e200=emaSeriesLocal(cl2,200);line2(k=>e20[k],"#7aa2d6");line2(k=>e50[k],"#a58fd6");line2(k=>e200[k],"#d6a55f");}
+  if(on.vwap){const vw=vwapSeries(cs);if(vw)line2(k=>vw[k],"#5fb8a6");}
+  if(on.donch){const dn=donchianSeries(cs,20);line2(k=>dn.u[k],"#8fa3b8");line2(k=>dn.l[k],"#8fa3b8");}
+  if(on.kelt){const kl=keltnerSeries(cs,20,1.5);if(kl){line2(k=>kl.u[k],"#d6a55f");line2(k=>kl.l[k],"#d6a55f");}}
+ }
+ if(!replayOn&&on.super){const st=supertrendSeries(cs,10,3);if(st){for(let i=0;i<n;i++){const v=st[off+i];if(!v)continue;const nx2=st[off+i+1];g.strokeStyle=v.dir>0?"#2ecc8f":"#ff5d6c";g.lineWidth=1.4;g.beginPath();g.moveTo(X(i),Y(v.v));if(nx2&&i+1<n)g.lineTo(X(i+1),Y(nx2.v));else{g.lineTo(X(i)+3,Y(v.v));}g.stroke();}}}
+ if(!replayOn&&on.sar){const sr=sarSeries(cs);if(sr){g.fillStyle="#ffb347";for(let i=0;i<n;i++){const v=sr[off+i];if(v==null||!isFinite(v))continue;g.beginPath();g.arc(X(i),Y(v),1.8,0,7);g.fill();}}}
  onellaDrawAdvancedTools(g,{off,n,X,Y,cw});
 }catch(e){}}
 function toolNote(id){if(cs.length<60)return"";const a=analyzeCS(),l=a.l,nm=marketPairName(),pc=x=>(Math.abs(x-l)/l*100).toFixed(1)+"٪";
@@ -93,4 +195,27 @@ function toolNote(id){if(cs.length<60)return"";const a=analyzeCS(),l=a.l,nm=mark
  if(id==="bb")return T("بولینگر: قیمت "+(a.pb>1?"بالای باند بالایی (کشیدگی صعودی)":a.pb<0?"زیر باند پایینی (کشیدگی نزولی)":a.pb>.8?"نزدیک باند بالا":a.pb<.2?"نزدیک باند پایین":"وسط باند")+"؛ عرض باند "+(a.bw*100).toFixed(1)+"٪ "+(a.bw<.06?"و فشرده است (احتمال حرکت شدید بعدی).":"."),"Bollinger: price is "+(a.pb>1?"above the upper band (stretched up)":a.pb<0?"below the lower band (stretched down)":a.pb>.8?"near the upper band":a.pb<.2?"near the lower band":"mid-band")+"; band width "+(a.bw*100).toFixed(1)+"%"+(a.bw<.06?", squeezed (a sharp move may follow).":"."));
  if(id==="tl"){const r=reg(),z=(l-(r.ic+r.sl*(r.m-1)))/r.sd,s=(r.sl/l*100).toFixed(2);return T("خط روند (رگرسیون): شیب "+(r.sl>0?"صعودی":"نزولی")+" حدود "+s+"٪ در هر کندل؛ قیمت "+(z>1.5?"بالای کانال (کشیدگی)":z<-1.5?"زیر کانال (کشیدگی)":"داخل کانال، در نیمه "+(z>0?"بالا":"پایین"))+".","Trendline (regression): "+(r.sl>0?"up":"down")+"slope of about "+s+"% per candle; price is "+(z>1.5?"above the channel (stretched)":z<-1.5?"below the channel (stretched)":"inside the channel, "+(z>0?"upper":"lower")+" half")+".")}
  if(id==="pv"){const c=cs[cs.length-2],P=(c.h+c.l+c.c)/3,r=c.h-c.l;return T("پیوت پوینت (از کندل قبل): P "+fmt(P)+"، R1 "+fmt(2*P-c.l)+"، S1 "+fmt(2*P-c.h)+"، R2 "+fmt(P+r)+"، S2 "+fmt(P-r)+". قیمت "+(l>P?"بالای":"زیر")+" پیوته، پس گرایش کوتاه‌مدت "+(l>P?"صعودیه":"نزولیه")+".","Pivot points (prev. candle): P "+fmt(P)+", R1 "+fmt(2*P-c.l)+", S1 "+fmt(2*P-c.h)+", R2 "+fmt(P+r)+", S2 "+fmt(P-r)+". Price is "+(l>P?"above":"below")+" the pivot, so short-term bias is "+(l>P?"up":"down")+".")}
+ /* v1.2.2 — خوانش ابزارهای تازه. */
+ if(id==="ema"){const cl=cs.map(x=>x.c),e20=emaSeriesLocal(cl,20),e50=emaSeriesLocal(cl,50),e200=emaSeriesLocal(cl,200);
+  const v20=e20[e20.length-1],v50=e50[e50.length-1],v200=e200.length?e200[e200.length-1]:null;
+  return T("میانگین نمایی: EMA20 "+fmt(v20)+"، EMA50 "+fmt(v50)+(v200!=null?"، EMA200 "+fmt(v200):"")+". قیمت "+(l>v20?"بالای":"زیر")+" EMA20 است و EMA20 "+(v20>v50?"بالای":"زیر")+" EMA50 — یعنی روند کوتاه‌مدت "+(v20>v50?"صعودی":"نزولی")+".",
+   "EMA: EMA20 "+fmt(v20)+", EMA50 "+fmt(v50)+(v200!=null?", EMA200 "+fmt(v200):"")+". Price is "+(l>v20?"above":"below")+" EMA20 and EMA20 is "+(v20>v50?"above":"below")+" EMA50, so the short-term trend is "+(v20>v50?"up":"down")+".")}
+ if(id==="vwap"){const vw=vwapSeries(cs);if(!vw)return T("برای این بازار حجم متمرکز نیست؛ VWAP حساب نمی‌شود.","No centralised volume for this market; VWAP cannot be computed.");
+  const v=vw[vw.length-1];
+  return T("وی‌واپ: "+fmt(v)+". قیمت "+(l>v?"بالای":"زیر")+" VWAP است"+(l>v?" (فشار خرید بیشتر بوده).":" (فشار فروش بیشتر بوده)."),
+   "VWAP: "+fmt(v)+". Price is "+(l>v?"above":"below")+" VWAP"+(l>v?" (buying pressure dominated).":" (selling pressure dominated)."));}
+ if(id==="donch"){const dn=donchianSeries(cs,20),u=dn.u[dn.u.length-1],lw=dn.l[dn.l.length-1],pos=(u>lw)?((l-lw)/(u-lw)*100):null;
+  return T("دونچیان (۲۰): سقف کانال "+fmt(u)+"، کف کانال "+fmt(lw)+"؛ قیمت در "+(pos==null?"—":pos.toFixed(0)+"٪")+" کانال است"+(pos!=null&&pos>80?" (نزدیک سقف).":pos!=null&&pos<20?" (نزدیک کف).":"."),
+   "Donchian (20): channel high "+fmt(u)+", low "+fmt(lw)+"; price is at "+(pos==null?"—":pos.toFixed(0)+"%")+" of the channel"+(pos!=null&&pos>80?" (near the top).":pos!=null&&pos<20?" (near the bottom).":"."));}
+ if(id==="kelt"){const kl=keltnerSeries(cs,20,1.5);if(!kl)return"";
+  const u=kl.u[kl.u.length-1],lw=kl.l[kl.l.length-1];
+  return T("کلتنر (EMA20 ± ۱٫۵×ATR): باند بالا "+fmt(u)+"، باند پایین "+fmt(lw)+"؛ قیمت "+(l>u?"بالای باند بالا (کشیدگی صعودی)":l<lw?"زیر باند پایین (کشیدگی نزولی)":"داخل باند")+".",
+   "Keltner (EMA20 ± 1.5×ATR): upper "+fmt(u)+", lower "+fmt(lw)+"; price is "+(l>u?"above the upper band (stretched up)":l<lw?"below the lower band (stretched down)":"inside the bands")+".");}
+ if(id==="super"){const st=supertrendSeries(cs,10,3);if(!st)return"";
+  const v=st[st.length-1];
+  return T("سوپرترند (۱۰، ۳): خط "+fmt(v.v)+" — روند "+(v.dir>0?"صعودی":"نزولی")+" است؛ تا وقتی قیمت "+(v.dir>0?"بالای":"زیر")+" خط بماند، روند همین است.",
+   "Supertrend (10, 3): line at "+fmt(v.v)+" — trend is "+(v.dir>0?"up":"down")+"; while price stays "+(v.dir>0?"above":"below")+" the line, the trend holds.");}
+ if(id==="sar"){const sr=sarSeries(cs);if(!sr)return"";
+  const v=sr[sr.length-1],above=l>v;
+  return T("پارابولیک SAR: نقطهٔ آخر "+fmt(v)+" — قیمت "+(above?"بالای نقطه‌هاست (روند صعودی)":"زیر نقطه‌هاست (روند نزولی)")+".","Parabolic SAR: last dot "+fmt(v)+" — price is "+(above?"above the dots (uptrend)":"below the dots (downtrend)")+".");}
  return""}
