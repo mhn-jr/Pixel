@@ -1385,14 +1385,19 @@
     var SET_TOGGLES = [['vol', 'حجم معاملات', 'Volume'], ['ma', 'میانگین ۲۰', 'MA20'], ['grid', 'شبکه', 'Grid'], ['last', 'خط قیمت زنده', 'Last price line'], ['pct', 'مقیاس درصدی', 'Percentage scale'], ['log', 'مقیاس لگاریتمی', 'Log scale'], ['lock', 'قفل مقیاس قیمت', 'Lock price scale'], ['rob', 'مقیاس مقاوم', 'Robust scale'], ['cd', 'شمارش معکوس کندل', 'Countdown']];
     var st = { type: 'candle', vol: 1, ma: 1, grid: 1, last: 1, pct: 0, log: 0, lock: 0, rob: 0, cd: 1, pal: 'def' };
     try { var _st = window.OnellaChartStyle.get(); if (_st) st = _st; } catch (e) {}
+    /* v1.7.0 — قابلیت تازه از همان کندل‌های موجود: VWAP + EMA20 روی چارت،
+       بدون API تازه — فقط وقتی ابزار روشن است، روی نوار ابزار پایین می‌آید. */
+    var toolOn = window.on || {};
+    var vwapOn = !!toolOn.vwap, emaOn = !!toolOn.ema;
     $('tab-chart').innerHTML =
-      '<div id="tfRow" class="tf-wrap"><button id="tfBtn" type="button" title="' + esc(T('تایم‌فریم', 'Timeframe')) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg><span class="tf-cur">' + esc(state.tf) + '</span> ▾</button>'
-      + '<button id="fsBtn" class="tf-fs" type="button" title="' + esc(T('تمام‌صفحه', 'Fullscreen')) + '">' + FS_ICONS.on + '</button>'
+      '<div id="tfRow" class="tf-wrap"><div class="tf-group"><button id="tfBtn" type="button" title="' + esc(T('تایم‌فریم', 'Timeframe')) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg><span class="tf-cur">' + esc(state.tf) + '</span> ▾</button>'
+      + '<button id="fsBtn" class="tf-fs" type="button" title="' + esc(T('تمام‌صفحه', 'Fullscreen')) + '">' + FS_ICONS.on + '</button></div>'
+      + '<div class="tf-group"><button class="tf-fs" id="toolsFab" type="button" title="' + esc(T('ابزارهای چارت', 'Chart tools')) + '">' + ICON.tools + '</button>'
+      + '<button class="tf-fs" id="setBtn" type="button" title="' + esc(T('تنظیمات چارت', 'Chart settings')) + '">' + SET_ICON + '</button></div>'
       + '<div id="tfPanel" class="tf-panel">' + tfs.map(function (k) {
           return '<button data-tf="' + k + '"' + (state.tf === k ? ' class="on"' : '') + ' type="button">' + k + '</button>';
         }).join('') + '</div></div>'
-      + '<div class="chartwrap" id="chartWrap"><div id="nv" style="position:relative;height:260px"><div id="px" class="px px-ov"></div><div id="lastPxTag" style="display:none"></div><div id="xhBox" class="xh-box" dir="ltr" style="display:none"></div><canvas id="cc" dir="ltr" style="width:100%;height:260px;display:block"></canvas><button class="axis-btn" id="tvAutoBtn" type="button" style="display:none">A</button><button class="axis-btn" id="tvLatestBtn" type="button" style="display:none">⏭</button><button class="tools-fab" id="toolsFab" type="button" title="' + esc(T('ابزارهای چارت', 'Chart tools')) + '">' + ICON.tools + '</button>'
-      + '<button class="set-fab" id="setBtn" type="button" title="' + esc(T('تنظیمات چارت', 'Chart settings')) + '">' + SET_ICON + '</button>'
+      + '<div class="chartwrap" id="chartWrap"><div id="nv" style="position:relative;height:260px"><div id="px" class="px px-ov"></div><div id="lastPxTag" style="display:none"></div><div id="xhBox" class="xh-box" dir="ltr" style="display:none"></div><canvas id="cc" dir="ltr" style="width:100%;height:260px;display:block"></canvas><button class="axis-btn" id="tvAutoBtn" type="button" style="display:none">A</button><button class="axis-btn" id="tvLatestBtn" type="button" style="display:none">⏭</button>'
       + '<div class="tools-strip" id="toolsStrip"><div class="strip-group" id="chartTools">' + TOOLS.map(function (t) {
           return '<button class="tbtn' + (toolOn[t[0]] ? ' on' : '') + '" data-tool="' + t[0] + '" type="button" title="' + esc(lang === 'fa' ? t[1] : t[2]) + '">' + (TOOL_ICONS[t[0]] || esc(lang === 'fa' ? t[1] : t[2])) + '</button>';
         }).join('') + '</div><div class="strip-sep"></div><div class="strip-group" id="drawTools">' + DRAW_TOOLS.map(function (t) {
@@ -1411,6 +1416,8 @@
       + '<button class="tbtn" id="typeBtn" type="button">' + esc(chartTypeLabel(cur)) + '</button>'
       + '<button class="tbtn' + (maOn ? ' on' : '') + '" id="maBtn" type="button">MA20</button>'
       + '<button class="tbtn' + (volOn ? ' on' : '') + '" id="volBtn" type="button">' + esc(T('حجم', 'Vol')) + '</button>'
+      + '<button class="tbtn' + (vwapOn ? ' on' : '') + '" id="vwapBtn" type="button">VWAP</button>'
+      + '<button class="tbtn' + (emaOn ? ' on' : '') + '" id="emaBtn" type="button">EMA20</button>'
       + '<button class="tbtn on" id="rsiBtn" type="button">RSI</button>'
       + '<button class="tbtn on" id="macdBtn" type="button">MACD</button>'
       + '<button class="tbtn" id="zoomOutBtn" type="button">−</button>'
@@ -1445,6 +1452,32 @@
         window.draw();
       } catch (e) {}
     });
+    /* v1.7.0 — VWAP + EMA20 روی نوار ابزار پایین: همان ابزارهای chart-tools
+       (از روی کندل‌های موجود) که حالا از این‌جا هم روشن/خاموش می‌شوند. */
+    (function () {
+      var vb = $('vwapBtn'), eb = $('emaBtn');
+      var sync = function () {
+        if (vb) vb.classList.toggle('on', !!(window.on || {}).vwap);
+        if (eb) eb.classList.toggle('on', !!(window.on || {}).ema);
+        var sb = document.querySelector('#chartTools [data-tool="vwap"]');
+        if (sb) sb.classList.toggle('on', !!(window.on || {}).vwap);
+        var se = document.querySelector('#chartTools [data-tool="ema"]');
+        if (se) se.classList.toggle('on', !!(window.on || {}).ema);
+      };
+      window.__syncVwapEma = sync;
+      if (vb) vb.addEventListener('click', function () {
+        var o = window.on || {};
+        o.vwap = !o.vwap; window.on = o;
+        sync();
+        try { window.draw(); } catch (e) {}
+      });
+      if (eb) eb.addEventListener('click', function () {
+        var o = window.on || {};
+        o.ema = !o.ema; window.on = o;
+        sync();
+        try { window.draw(); } catch (e) {}
+      });
+    })();
     $('volBtn').addEventListener('click', function () {
       try {
         var v2 = !window.OnellaChartStyle.get().vol;
@@ -1505,6 +1538,7 @@
         var o = window.on || {};
         o[id] = !o[id];
         b.classList.toggle('on', !!o[id]);
+        if (typeof window.__syncVwapEma === 'function') window.__syncVwapEma();
         var note = $('toolNote');
         try {
           if (o[id]) { if (note) note.textContent = (typeof toolNote === 'function') ? toolNote(id) : ''; }
@@ -2132,11 +2166,92 @@
 
   /* ---- دفتر سفارش «عمق» (v1.2.1) ----
      فقط برای کریپتو (Binance): depth مستقیم Binance، fallback ورکر، بعد OKX books.
-     فقط وقتی تب عمق باز است پول می‌شود (۵ ثانیه)؛ با خروج از تب/نماد، پول قطع می‌شود. */
+     v1.7.0 — زنده از WebSocket: همان WS کندل‌ها (data-stream.binance.vision) حالا
+     دو استریم دیگر هم می‌گیرد — depth20@100ms برای دفتر سفارش و aggTrade برای
+     معاملات زنده — با همان fallback پولینگ ۵ ثانیه‌ای وقتی WS نرسد. */
   var depthTimer = null, depthSym = null;
+  var depthWs = null, depthData = null, tradesWs = null, liveTrades = [];
+  function stopDepthWs() {
+    try { if (depthWs) depthWs.close(); } catch (e) {}
+    depthWs = null;
+    try { if (tradesWs) tradesWs.close(); } catch (e) {}
+    tradesWs = null;
+  }
   function stopDepthPoll() {
     if (depthTimer) { clearInterval(depthTimer); depthTimer = null; }
     depthSym = null;
+    stopDepthWs();
+    depthData = null; liveTrades = [];
+  }
+  /* دفتر سفارش را با diffهای WS به‌روز کن (بدون درخواست تازه): هر diff فقط
+     سطوح تغییرکرده را می‌فرستد؛ سطح با مقدار ۰ حذف می‌شود. */
+  function applyDepthDiff(d) {
+    if (!depthData) return false;
+    if (!d || !Array.isArray(d.b) || !Array.isArray(d.a)) return false;
+    var merge = function (cur, diff, desc) {
+      var map = {};
+      cur.forEach(function (r) { map[r[0]] = r[1]; });
+      diff.forEach(function (r) {
+        var p = +r[0], q = +r[1];
+        if (!Number.isFinite(p) || !Number.isFinite(q) || p <= 0) return;
+        if (q === 0) delete map[p]; else map[p] = q;
+      });
+      var out = Object.keys(map).map(function (k) { return [+k, map[k]]; });
+      out.sort(function (a, b) { return desc ? b[0] - a[0] : a[0] - b[0]; });
+      return out.slice(0, 20);
+    };
+    depthData = { bids: merge(depthData.bids, d.b, true), asks: merge(depthData.asks, d.a, false) };
+    return depthData.bids.length > 0 && depthData.asks.length > 0;
+  }
+  function startDepthWs(sym) {
+    stopDepthWs();
+    if (typeof WebSocket === 'undefined') return;
+    try {
+      var ws = new WebSocket('wss://data-stream.binance.vision/ws/' + sym.toLowerCase() + '@depth20@100ms');
+      depthWs = ws;
+      ws.onmessage = function (ev) {
+        try {
+          var d = JSON.parse(ev.data);
+          if (!d || d.s !== sym) return;
+          if (applyDepthDiff(d) && state.tab === 'depth' && state.view === 'symbol' && depthSym === sym) {
+            var el = $('tab-depth');
+            if (el) renderDepthData(el, depthData);
+          }
+        } catch (e) {}
+      };
+      ws.onclose = function () { if (depthWs === ws) depthWs = null; };
+      ws.onerror = function () { if (depthWs === ws) { try { ws.close(); } catch (e) {} } };
+      setTimeout(function () {
+        if (depthWs === ws && ws.readyState !== 1) { try { ws.close(); } catch (e) {} }
+      }, 6000);
+    } catch (e) {}
+    try {
+      var tw = new WebSocket('wss://data-stream.binance.vision/ws/' + sym.toLowerCase() + '@aggTrade');
+      tradesWs = tw;
+      tw.onmessage = function (ev) {
+        try {
+          var t = JSON.parse(ev.data);
+          if (!t || t.s !== sym) return;
+          liveTrades.unshift({ p: +t.p, q: +t.q, t: +t.T, buy: !!t.m });
+          if (liveTrades.length > 20) liveTrades.length = 20;
+          if (state.tab === 'depth' && state.view === 'symbol' && depthSym === sym) {
+            var list = document.getElementById('liveTrades');
+            if (list) list.innerHTML = tradesRowsHtml();
+          }
+        } catch (e) {}
+      };
+      tw.onclose = function () { if (tradesWs === tw) tradesWs = null; };
+      tw.onerror = function () { if (tradesWs === tw) { try { tw.close(); } catch (e) {} } };
+      setTimeout(function () {
+        if (tradesWs === tw && tw.readyState !== 1) { try { tw.close(); } catch (e) {} }
+      }, 6000);
+    } catch (e) {}
+  }
+  function tradesRowsHtml() {
+    if (!liveTrades.length) return '<div class="muted">' + esc(T('در انتظار اولین معامله…', 'Waiting for the first trade…')) + '</div>';
+    return liveTrades.map(function (tr) {
+      return '<div class="tr-row"><span class="' + (tr.buy ? 'dn' : 'up') + '">' + fmt(tr.p) + '</span><span>' + fmt(tr.q) + '</span><span class="tr-t">' + new Date(tr.t).toUTCString().slice(17, 25) + '</span></div>';
+    }).join('');
   }
   function parseDepth(j) {
     if (!j || !Array.isArray(j.bids) || !Array.isArray(j.asks)) return null;
@@ -2164,6 +2279,7 @@
     return null;
   }
   function renderDepthData(el, d) {
+    depthData = d;
     var bids = d.bids.slice(0, 10), asks = d.asks.slice(0, 10);
     var bestBid = bids[0][0], bestAsk = asks[0][0];
     var spread = bestAsk - bestBid, spreadPct = bestBid > 0 ? (spread / bestBid) * 100 : null;
@@ -2176,10 +2292,11 @@
       var w = maxQ > 0 ? Math.max(2, Math.round((r[1] / maxQ) * 100)) : 0;
       return '<div class="ob-row ' + cls + '"><span class="ob-bar" style="width:' + w + '%"></span><span class="ob-p">' + fmt(r[0]) + '</span><span>' + fmt(r[1]) + '</span><span>' + fmt(cum) + '</span></div>';
     };
+    var liveTag = (depthWs || tradesWs) ? ' <span class="live-dot live-ws">' + esc(T('● زنده', '● LIVE')) + '</span>' : '';
     var html = '<div class="ob-wrap">';
     html += '<div class="ob-head"><span>' + esc(T('بهترین خرید', 'Best bid')) + ' <b class="up">' + fmt(bestBid) + '</b></span>'
       + '<span>' + esc(T('بهترین فروش', 'Best ask')) + ' <b class="dn">' + fmt(bestAsk) + '</b></span>'
-      + '<button type="button" id="obRefresh">↻</button></div>';
+      + '<button type="button" id="obRefresh">↻</button>' + liveTag + '</div>';
     html += '<div class="ob-imb"><span class="ib-bid" style="width:' + bidPct + '%"></span><span class="ib-ask" style="width:' + (100 - bidPct) + '%"></span></div>'
       + '<div class="ob-sub">' + esc(T('خرید', 'Buy')) + ' ' + bidPct + '٪ · ' + esc(T('فروش', 'Sell')) + ' ' + (100 - bidPct) + '٪</div>';
     html += '<div class="ob-cols"><span>' + esc(T('قیمت', 'Price')) + '</span><span>' + esc(T('مقدار', 'Amount')) + '</span><span>' + esc(T('جمع', 'Total')) + '</span></div>';
@@ -2191,6 +2308,9 @@
     cum = 0;
     bids.forEach(function (r) { cum += r[1]; html += obRow(r, cum, 'ob-bid'); });
     html += '</div><div class="warn">' + esc(T('دفتر سفارش لحظه‌ای است و هر ۵ ثانیه تازه می‌شود — نه سیگنال، نه توصیهٔ معامله.', 'Live order book, refreshed every 5s — not a signal, not trading advice.')) + '</div>';
+    /* v1.7.0 — معاملات زنده (aggTrade همان WS): ۲۰ معاملهٔ آخر، سبز = خرید
+       (taker خریدار است)، قرمز = فروش؛ فقط نمایش است. */
+    html += '<div class="tr-sec"><div class="tr-h">' + esc(T('معاملات زنده', 'Live trades')) + '</div><div class="tr-cols"><span>' + esc(T('قیمت', 'Price')) + '</span><span>' + esc(T('مقدار', 'Amount')) + '</span><span>' + esc(T('زمان', 'Time')) + '</span></div><div id="liveTrades">' + tradesRowsHtml() + '</div></div>';
     el.innerHTML = html;
     var rb = document.getElementById('obRefresh');
     if (rb) rb.addEventListener('click', function () { renderDepth(); });
@@ -2210,6 +2330,10 @@
       if (depthSym !== q.symbol || state.tab !== 'depth') return;
       if (!d) { el.innerHTML = '<div class="na">' + esc(T('فعلاً در دسترس نیست.', 'Not available right now.')) + '</div>'; return; }
       renderDepthData(el, d);
+      startDepthWs(q.symbol);
+      /* پولینگ ۵ ثانیه‌ای می‌ماند: وقتی WS وصل نیست، دفتر را تازه می‌کند؛
+         وقتی WS وصل است، فقط یک همگام‌سازی دوره‌ای است (diffها بین دو پول
+         همان WS را پوشش می‌دهند). */
       depthTimer = setInterval(function () {
         if (state.tab !== 'depth' || state.view !== 'symbol' || depthSym !== q.symbol) { stopDepthPoll(); return; }
         fetchDepth(q.symbol).then(function (d2) { if (d2 && depthSym === q.symbol && state.tab === 'depth') renderDepthData(el, d2); });
@@ -2454,7 +2578,7 @@
   /* برای تست از کنسول مرورگر: window.__miniApp.openSymbol({provider:'binance',symbol:'BTCUSDT',display:'BTC/USDT',label:'BTC'}) */
   window.__miniApp = { openSymbol: openSymbol, setTf: setTf, setTab: setTab, state: state, renderPriceBox: renderPriceBox, setPriceMode: setPriceMode, updateLivePrice: updateLivePrice, renderSearch: renderSearch, renderCatalog: renderCatalog, zoomBy: zoomBy, toggleFs: toggleFs, startLive: startLive, stopLive: stopLive, MARKETS: MARKETS, TFS: TFS,
     showMainTab: showMainTab, openSearchModal: openSearchModal, closeSearchModal: closeSearchModal, renderSmBody: renderSmBody, renderSmTabs: renderSmTabs, sm: sm,
-    loadDash: loadDash, renderDash: renderDash, confluence: confluence, renderGauge: renderGauge, renderDepth: renderDepth, fetchDepth: fetchDepth, stopDepthPoll: stopDepthPoll, positionLastPxTag: positionLastPxTag,
+    loadDash: loadDash, renderDash: renderDash, confluence: confluence, renderGauge: renderGauge, renderDepth: renderDepth, renderDepthData: renderDepthData, fetchDepth: fetchDepth, stopDepthPoll: stopDepthPoll, applyDepthDiff: applyDepthDiff, tradesRowsHtml: tradesRowsHtml, getDepthData: function () { return depthData; }, getLiveTrades: function () { return liveTrades; }, setLiveTrades: function (t) { liveTrades = t || []; }, positionLastPxTag: positionLastPxTag,
     yahooSearch: yahooSearch, mofidResolve: mofidResolve, rememberQuote: rememberQuote,
     pmScale: pmScale, pmPan: pmPan, autoScale: autoScale, toLatest: toLatest, refreshAxisBtns: refreshAxisBtns,
     toggleFav: toggleFav, isFav: isFav, lookupQuote: lookupQuote, yahooMulti: yahooMulti, mofidBulk: mofidBulk, cgMarkets: cgMarkets };

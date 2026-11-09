@@ -186,12 +186,15 @@
   .an-card.an-lvl h4 svg { color: var(--p-lvl); }
   /* v1.2.2 — نقطهٔ رنگ بازار (تب‌ها) + دکمهٔ شناور ابزارها + پنل ابزار روی چارت. */
   .mkt-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-inline-end: 2px; vertical-align: 1px; }
-  .tools-fab { position: absolute; left: 8px; top: 44px; width: 44px; height: 44px; padding: 7px; background: rgba(13,19,32,.88); border: 1px solid var(--line); border-radius: 12px; cursor: pointer; z-index: 5; }
-  .tools-fab svg { width: 28px; height: 28px; display: block; }
-  .tools-fab:active { border-color: var(--acc); }
+  /* v1.7.0 — دکمه‌های ابزار و تنظیمات دیگر روی چارت نیستند؛ در ردیف بالا
+     سمت چپ‌اند (کلاس .tf-fs). پنل تنظیمات زیر همان سمت چپ باز می‌شود. */
+  .tools-fab, .set-fab { display: none; }
+  .tf-fs.on { background: rgba(240,106,21,.18); border-color: var(--acc); }
   /* v1.5.0 — نوار ابزار عمودی (جای پنل بزرگ پایین چارت): باریک، قابل اسکرول؛
      دکمهٔ تنظیمات چارت (بالا-راست چارت، مثل اپ اصلی) + پنل تنظیمات قابل اسکرول. */
-  .tools-strip { display: none; position: absolute; left: 8px; top: 96px; width: 44px; max-height: 220px; overflow-y: auto; overflow-x: hidden; background: rgba(13,19,32,.97); border: 1px solid var(--line); border-radius: 12px; padding: 4px; z-index: 6; }
+  /* v1.7.0 — پنل تنظیمات زیر دکمهٔ تنظیمات (سمت چپ) باز می‌شود؛ نوار ابزار
+     دستی هم از همان سمت چپ، زیر ردیف بالا. */
+  .tools-strip { display: none; position: absolute; left: 8px; top: 8px; width: 44px; max-height: 220px; overflow-y: auto; overflow-x: hidden; background: rgba(13,19,32,.97); border: 1px solid var(--line); border-radius: 12px; padding: 4px; z-index: 6; }
   .tools-strip.open { display: block; }
   .tools-strip::-webkit-scrollbar { width: 4px; }
   .tools-strip::-webkit-scrollbar-thumb { background: rgba(124,138,160,.5); border-radius: 2px; }
@@ -203,11 +206,10 @@
   .tools-strip #drawTools .tbtn.on { border-color: var(--acc); color: var(--acc); }
   .tools-strip .tbtn:disabled { opacity: .4; }
   .tool-note-bar { font-size: 12px; color: var(--mut); line-height: 1.6; padding: 6px 2px 0; }
-  .set-fab { position: absolute; right: 8px; top: 48px; width: 36px; height: 36px; padding: 6px; background: rgba(13,19,32,.88); border: 1px solid var(--acc); border-radius: 10px; cursor: pointer; z-index: 5; }
+  .set-fab { display: none; }
   .set-fab svg { width: 22px; height: 22px; display: block; }
   .set-fab.on { background: rgba(240,106,21,.18); }
-  /* v1.7.0 — تمام‌صفحه کنار تب تایم‌فریم رفت (دیگر روی چارت نیست)؛ پنل تنظیمات کوچک‌تر. */
-  .settings-panel { display: none; position: absolute; top: 92px; right: 8px; width: 216px; max-width: calc(100% - 16px); max-height: 280px; overflow-y: auto; background: rgba(13,19,32,.97); border: 1px solid var(--line); border-radius: 12px; padding: 8px; z-index: 7; box-shadow: 0 10px 24px rgba(0,0,0,.45); }
+  .settings-panel { display: none; position: absolute; top: 8px; left: 8px; width: 216px; max-width: calc(100% - 16px); max-height: 280px; overflow-y: auto; background: rgba(13,19,32,.97); border: 1px solid var(--line); border-radius: 12px; padding: 8px; z-index: 7; box-shadow: 0 10px 24px rgba(0,0,0,.45); }
   .settings-panel.open { display: block; }
   .settings-panel::-webkit-scrollbar { width: 4px; }
   .settings-panel::-webkit-scrollbar-thumb { background: rgba(124,138,160,.5); border-radius: 2px; }
@@ -226,8 +228,10 @@
   .switch::after { content: ''; position: absolute; top: 1px; left: 1px; width: 16px; height: 16px; border-radius: 50%; background: #e6e9ef; }
   .switch.on { background: var(--acc); border-color: var(--acc); }
   .switch.on::after { left: 19px; }
-  /* v1.7.0 — تمام‌صفحه کنار تب تایم‌فریم: دکمهٔ آیکون کوچک در ردیف تایم‌فریم. */
-  .tf-wrap { position: relative; margin: 10px 0 4px; display: flex; gap: 6px; align-items: center; }
+  /* v1.7.0 — چیدمان نوار بالا: تایم‌فریم + تمام‌صفحه سمت راست، ابزارهای دستی +
+     تنظیمات چارت سمت چپ، وسط خالی (space-between؛ در RTL گروه اول راست است). */
+  .tf-wrap { position: relative; margin: 10px 0 4px; display: flex; gap: 6px; align-items: center; justify-content: space-between; }
+  .tf-group { display: flex; gap: 6px; align-items: center; }
   .tf-fs { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; padding: 6px; background: var(--card); border: 1px solid var(--line); color: var(--txt); border-radius: 10px; cursor: pointer; flex: none; }
   .tf-fs svg { width: 18px; height: 18px; display: block; }
   .tf-fs:active { border-color: var(--acc); }
@@ -328,6 +332,17 @@
   .ob-spread { text-align: center; font-size: 12px; color: var(--mut); padding: 7px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 2px 0; }
   .sm-tabs button svg { width: 15px; height: 15px; vertical-align: -3px; }
   .sm-star svg { width: 20px; height: 20px; display: block; }
+  /* v1.7.0 — معاملات زنده (تب عمق): ۲۰ معاملهٔ آخر از aggTrade. */
+  .tr-sec { margin-top: 14px; }
+  .tr-h { font-size: 14px; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 7px; border-inline-start: 3px solid var(--acc); padding-inline-start: 8px; }
+  .tr-cols, .tr-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; padding: 4px 8px; font-size: 13px; text-align: end; }
+  .tr-cols { font-size: 11px; color: var(--mut); }
+  .tr-row { border-bottom: 1px solid rgba(120,140,170,.08); font-variant-numeric: tabular-nums; }
+  .tr-row:last-child { border-bottom: 0; }
+  .tr-row .tr-t { color: var(--mut); font-size: 12px; }
+  .live-dot { font-size: 11px; font-weight: 700; }
+  .live-dot.live-ws { color: var(--up); }
+  .live-dot.live-poll { color: #ffb347; }
 </style>
 </head>
 <body>
