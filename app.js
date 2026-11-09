@@ -1,5 +1,8 @@
 'use strict';
-/* Onella Nelora Lite v1.11.0 — منطق مینی‌اپ (صفحهٔ استاتیک؛ بدون سرور).
+/* Onella Nelora Lite v1.11.2 — منطق مینی‌اپ (صفحهٔ استاتیک؛ بدون سرور).
+   v1.11.2: (۱) قیمت لحظه‌ای زیر هر هشدار فعال — در مودال هشدار، زیر هر
+   هشدار فعال «قیمت الان + فاصله تا هدف» می‌آید و هر ۳۰ ثانیه تازه می‌شود
+   (برای همهٔ نمادها، نه فقط نماد فعلی)؛ سربرگ فهرست هم «هشدارهای من» شد.
    v1.11.0: (۱) آلرت سریع از ورکر — «📲 پیام تلگرام» اول به همین ورکر
    (POST /alert-add با initData) می‌رود؛ ورکر همان لحظه تأیید می‌فرستد و
    Cron هر دقیقه شلیک می‌کند (PC خاموش هم کار می‌کند). فقط اگر ورکر
@@ -2072,6 +2075,9 @@
      ۳۰ ثانیه‌ای وقتی هشدار فعال دارند. وقتی بسته است هیچ هشداری نمی‌رسد. */
   var alertTimer = null;
   var alertBannerTimer = null, axisMenuPrice = null;
+  /* v1.11.2 — قیمت لحظه‌ای هر نمادِ دارای هشدار فعال (برای ردیف‌های مودال). */
+  var liveAlertPrices = {};
+  var alertLiveTimer = null;
   /* v1.9.1 — وضعیت + محور قیمت و کراس‌هیر (سطح بیرونی تا تست و head هم ببینند). */
   var axisPlusPrice = null, xhPinned = false;
   function curAlertPrice() {
@@ -2140,6 +2146,44 @@
     alertTimer = setInterval(alertPollTick, 30000);
   }
   function stopAlertPoll() { if (alertTimer) { try { clearInterval(alertTimer); } catch (e) {} alertTimer = null; } }
+  /* v1.11.2 — قیمت لحظه‌ای هشدارها: برای هر نمادِ دارای هشدار فعال، قیمت
+     را می‌گیرد (از همان مسیر قیمت صفحه) و اگر مودال باز است، فهرست را
+     دوباره می‌کشد تا «قیمت الان» زیر هر هشدار تازه شود. */
+  function quoteForSymbol(sym) {
+    try {
+      var keys = Object.keys(MARKETS || {});
+      for (var ki = 0; ki < keys.length; ki++) {
+        var g = MARKETS[keys[ki]];
+        if (!g || !g.quotes) continue;
+        for (var i = 0; i < g.quotes.length; i++) if (g.quotes[i].symbol === sym) return g.quotes[i];
+      }
+    } catch (e) {}
+    return null;
+  }
+  async function refreshAlertLivePrices() {
+    var A = window.OnellaAlerts;
+    if (!A) return;
+    var act = [];
+    try { act = A.listActive(); } catch (e) { act = []; }
+    var seen = {};
+    for (var i = 0; i < act.length; i++) {
+      var sym = act[i].sym;
+      if (seen[sym]) continue;
+      seen[sym] = true;
+      var q = quoteForSymbol(sym);
+      if (!q) continue;
+      var p = await fetchCurrentPrice(q);
+      if (p != null && isFinite(p)) liveAlertPrices[sym] = { price: p, at: Date.now() };
+    }
+    var m = $('alertModal');
+    if (m && m.style.display !== 'none') renderAlertList();
+  }
+  function startAlertLivePrices() {
+    stopAlertLivePrices();
+    refreshAlertLivePrices();
+    alertLiveTimer = setInterval(refreshAlertLivePrices, 30000);
+  }
+  function stopAlertLivePrices() { if (alertLiveTimer) { try { clearInterval(alertLiveTimer); } catch (e) {} alertLiveTimer = null; } }
   function ensureAlertUI() {
     if ($('alertModal')) return;
     var bd = document.body;
@@ -2172,15 +2216,15 @@
       + '<label class="al-lb">' + esc(T('پیام', 'Message')) + '<input id="alMsg" class="al-in" autocomplete="off" maxlength="120"></label>'
       + '<label class="al-ck"><input type="checkbox" id="alTelegram"><span>' + esc(T('📲 پیام تلگرام هنگام فعال‌شدن', '📲 Telegram message when it triggers')) + '</span></label>'
       + '<div class="al-tgnote" id="alTgNote"></div>'
-      + '<div class="al-note">' + esc(T('اعلان درون‌برنامه (بنر + نشان) فقط وقتی مینی‌اپ باز است می‌رسد. با «پیام تلگرام» ربات هم وقتی قیمت برسد در چت پیام می‌دهد (کامپیوتر روشن باشد).', 'In-app notification (banner + badge) only arrives while the Mini App is open. With “Telegram message”, the bot also messages you in chat when the price gets there (while the PC is on).')) + '</div>'
+      + '<div class="al-note">' + esc(T('اعلان درون‌برنامه (بنر + نشان) فقط وقتی مینی‌اپ باز است می‌رسد. با «پیام تلگرام» وقتی قیمت برسد در چت پیام می‌دهد — حتی اگر کامپیوتر خاموش باشد.', 'In-app notification (banner + badge) only arrives while the Mini App is open. With “Telegram message”, you get a chat message when the price gets there — even if the PC is off.')) + '</div>'
       + '<div class="al-err" id="alErr" style="display:none"></div>'
       + '<div class="al-actions"><button class="tbtn on" id="alCreate" type="button">' + esc(T('ایجاد هشدار', 'Create alert')) + '</button><button class="tbtn" id="alCancel" type="button">' + esc(T('انصراف', 'Cancel')) + '</button></div>'
-      + '<div class="al-list-h">' + esc(T('هشدارهای این نماد', 'Alerts for this symbol')) + '</div>'
+      + '<div class="al-list-h">' + esc(T('هشدارهای من', 'My alerts')) + '</div>'
       + '<div id="alList"></div></div>';
     bd.appendChild(modal);
-    $('alClose').addEventListener('click', function () { modal.style.display = 'none'; });
-    $('alCancel').addEventListener('click', function () { modal.style.display = 'none'; });
-    modal.addEventListener('click', function (e) { if (e.target === modal) modal.style.display = 'none'; });
+    $('alClose').addEventListener('click', function () { modal.style.display = 'none'; stopAlertLivePrices(); });
+    $('alCancel').addEventListener('click', function () { modal.style.display = 'none'; stopAlertLivePrices(); });
+    modal.addEventListener('click', function (e) { if (e.target === modal) { modal.style.display = 'none'; stopAlertLivePrices(); } });
     $('alCreate').addEventListener('click', function () { createAlertFromModal(); });
     document.addEventListener('click', function (e) {
       var m2 = $('axisMenu');
@@ -2219,6 +2263,7 @@
     }
     $('alErr').style.display = 'none';
     renderAlertList();
+    startAlertLivePrices(); // v1.11.2 — قیمت لحظه‌ای زیر هشدارهای فعال
     if (window.OnellaAlerts && window.OnellaAlerts.ready) {
       window.OnellaAlerts.ready.then(function () { try { renderAlertList(); refreshAlertBadge(); } catch (e) {} }).catch(function () {});
     }
@@ -2241,6 +2286,12 @@
     }
     function row(a, kind) {
       var sub = A.condLabel(a.cond, lang) + ' ' + fmt(a.price) + ' • ' + (a.repeat === 'every' ? T('هر بار', 'Every time') : T('فقط یک بار', 'Once only')) + expTxt(a);
+      /* v1.11.2 — قیمت لحظه‌ای زیر هر هشدار فعال + فاصله تا هدف. */
+      if (kind === 'active' && liveAlertPrices[a.sym]) {
+        var lp = liveAlertPrices[a.sym].price;
+        var pct = (lp - a.price) / a.price * 100;
+        sub += ' • 📍 ' + fmt(lp) + ' (' + (pct > 0 ? '+' : '') + pct.toFixed(1) + '% ' + T('تا هدف', 'to target') + ')';
+      }
       var fired = '';
       if (kind === 'fired' && a.firedAt) {
         try { fired = ' • ' + T('فعال شد ', 'Fired ') + new Date(a.firedAt).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }); } catch (e) {}
@@ -3293,7 +3344,7 @@
     loadDash: loadDash, renderDash: renderDash, confluence: confluence, renderGauge: renderGauge, renderDepth: renderDepth, renderDepthData: renderDepthData, fetchDepth: fetchDepth, stopDepthPoll: stopDepthPoll, applyDepthDiff: applyDepthDiff, tradesRowsHtml: tradesRowsHtml, getDepthData: function () { return depthData; }, getLiveTrades: function () { return liveTrades; }, setLiveTrades: function (t) { liveTrades = t || []; }, positionLastPxTag: positionLastPxTag,
     yahooSearch: yahooSearch, mofidResolve: mofidResolve, rememberQuote: rememberQuote,
     iranRate: iranRate, perfFromDaily: perfFromDaily, frankfurterWeek: frankfurterWeek, iranRatesBulk: iranRatesBulk, dailyCandlesFor: dailyCandlesFor,
-    openAlertModal: openAlertModal, showPriceAxisMenu: showPriceAxisMenu, checkAlertsNow: checkAlertsNow, refreshAlertBadge: refreshAlertBadge, renderAlertList: renderAlertList,
+    openAlertModal: openAlertModal, showPriceAxisMenu: showPriceAxisMenu, checkAlertsNow: checkAlertsNow, refreshAlertBadge: refreshAlertBadge, renderAlertList: renderAlertList, refreshAlertLivePrices: refreshAlertLivePrices, stopAlertLivePrices: stopAlertLivePrices,
     showAxisPlus: showAxisPlus, hideAxisPlus: hideAxisPlus, refreshAxisPlus: refreshAxisPlus, snapXhPrice: snapXhPrice, updateStripMore: updateStripMore, dismissCrosshair: dismissCrosshair, isXhPinned: function () { return xhPinned; }, getAxisPlusPrice: function () { return axisPlusPrice; },
     pmScale: pmScale, pmPan: pmPan, autoScale: autoScale, toLatest: toLatest, refreshAxisBtns: refreshAxisBtns,
     toggleFav: toggleFav, isFav: isFav, lookupQuote: lookupQuote, yahooMulti: yahooMulti, mofidBulk: mofidBulk, cgMarkets: cgMarkets };
