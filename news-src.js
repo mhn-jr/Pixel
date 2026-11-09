@@ -10,6 +10,14 @@ const { esc, section } = window.__miniDisplay;
 
 const GNEWS = 'https://news.google.com/rss/search';
 const COINDESK_RSS = 'https://www.coindesk.com/arc/outboundfeeds/rss/';
+// v1.2.3 — خوراک جایگزین خبر (وقتی Google News از IP ورکر 503 می‌دهد):
+// BBC Business برای بازارهای جهانی، BBC Persian برای نرخ/بورس ایران.
+const BBC_BUSINESS = 'https://feeds.bbci.co.uk/news/business/rss.xml';
+const BBC_PERSIAN = 'https://feeds.bbci.co.uk/persian/rss.xml';
+const FALLBACK_RSS = {
+  stock: BBC_BUSINESS, index: BBC_BUSINESS, commodity: BBC_BUSINESS, forex: BBC_BUSINESS,
+  'iran-rate': BBC_PERSIAN, 'iran-stock': BBC_PERSIAN
+};
 
 const COIN_NAMES = {
   BTC: 'Bitcoin', ETH: 'Ethereum', SOL: 'Solana', BNB: 'BNB', XRP: 'XRP',
@@ -171,12 +179,20 @@ function createNews(opts) {
   }
 
   async function marketNews(market, lang, limit) {
-    if (market === 'crypto') return (await fetchRss(COINDESK_RSS)).slice(0, limit || 5);
+    if (market === 'crypto') {
+      var ci = await fetchRss(COINDESK_RSS);
+      if (!ci.length) ci = await fetchRss(BBC_BUSINESS);
+      return ci.slice(0, limit || 5);
+    }
     const q = marketQuery(market, lang);
     if (!q) return [];
     const fa = lang === 'fa';
     const url = GNEWS + '?q=' + encodeURIComponent(q) + '&hl=' + (fa ? 'fa' : 'en-US') + '&gl=' + (fa ? 'IR' : 'US') + '&ceid=' + (fa ? 'IR:fa' : 'US:en');
-    return (await fetchRss(url)).slice(0, limit || 5);
+    var items = await fetchRss(url);
+    /* v1.2.3 — Google News از IP ورکر 503 می‌دهد (بلاک «ترافیک غیرعادی»)؛
+       اگر هیچ خبری نیامد، BBC را جایگزین کن تا بخش خبر خالی نماند. */
+    if (!items.length && FALLBACK_RSS[market]) items = await fetchRss(FALLBACK_RSS[market]);
+    return items.slice(0, limit || 5);
   }
 
   // هر خبر: برچسب نماد + تیتر + زمان + میزان تاثیر (تخمینی).
