@@ -1850,8 +1850,16 @@
         if (gMode === 'xh') { setCurFromX(p); xhPriceAtY(p.y); try { window.head(); window.draw(); } catch (err) {} return; }
         if (gMode === 'pscale' && pm0) {
           try {
+            /* v1.14.8-fix — کشیدنِ عمودی روی محور قیمت = جابه‌جاییِ عمودیِ مقیاس
+               (مثل تریدینگ‌ویو): قیمتی که زیر انگشت بود زیر انگشت می‌ماند. */
             window.__ov = window.__ov || {};
-            window.__ov.pm = pmScale(pm0, Math.exp(dy / 170), window.__geo || {});
+            var G2 = window.__geo || {};
+            var pA = (typeof G2.inv === 'function') ? G2.inv(Math.max(0, Math.min(G2.ph || 0, gy0))) : null;
+            var pB = (typeof G2.inv === 'function') ? G2.inv(Math.max(0, Math.min(G2.ph || 0, p.y))) : null;
+            if (pA != null && pB != null && isFinite(pA) && isFinite(pB)) {
+              var dp = pB - pA;
+              window.__ov.pm = { hi: pm0.hi + dp, lo: pm0.lo + dp };
+            }
             setAxisXh(p.y); // v1.14.8 — برچسب + ⊕ با انگشت روی محور حرکت می‌کنند.
             window.draw(); window.head(); refreshAxisBtns();
           } catch (err) {}
