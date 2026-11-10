@@ -858,32 +858,42 @@ async function ffNextHighImpact(nowMs) {
   } catch (e) { return { ok: false, event: null }; }
 }
 
-/* فهرست قیمت کانال — همان ۱۹ نماد + ترتیب + ایموجیِ channel.js. */
+/* فهرست قیمت کانال — همان ۱۹ نماد + ترتیب + ایموجیِ channel.js.
+   گروه‌بندی (v1.14.1، مثل PC): سرگروه جدا + هر نماد یک خط؛ LRM جلوی «$»
+   در فارسی تا «$» پشت عدد نپرد. */
 const CH_PRICE_SYMBOLS = [
-  { kind: 'nerkh', key: 'tether', emoji: '💵', name: { en: 'Tether', fa: 'تتر' } },
-  { kind: 'nerkh', key: 'gold', emoji: '🥇', name: { en: 'Gold 18k', fa: 'طلا ۱۸ عیار' } },
-  { kind: 'okx', sym: 'BTCUSDT', emoji: '🟧', name: { en: 'Bitcoin', fa: 'بیت‌کوین' } },
-  { kind: 'okx', sym: 'PAXGUSDT', emoji: '🟨', name: { en: 'XAUUSD', fa: 'XAUUSD' } },
-  { kind: 'yahoo', sym: '^DJI', emoji: '🟦', name: { en: 'US30', fa: 'US30' } },
-  { kind: 'yahoo', sym: 'EURUSD=X', emoji: '💱', name: { en: 'EURUSD', fa: 'EURUSD' } },
-  { kind: 'yahoo', sym: '^NDX', emoji: '🟪', name: { en: 'NDX', fa: 'NDX' } },
-  { kind: 'yahoo', sym: 'CL=F', emoji: '🛢️', name: { en: 'USOIL', fa: 'USOIL' } },
-  { kind: 'okx', sym: 'ETHUSDT', emoji: '🔷', name: { en: 'Ethereum', fa: 'اتریوم' } },
-  { kind: 'nerkh', key: 'half', emoji: '🟠', name: { en: 'Half Coin', fa: 'نیم سکه' } },
-  { kind: 'nerkh', key: 'quarter', emoji: '🟡', name: { en: 'Quarter Coin', fa: 'ربع سکه' } },
-  { kind: 'nerkh', key: 'coin', emoji: '🟢', name: { en: 'Full Coin (New)', fa: 'سکه تمام جدید' } },
-  { kind: 'nerkh', key: 'bahar', emoji: '⚪', name: { en: 'Full Coin (Old)', fa: 'سکه تمام قدیم' } },
-  { kind: 'yahoo', sym: 'AAPL', emoji: '📱', name: { en: 'Apple', fa: 'اپل' } },
-  { kind: 'yahoo', sym: 'MSFT', emoji: '💻', name: { en: 'Microsoft', fa: 'مایکروسافت' } },
-  { kind: 'yahoo', sym: 'NVDA', emoji: '🎮', name: { en: 'NVIDIA', fa: 'انویدیا' } },
-  { kind: 'nerkh', key: 'silver', emoji: '🥈', name: { en: 'Silver', fa: 'نقره' } },
-  { kind: 'yahoo', sym: 'BZ=F', emoji: '⛽', name: { en: 'Brent', fa: 'نفت برنت' } },
-  { kind: 'yahoo', sym: 'HG=F', emoji: '🟤', name: { en: 'Copper', fa: 'مس' } }
+  { kind: 'nerkh', key: 'tether', group: 'iran', emoji: '💵', name: { en: 'Tether', fa: 'تتر' } },
+  { kind: 'nerkh', key: 'gold', group: 'iran', emoji: '🥇', name: { en: 'Gold 18k', fa: 'طلا ۱۸ عیار' } },
+  { kind: 'okx', sym: 'BTCUSDT', group: 'crypto', emoji: '🟧', name: { en: 'Bitcoin', fa: 'بیت‌کوین' } },
+  { kind: 'okx', sym: 'PAXGUSDT', group: 'mixed', emoji: '🟨', name: { en: 'XAUUSD', fa: 'XAUUSD' } },
+  { kind: 'yahoo', sym: '^DJI', group: 'mixed', emoji: '🟦', name: { en: 'US30', fa: 'US30' } },
+  { kind: 'yahoo', sym: 'EURUSD=X', group: 'forex', emoji: '💱', name: { en: 'EURUSD', fa: 'EURUSD' } },
+  { kind: 'yahoo', sym: '^NDX', group: 'mixed', emoji: '🟪', name: { en: 'NDX', fa: 'NDX' } },
+  { kind: 'yahoo', sym: 'CL=F', group: 'mixed', emoji: '🛢️', name: { en: 'USOIL', fa: 'USOIL' } },
+  { kind: 'okx', sym: 'ETHUSDT', group: 'crypto', emoji: '🔷', name: { en: 'Ethereum', fa: 'اتریوم' } },
+  { kind: 'nerkh', key: 'half', group: 'iran', emoji: '🟠', name: { en: 'Half Coin', fa: 'نیم سکه' } },
+  { kind: 'nerkh', key: 'quarter', group: 'iran', emoji: '🟡', name: { en: 'Quarter Coin', fa: 'ربع سکه' } },
+  { kind: 'nerkh', key: 'coin', group: 'iran', emoji: '🟢', name: { en: 'Full Coin (New)', fa: 'سکه تمام جدید' } },
+  { kind: 'nerkh', key: 'bahar', group: 'iran', emoji: '⚪', name: { en: 'Full Coin (Old)', fa: 'سکه تمام قدیم' } },
+  { kind: 'yahoo', sym: 'AAPL', group: 'stocks', emoji: '📱', name: { en: 'Apple', fa: 'اپل' } },
+  { kind: 'yahoo', sym: 'MSFT', group: 'stocks', emoji: '💻', name: { en: 'Microsoft', fa: 'مایکروسافت' } },
+  { kind: 'yahoo', sym: 'NVDA', group: 'stocks', emoji: '🎮', name: { en: 'NVIDIA', fa: 'انویدیا' } },
+  { kind: 'nerkh', key: 'silver', group: 'mixed', emoji: '🥈', name: { en: 'Silver', fa: 'نقره' } },
+  { kind: 'yahoo', sym: 'BZ=F', group: 'mixed', emoji: '⛽', name: { en: 'Brent', fa: 'نفت برنت' } },
+  { kind: 'yahoo', sym: 'HG=F', group: 'mixed', emoji: '🟤', name: { en: 'Copper', fa: 'مس' } }
+];
+const CH_PRICE_GROUPS = [
+  { key: 'iran', emoji: '🇮🇷', label: { en: 'Iran', fa: 'ایران' } },
+  { key: 'crypto', emoji: '🪙', label: { en: 'Crypto', fa: 'کریپتو' } },
+  { key: 'stocks', emoji: '📈', label: { en: 'Stocks', fa: 'سهام' } },
+  { key: 'forex', emoji: '💱', label: { en: 'Forex', fa: 'فارکس' } },
+  { key: 'mixed', emoji: '🥇', label: { en: 'Gold, Commodities & Indices', fa: 'طلا، کالا و شاخص' } }
 ];
 function buildChannelPrices(lang, data, nowMs) {
   const fa = lang === 'fa';
   const head = fa ? '📊 قیمت بازارها — ' + chTimeTehran(nowMs) : '📊 Market prices — ' + chTimeTehran(nowMs);
-  const lines = [];
+  const byGroup = {};
+  for (const g of CH_PRICE_GROUPS) byGroup[g.key] = [];
   for (const s of CH_PRICE_SYMBOLS) {
     let price = null, chg = null, toman = false;
     if (s.kind === 'nerkh') {
@@ -899,12 +909,18 @@ function buildChannelPrices(lang, data, nowMs) {
     if (price === null) continue;
     const chgStr = (typeof chg === 'number') ? ' (' + chFmtChg(chg) + ')' : '';
     const name = s.name[fa ? 'fa' : 'en'];
-    if (toman) lines.push(s.emoji + ' ' + name + ': ' + chFmtPrice(price) + (fa ? ' تومان' : ' Toman'));
-    else lines.push(s.emoji + ' ' + name + ': $' + chFmtPrice(price) + chgStr);
+    if (toman) byGroup[s.group].push(s.emoji + ' ' + name + ': ' + chFmtPrice(price) + (fa ? ' تومان' : ' Toman'));
+    else byGroup[s.group].push(s.emoji + ' ' + name + ': ' + (fa ? '\u200E' : '') + '$' + chFmtPrice(price) + chgStr);
   }
-  if (!lines.length) return null;
+  const lines = [head];
+  for (const g of CH_PRICE_GROUPS) {
+    if (!byGroup[g.key].length) continue;
+    lines.push(g.emoji + ' ' + g.label[fa ? 'fa' : 'en']);
+    lines.push(...byGroup[g.key]);
+  }
+  if (lines.length < 2) return null;
   const foot = '📅 ' + chDateTehran(nowMs, lang) + ' — ' + chTimeTehran(nowMs);
-  return chRenderLines(lang, [head].concat(lines).concat([foot]));
+  return chRenderLines(lang, lines.concat([foot]));
 }
 
 /* خلاصهٔ ۱۵ نمادی — همان گروه‌ها و جانشین‌های digest-snapshot.js؛ جانشین
@@ -1373,6 +1389,61 @@ async function handleStatus() {
   });
 }
 
+/* v1.14.2 — ادمینِ وب (صفحهٔ دومِ گیت‌هاب، admin.html): POST /admin با
+   رمزِ ADMIN_SECRET. فقط «ارسال دستی» خلاصه/قیمت/خبر به کانال‌ها — جایگزینِ
+   /admin تلگرامی نیست؛ /admin تلگرامیِ PC اولویت دارد و این صفحه فقط وقتی
+   PC خاموش است به کار می‌آید (دستور مالک ۲۰۲۶-۱۱-۱۰). رمز هرگز در صفحه یا
+   ریپو نیست — کاربر یک بار در صفحه تایپش می‌کند و در localStorage همان گوشی
+   می‌ماند؛ بدون رمز یا با رمز اشتباه → 401. کانال‌ها از ضربانِ PC در KV
+   می‌آیند (همانِ Cron) — پس حتی با PC خاموش، مقصدها معلوم‌اند. ارسال دستی
+   اسلاتِ زمان‌بندی را علامت نمی‌زند (مثل postNow در PC) — پستِ زمان‌بندیِ
+   بعدی سر جایش می‌آید. خبرِ دستی هم مثل Cronِ ورکر متن‌تنهاست (بدون عکس). */
+async function handleAdmin(req) {
+  const kv = alertKV();
+  const token = alertEnv('TELEGRAM_BOT_TOKEN');
+  const secret = alertEnv('ADMIN_SECRET');
+  if (!kv || !token || !secret) return json({ ok: false, error: 'admin_not_configured' }, 503);
+  let body = {};
+  try { body = await req.json(); } catch (e) { return json({ ok: false, error: 'bad_json' }, 400); }
+  if (!body || typeof body.secret !== 'string' || body.secret !== secret) return json({ ok: false, error: 'unauthorized' }, 401);
+  const action = body.action === 'send' ? 'send' : 'preview';
+  const kind = body.kind;
+  if (kind !== 'news' && kind !== 'prices' && kind !== 'digest') return json({ ok: false, error: 'bad_kind' }, 400);
+  const target = body.target;
+  if (target !== 'fa' && target !== 'en' && target !== 'both') return json({ ok: false, error: 'bad_target' }, 400);
+  let hb = null;
+  try { hb = JSON.parse(await kv.get('pc-heartbeat') || 'null'); } catch (e) { /* خالی */ }
+  if (!hb || !Array.isArray(hb.channels) || !hb.channels.length) return json({ ok: false, error: 'no_heartbeat' }, 503);
+  const langs = target === 'both' ? ['fa', 'en'] : [target];
+  const channels = hb.channels.filter(c => c && c.chatId && langs.includes(c.lang)).slice(0, 4);
+  if (!channels.length) return json({ ok: false, error: 'no_channel' }, 503);
+  const now = Date.now();
+  const texts = {};
+  if (kind === 'news') {
+    for (const c of channels) {
+      const res = await fetchChannelNews(c.lang).catch(() => null);
+      const text = res ? buildChannelNews(c.lang, res, now) : null;
+      if (text) texts[c.lang] = text;
+    }
+  } else {
+    const data = await fetchChannelData(now).catch(() => null);
+    if (!data) return json({ ok: false, error: 'no_data' }, 502);
+    for (const c of channels) {
+      const text = kind === 'prices' ? buildChannelPrices(c.lang, data, now) : buildChannelDigest(c.lang, data, now);
+      if (text) texts[c.lang] = text;
+    }
+  }
+  if (!Object.keys(texts).length) return json({ ok: false, error: 'empty' }, 502);
+  if (action === 'preview') return json({ ok: true, kind, target, texts });
+  const posted = [];
+  for (const c of channels) {
+    if (!texts[c.lang]) continue;
+    if (await tgSend(token, c.chatId, texts[c.lang])) posted.push(c.lang);
+  }
+  if (!posted.length) return json({ ok: false, error: 'send_failed' }, 502);
+  return json({ ok: true, kind, target, posted });
+}
+
 /* ---- روت اصلی ---- */
 async function handle(req) {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders() });
@@ -1384,6 +1455,11 @@ async function handle(req) {
   if (kind === 'status') {
     if (req.method !== 'GET') return json({ ok: false, error: 'bad' }, 405);
     return handleStatus();
+  }
+  /* v1.14.2 — ادمینِ وب (صفحهٔ دومِ گیت‌هاب). */
+  if (kind === 'admin') {
+    if (req.method !== 'POST') return json({ ok: false, error: 'bad' }, 405);
+    return handleAdmin(req);
   }
   if (kind === 'pc-heartbeat') {
     if (req.method !== 'POST') return json({ ok: false, error: 'bad' }, 405);
@@ -1493,7 +1569,7 @@ async function handle(req) {
       return json({ error: 'upstream failed' }, 502);
     }
   }
-  return json({ error: 'unknown route', routes: ['yahoo-chart', 'yahoo-quote', 'yahoo-multi', 'rss', 'nerkhsanj', 'binance', 'coingecko', 'iran', 'okx', 'mofid', 'alert-add', 'alert-del', 'alert-list', 'alert-list-bot', 'pc-heartbeat', 'channel-posted'] }, 404);
+  return json({ error: 'unknown route', routes: ['yahoo-chart', 'yahoo-quote', 'yahoo-multi', 'rss', 'nerkhsanj', 'binance', 'coingecko', 'iran', 'okx', 'mofid', 'alert-add', 'alert-del', 'alert-list', 'alert-list-bot', 'pc-heartbeat', 'channel-posted', 'status', 'admin'] }, 404);
 }
 
 addEventListener('fetch', function (event) {

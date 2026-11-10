@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ادمین Onella — ارسال دستی به کانال</title>
+<style>
+  :root { --bg:#0f1115; --card:#171a21; --line:#262b36; --text:#e8eaf0; --muted:#9aa3b2; --orange:#f5820d; --green:#2fbf71; --red:#e5484d; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:Tahoma, sans-serif; font-size:15px; line-height:1.7; }
+  .wrap { max-width:560px; margin:0 auto; padding:16px 14px 40px; }
+  h1 { font-size:19px; margin:4px 0 2px; }
+  .sub { color:var(--muted); font-size:13px; margin:0 0 14px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin:12px 0; }
+  .card h2 { font-size:16px; margin:0 0 8px; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; }
+  button { font-family:inherit; font-size:15px; border:0; border-radius:10px; padding:11px 16px; cursor:pointer; background:#232833; color:var(--text); flex:1; min-width:100px; }
+  button:disabled { opacity:.45; cursor:default; }
+  button.primary { background:var(--orange); color:#fff; font-weight:bold; }
+  button.danger { background:transparent; border:1px solid var(--red); color:var(--red); flex:0 0 auto; }
+  input[type=password] { font-family:inherit; font-size:15px; width:100%; padding:11px 12px; border-radius:10px; border:1px solid var(--line); background:#0f1115; color:var(--text); direction:ltr; text-align:left; }
+  .muted { color:var(--muted); font-size:13px; }
+  .ok { color:var(--green); } .err { color:var(--red); }
+  pre { white-space:pre-wrap; word-break:break-word; background:#0f1115; border:1px solid var(--line); border-radius:10px; padding:12px; font-size:13px; line-height:1.8; max-height:420px; overflow:auto; direction:rtl; }
+  .badge { display:inline-block; padding:2px 10px; border-radius:20px; font-size:13px; background:#232833; }
+  .badge.on { background:var(--green); color:#fff; } .badge.off { background:var(--red); color:#fff; }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🛠 ادمین Onella</h1>
+  <p class="sub">ارسال دستی خبر / قیمت / خلاصه به کانال‌ها — <b>فقط وقتی PC خاموش است.</b><br>
+  وقتی PC روشن است، از <b>/admin</b> تلگرام استفاده کن؛ آن روش اصلی است و این صفحه فقط جانشین آن است.</p>
+
+  <div class="card" id="lockCard">
+    <h2>🔑 رمز ادمین</h2>
+    <p class="muted">رمز را یک بار وارد کن؛ فقط در همین گوشی ذخیره می‌شود و هیچ‌وقت به گیت‌هاب فرستاده نمی‌شود. رمز را از کلادفلر (ADMIN_SECRET) برمی‌داری.</p>
+    <input type="password" id="secret" placeholder="ADMIN_SECRET" autocomplete="off">
+    <div class="row" style="margin-top:10px">
+      <button class="primary" id="saveSecret">ذخیرهٔ رمز</button>
+      <button class="danger hidden" id="forgetSecret">فراموش کردن رمز</button>
+    </div>
+    <p class="muted" id="lockMsg"></p>
+  </div>
+
+  <div class="card hidden" id="mainCard">
+    <h2>📡 وضعیت</h2>
+    <p id="statusBox" class="muted">در حال خواندن وضعیت…</p>
+    <div class="row"><button id="refreshStatus">🔄 تازه‌سازی وضعیت</button></div>
+  </div>
+
+  <div class="card hidden" id="sendCard">
+    <h2>📣 ارسال دستی</h2>
+    <p class="muted">اول پیش‌نمایش می‌آید، بعد با «بفرست» تأیید می‌کنی. خبرِ دستی از ورکر متن‌تنهاست (بدون عکس)؛ عکس فقط وقتی PC روشن است می‌آید.</p>
+    <div id="kinds"></div>
+  </div>
+
+  <div class="card hidden" id="previewCard">
+    <h2 id="previewTitle">پیش‌نمایش</h2>
+    <pre id="previewText"></pre>
+    <div class="row">
+      <button class="primary" id="confirmSend">✅ بفرست</button>
+      <button id="cancelSend">لغو</button>
+    </div>
+    <p id="sendMsg"></p>
+  </div>
+</div>
+<script>
+(function () {
+  'use strict';
+  var WORKER = 'https://pixelminiapp.mahanjafari039.workers.dev';
+  var LS_KEY = 'onella_admin_secret';
+  var KINDS = [
+    { key: 'news', icon: '📰', label: 'خبر' },
+    { key: 'prices', icon: '📊', label: 'قیمت' },
+    { key: 'digest', icon: '📋', label: 'خلاصه' }
+  ];
+  var TARGETS = [
+    { key: 'fa', label: '🇮🇷 کانال فارسی' },
+    { key: 'en', label: '🇬🇧 کانال انگلیسی' },
+    { key: 'both', label: '🌍 هر دو کانال' }
+  ];
+  var secret = localStorage.getItem(LS_KEY) || '';
+  var pending = null; // {kind, target}
+  var $ = function (id) { return document.getElementById(id); };
+
+  function getSecret() { return (secret || '').trim(); }
+  function showMain() {
+    $('lockCard').classList.add('hidden');
+    $('mainCard').classList.remove('hidden');
+    $('sendCard').classList.remove('hidden');
+    $('forgetSecret').classList.remove('hidden');
+    loadStatus();
+  }
+  function showLock(msg) {
+    $('lockCard').classList.remove('hidden');
+    $('mainCard').classList.add('hidden');
+    $('sendCard').classList.add('hidden');
+    $('previewCard').classList.add('hidden');
+    if (msg) $('lockMsg').textContent = msg;
+  }
+
+  $('saveSecret').onclick = function () {
+    var v = $('secret').value.trim();
+    if (!v) { $('lockMsg').textContent = 'رمز را وارد کن.'; return; }
+    secret = v;
+    localStorage.setItem(LS_KEY, v);
+    $('secret').value = '';
+    $('lockMsg').textContent = '';
+    showMain();
+  };
+  $('forgetSecret').onclick = function () {
+    secret = '';
+    localStorage.removeItem(LS_KEY);
+    $('forgetSecret').classList.add('hidden');
+    showLock('رمز پاک شد.');
+  };
+  $('secret').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('saveSecret').click(); });
+
+  function loadStatus() {
+    var box = $('statusBox');
+    box.textContent = 'در حال خواندن وضعیت…';
+    fetch(WORKER + '/status').then(function (r) { return r.json(); }).then(function (j) {
+      if (!j || j.ok !== true) { box.textContent = 'وضعیت خوانده نشد.'; return; }
+      var pc = (typeof j.heartbeatAgeMin === 'number')
+        ? (j.heartbeatAgeMin <= 10
+          ? '<span class="badge on">PC روشن است</span> (ضربان ' + j.heartbeatAgeMin + ' دقیقه پیش)'
+          : '<span class="badge off">PC خاموش است</span> (آخرین ضربان ' + j.heartbeatAgeMin + ' دقیقه پیش)')
+        : '<span class="badge off">PC خاموش است</span> (ضربانی نرسیده)';
+      var times = 'خلاصه: ' + (j.digestTimes || []).join('، ') + ' • قیمت: ' + (j.priceHours || []).map(function (h) { return String(h).padStart(2, '0') + ':00'; }).join('، ') + ' • خبر: ' + (j.newsTimes || []).join('، ');
+      var last = j.lastPosted || {};
+      var lastTxt = 'آخرین پست‌ها — خلاصه: ' + (last.digest || '—') + ' • قیمت: ' + (last.prices || '—') + ' • خبر: ' + (last.news || '—');
+      box.innerHTML = pc + '<br>' + times + '<br>' + lastTxt;
+    }).catch(function () { box.textContent = 'وضعیت خوانده نشد — ورکر در دسترس نیست.'; });
+  }
+  $('refreshStatus').onclick = loadStatus;
+
+  var kindsEl = $('kinds');
+  KINDS.forEach(function (k) {
+    var h = document.createElement('h2');
+    h.textContent = k.icon + ' ' + k.label;
+    h.style.margin = '14px 0 8px';
+    kindsEl.appendChild(h);
+    var row = document.createElement('div');
+    row.className = 'row';
+    TARGETS.forEach(function (t) {
+      var b = document.createElement('button');
+      b.textContent = t.label;
+      b.onclick = function () { requestPreview(k.key, t.key, b); };
+      row.appendChild(b);
+    });
+    kindsEl.appendChild(row);
+  });
+
+  function api(body) {
+    return fetch(WORKER + '/admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(function (r) { return r.json().then(function (j) { return { status: r.status, json: j }; }); });
+  }
+  function errText(j) {
+    if (!j) return 'ورکر جواب نداد.';
+    if (j.error === 'unauthorized') return 'رمز اشتباه است — رمز را دوباره وارد کن.';
+    if (j.error === 'admin_not_configured') return 'رمز ادمین در کلادفلر تنظیم نشده (ADMIN_SECRET).';
+    if (j.error === 'no_heartbeat') return 'هنوز ضربانی از PC نرسیده — اول یک بار PC را روشن کن تا کانال‌ها ثبت شوند.';
+    if (j.error === 'no_channel') return 'کانالی برای این زبان ثبت نشده.';
+    if (j.error === 'empty' || j.error === 'no_data') return 'داده‌ای برای ساخت این پست نیامد — دوباره امتحان کن.';
+    if (j.error === 'send_failed') return 'ارسال به تلگرام ناموفق بود.';
+    return 'خطا: ' + (j.error || 'نامعلوم');
+  }
+
+  function requestPreview(kind, target, btn) {
+    var s = getSecret();
+    if (!s) { showLock('اول رمز را وارد کن.'); return; }
+    var label = KINDS.find(function (k) { return k.key === kind; }).label + ' → ' + TARGETS.find(function (t) { return t.key === target; }).label;
+    $('previewTitle').textContent = 'پیش‌نمایش — ' + label;
+    $('previewText').textContent = 'در حال ساخت پیش‌نمایش…';
+    $('sendMsg').textContent = '';
+    $('previewCard').classList.remove('hidden');
+    $('previewCard').scrollIntoView({ behavior: 'smooth' });
+    btn.disabled = true;
+    api({ secret: s, action: 'preview', kind: kind, target: target }).then(function (res) {
+      btn.disabled = false;
+      var j = res.json;
+      if (res.status === 401 || (j && j.error === 'unauthorized')) {
+        secret = ''; localStorage.removeItem(LS_KEY);
+        $('previewCard').classList.add('hidden');
+        showLock('رمز اشتباه است — دوباره وارد کن.');
+        return;
+      }
+      if (!j || j.ok !== true) { $('previewText').textContent = errText(j); pending = null; return; }
+      var langs = Object.keys(j.texts);
+      $('previewText').textContent = langs.map(function (l) { return (l === 'fa' ? '── فارسی ──' : '── English ──') + '\n' + j.texts[l]; }).join('\n\n');
+      pending = { kind: kind, target: target };
+    }).catch(function () {
+      btn.disabled = false;
+      $('previewText').textContent = 'ورکر در دسترس نیست — اتصال را چک کن.';
+      pending = null;
+    });
+  }
+
+  $('confirmSend').onclick = function () {
+    if (!pending) return;
+    var s = getSecret();
+    if (!s) { showLock('اول رمز را وارد کن.'); return; }
+    var btn = $('confirmSend');
+    btn.disabled = true;
+    $('sendMsg').textContent = 'در حال ارسال…';
+    api({ secret: s, action: 'send', kind: pending.kind, target: pending.target }).then(function (res) {
+      btn.disabled = false;
+      var j = res.json;
+      if (res.status === 401 || (j && j.error === 'unauthorized')) {
+        secret = ''; localStorage.removeItem(LS_KEY);
+        $('previewCard').classList.add('hidden');
+        showLock('رمز اشتباه است — دوباره وارد کن.');
+        return;
+      }
+      if (!j || j.ok !== true) { $('sendMsg').innerHTML = '<span class="err">' + errText(j) + '</span>'; return; }
+      $('sendMsg').innerHTML = '<span class="ok">✅ فرستاده شد (' + (j.posted || []).join('، ') + ')</span>';
+      pending = null;
+      loadStatus();
+    }).catch(function () {
+      btn.disabled = false;
+      $('sendMsg').innerHTML = '<span class="err">ورکر در دسترس نیست — اتصال را چک کن.</span>';
+    });
+  };
+  $('cancelSend').onclick = function () {
+    pending = null;
+    $('previewCard').classList.add('hidden');
+  };
+
+  if (getSecret()) { $('forgetSecret').classList.remove('hidden'); showMain(); }
+})();
+</script>
+</body>
+</html>
