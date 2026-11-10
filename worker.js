@@ -515,6 +515,37 @@ async function tgSend(token, chatId, text) {
     return r.ok;
   } catch (e) { return false; }
 }
+/* v1.14.4 — سقف پیام تلگرام ۴۰۹۶ کاراکتر است؛ خبر انگلیسیِ ۱۰ موردی با
+   لینک‌های بلند به ۴۲۰۰ می‌رسد و sendMessage ردش می‌کند (هم در Cron و هم
+   در /admin). متن را فقط در مرزِ خط می‌بُریم تا تگِ HTML وسط نصف نشود. */
+function splitChannelText(text, limit) {
+  const max = limit || 4000;
+  const s = String(text || '');
+  if (!s) return [];
+  if (s.length <= max) return [s];
+  const lines = s.split('\n');
+  const chunks = [];
+  let cur = '';
+  for (const line of lines) {
+    if (line.length > max) {
+      if (cur) { chunks.push(cur); cur = ''; }
+      for (let i = 0; i < line.length; i += max) chunks.push(line.slice(i, i + max));
+      continue;
+    }
+    const next = cur ? cur + '\n' + line : line;
+    if (next.length > max) { chunks.push(cur); cur = line; }
+    else cur = next;
+  }
+  if (cur) chunks.push(cur);
+  return chunks;
+}
+async function tgSendLong(token, chatId, text) {
+  const parts = splitChannelText(text, 4000);
+  for (const part of parts) {
+    if (!(await tgSend(token, chatId, part))) return false;
+  }
+  return parts.length > 0;
+}
 /* v1.14.3 — عکسِ پست کانال از گیت‌هاب: تلگرام sendPhoto با URL هم قبول
    می‌کند؛ پس ورکر لازم نیست فایل آپلود کند — عکس‌ها در همان ریپوی گیت‌هاب
    (mhn-jr.github.io/Pixel) هستند و ورکر فقط آدرسشان را می‌فرستد. همان
@@ -545,10 +576,10 @@ async function postChannelWithPhoto(token, c, kind, text) {
     if (text.length <= 1024) {
       if (await tgSendPhoto(token, c.chatId, url, text)) return true;
     } else if (await tgSendPhoto(token, c.chatId, url, null)) {
-      return await tgSend(token, c.chatId, text);
+      return await tgSendLong(token, c.chatId, text);
     }
   }
-  return await tgSend(token, c.chatId, text);
+  return await tgSendLong(token, c.chatId, text);
 }
 async function binancePrice(sym) {
   try {
@@ -1250,7 +1281,24 @@ async function fetchChannelNews(lang) {
   }
   return { groups, total: picked.length };
 }
+/* خبر باید در یک پیام جا شود (سقف ۴۰۹۶) — دستور مالک ۲۰۲۶-۱۱-۱۰: اگر متن
+   بلند شد، از آخرِ خبرها کم می‌کنیم تا جا شود؛ هرگز تکه‌تکه نمی‌فرستیم.
+   دست‌کم ۵ خبر می‌ماند (یکی از هر بازار). */
 function buildChannelNews(lang, res, nowMs) {
+  if (!res || !res.total) return null;
+  let text = formatChannelNewsText(lang, res, nowMs);
+  while (text && text.length > 4000 && res.total > 5) {
+    let removed = false;
+    for (let i = res.groups.length - 1; i >= 0 && !removed; i--) {
+      const g = res.groups[i];
+      if (g.items && g.items.length) { g.items.pop(); res.total--; removed = true; }
+    }
+    if (!removed) break;
+    text = formatChannelNewsText(lang, res, nowMs);
+  }
+  return text;
+}
+function formatChannelNewsText(lang, res, nowMs) {
   const fa = lang === 'fa';
   if (!res || !res.total) return null;
   const header = fa
@@ -1259,6 +1307,7 @@ function buildChannelNews(lang, res, nowMs) {
   const lines = [header];
   let n = 0;
   for (const g of res.groups) {
+    if (!g.items || !g.items.length) continue; // گروهِ خالی سرگروه ندارد
     lines.push(g.emoji + ' ' + g.label[fa ? 'fa' : 'en']);
     for (const it of g.items) {
       n++;
