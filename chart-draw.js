@@ -15,6 +15,14 @@
   var store = {};
   var activeTool = null, pending = null, preview = null, selectedId = null, moveStart = null;
   var idSeq = 0;
+  /* v1.14.7 — آهنربا (چسبیدن نقطهٔ رسم به نزدیک‌ترین O/H/L/C کندل زیر نشانگر)
+     + قلم آزاد (freehand): نقاطِ stroke حین کشیدن جمع می‌شوند. */
+  var MAG_KEY = 'onella_draw_magnet_v1';
+  var magnetOn = false;
+  try { magnetOn = localStorage.getItem(MAG_KEY) === '1'; } catch (_) {}
+  function saveMagnet() { try { localStorage.setItem(MAG_KEY, magnetOn ? '1' : '0'); } catch (_) {} }
+  function setMagnet(on) { magnetOn = !!on; saveMagnet(); syncUI(); return magnetOn; }
+  var liveBrush = null;
 
   function load() {
     try { var r = JSON.parse(localStorage.getItem(KEY) || 'null'); store = (r && typeof r === 'object') ? r : {}; }
@@ -63,7 +71,16 @@
     if (idx < 0) idx = 0;
     if (idx > cs.length - 1) idx = cs.length - 1;
     var yy = Math.max(0, Math.min(G.ph || 0, y));
-    return { t: cs[idx].t, idx: idx, p: G.inv(yy), x: x, y: y };
+    var pt = { t: cs[idx].t, idx: idx, p: G.inv(yy), x: x, y: y };
+    /* v1.14.7 — آهنربا: قیمت نقطه به نزدیک‌ترین O/H/L/C کندلِ همان ستون می‌چسبد. */
+    if (magnetOn) {
+      var c = cs[idx], best = pt.p, bd = Infinity, k, v;
+      if (c) {
+        ['o', 'h', 'l', 'c'].forEach(function (kk) { var vv = c[kk]; if (typeof vv === 'number' && isFinite(vv)) { var dd = Math.abs(vv - pt.p); if (dd < bd) { bd = dd; best = vv; } } });
+        pt.p = best;
+      }
+    }
+    return pt;
   }
   function visIdx(t, g) { return timeToIndex(t) - (g.off || 0); }
   function pxOf(t, g) { return g.X(visIdx(t, g)); }
@@ -97,13 +114,26 @@
 
   /* ---- ابزار فعال + ضربه ---- */
   function setTool(t) {
+    /* v1.14.7 — نشانگر: ابزارِ انتخاب (بدون ابزار رسم)؛ آهنربا: کلید چسبندگی، نه ابزار رسم. */
+    if (t === 'cursor') { activeTool = null; pending = null; preview = null; liveBrush = null; syncUI(); return null; }
+    if (t === 'magnet') { setMagnet(!magnetOn); return magnetOn ? 'magnet' : null; }
     if (activeTool === t) { activeTool = null; }
     else { activeTool = t; selectedId = null; }
-    pending = null; preview = null;
+    pending = null; preview = null; liveBrush = null;
     syncUI();
     return activeTool;
   }
-  function setPreview(pt) { preview = pt || null; }
+  function setPreview(pt) {
+    /* v1.14.7 — قلم آزاد: هر نقطهٔ حرکت به stroke زنده اضافه می‌شود (با فاصلهٔ حداقلی). */
+    if (activeTool === 'brush' && pt) {
+      if (!liveBrush) liveBrush = { type: 'brush', pts: [] };
+      var last = liveBrush.pts[liveBrush.pts.length - 1];
+      if (!last || Math.hypot(pt.x - last.x, pt.y - last.y) > 4) liveBrush.pts.push({ t: pt.t, p: pt.p, x: pt.x, y: pt.y });
+      preview = liveBrush;
+      return;
+    }
+    preview = pt || null;
+  }
   function askText(anchor) {
     if (typeof prompt !== 'function') return null;
     var v = null;
@@ -114,6 +144,18 @@
   }
   function tap(pt) {
     if (!pt) return null;
+    /* v1.14.7 — پاک‌کن: ضربه روی رسم آن را همان‌جا حذف می‌کند. */
+    if (activeTool === 'eraser') {
+      var hitE = hitTestXY(pt.x, pt.y);
+      if (hitE) { remove(hitE.id); return 'erased'; }
+      return null;
+    }
+    /* v1.14.7 — قلم آزاد با یک ضربه: یک نقطه (نقطه‌چین) می‌گذارد. */
+    if (activeTool === 'brush') {
+      add({ type: 'brush', pts: [{ t: pt.t, p: pt.p }] });
+      syncUI();
+      return 'placed';
+    }
     if (activeTool === 'hline') {
       add({ type: 'hline', p: pt.p });
       syncUI();
@@ -136,7 +178,7 @@
       syncUI();
       return 'placed';
     }
-    if (activeTool === 'trend' || activeTool === 'rect' || activeTool === 'fib') {
+    if (activeTool === 'trend' || activeTool === 'rect' || activeTool === 'fib' || activeTool === 'measure') {
       if (!pending) { pending = { t: pt.t, p: pt.p }; return 'pending'; }
       add({ type: activeTool, t1: pending.t, p1: pending.p, t2: pt.t, p2: pt.p });
       pending = null; preview = null;
@@ -150,6 +192,20 @@
   }
   function completeDrag(a, b) {
     if (!a || !b || !activeTool) return null;
+    /* v1.14.7 — پاک‌کن با کشیدن هم همان نقطهٔ رها را پاک می‌کند. */
+    if (activeTool === 'eraser') {
+      var hitE = hitTestXY(b.x, b.y);
+      if (hitE) { remove(hitE.id); return 'erased'; }
+      return null;
+    }
+    /* v1.14.7 — قلم آزاد: stroke زنده نهایی می‌شود (اگر نقطه‌ای جمع نشده بود، همان دو سر). */
+    if (activeTool === 'brush') {
+      var pts = (liveBrush && liveBrush.pts.length) ? liveBrush.pts.slice() : [{ t: a.t, p: a.p }, { t: b.t, p: b.p }];
+      if (pts.length === 1) pts.push({ t: b.t, p: b.p });
+      add({ type: 'brush', pts: pts });
+      liveBrush = null; preview = null; syncUI();
+      return 'placed';
+    }
     if (activeTool === 'hline') { add({ type: 'hline', p: b.p }); syncUI(); return 'placed'; }
     if (activeTool === 'ray') { add({ type: 'ray', t: a.t, p: a.p }); syncUI(); return 'placed'; }
     if (activeTool === 'vline') { add({ type: 'vline', t: a.t }); syncUI(); return 'placed'; }
@@ -191,6 +247,10 @@
     else if (d.type === 'ray') { d.t = shiftT(s.t); d.p = s.p + dP; }
     else if (d.type === 'vline') { d.t = shiftT(s.t); }
     else if (d.type === 'text') { d.t = shiftT(s.t); d.p = s.p + dP; }
+    else if (d.type === 'brush') {
+      /* v1.14.7 — همهٔ نقطه‌های stroke با هم جابه‌جا می‌شوند (از snapshot، نه تجمعی). */
+      (d.pts || []).forEach(function (q, qi) { if (s.pts && s.pts[qi]) { q.t = shiftT(s.pts[qi].t); q.p = s.pts[qi].p + dP; } });
+    }
     else { d.t1 = shiftT(s.t1); d.p1 = s.p1 + dP; d.t2 = shiftT(s.t2); d.p2 = s.p2 + dP; }
     return true;
   }
@@ -209,8 +269,15 @@
     var arr = list();
     for (var k = arr.length - 1; k >= 0; k--) {
       var d = arr[k];
-      if (d.type === 'trend') {
+      if (d.type === 'trend' || d.type === 'measure') {
         if (distSeg(x, y, pxOf(d.t1, g), g.Y(d.p1), pxOf(d.t2, g), g.Y(d.p2)) < 12) return d;
+      } else if (d.type === 'brush') {
+        /* v1.14.7 — برخورد با هر قطعهٔ stroke. */
+        var bp = d.pts || [], qi;
+        for (qi = 0; qi + 1 < bp.length; qi++) {
+          if (distSeg(x, y, pxOf(bp[qi].t, g), g.Y(bp[qi].p), pxOf(bp[qi + 1].t, g), g.Y(bp[qi + 1].p)) < 12) return d;
+        }
+        if (bp.length === 1 && Math.hypot(x - pxOf(bp[0].t, g), y - g.Y(bp[0].p)) < 12) return d;
       } else if (d.type === 'fib') {
         if (distSeg(x, y, pxOf(d.t1, g), g.Y(d.p1), pxOf(d.t2, g), g.Y(d.p2)) < 12) return d;
         var x1 = pxOf(d.t1, g), x2 = pxOf(d.t2, g), xa = Math.min(x1, x2), xb = Math.max(x1, x2);
@@ -306,8 +373,50 @@
         g.fillText(d.text || '', txp + 6, typ + 4);
         g.font = '10px sans-serif';
         if (sel) { g.strokeStyle = COLORS.sel; g.setLineDash([3, 3]); g.strokeRect(txp - 4.5, typ - 11.5, 12 + (d.text || '').length * 6.5, 18); g.setLineDash([]); }
+      } else if (d.type === 'brush') {
+        /* v1.14.7 — قلم آزاد: خط شکسته از نقطه‌ها. */
+        var bp = d.pts || [];
+        if (bp.length === 1) {
+          g.fillStyle = COLORS.text;
+          g.beginPath(); g.arc(pxOf(bp[0].t, gg), gg.Y(bp[0].p), 2.5, 0, 7); g.fill();
+        } else if (bp.length > 1) {
+          g.strokeStyle = sel ? COLORS.sel : COLORS.text; g.lineWidth = sel ? 2.4 : 2; g.lineJoin = 'round'; g.lineCap = 'round';
+          g.beginPath();
+          bp.forEach(function (q, qi) { var xx = pxOf(q.t, gg), yy = gg.Y(q.p); if (qi === 0) g.moveTo(xx, yy); else g.lineTo(xx, yy); });
+          g.stroke(); g.lineWidth = 1;
+        }
+        if (sel && bp.length) handles(bp.map(function (q) { return [pxOf(q.t, gg), gg.Y(q.p)]; }));
+      } else if (d.type === 'measure') {
+        /* v1.14.7 — خط‌کش: خط چین‌دار + برچسب Δقیمت (٪) · کندل‌ها · مدت. */
+        var mx1 = pxOf(d.t1, gg), my1 = gg.Y(d.p1), mx2 = pxOf(d.t2, gg), my2 = gg.Y(d.p2);
+        line(mx1, my1, mx2, my2, sel ? COLORS.sel : '#8fa3b8', sel ? 2 : 1.4, [5, 3]);
+        if (sel) handles([[mx1, my1], [mx2, my2]]);
+        var dp = d.p2 - d.p1, pct = (d.p1 && isFinite(d.p1) && d.p1 !== 0) ? dp / d.p1 * 100 : 0;
+        var nb = Math.abs(timeToIndex(d.t2) - timeToIndex(d.t1));
+        var durMs = Math.abs(d.t2 - d.t1), dur = durMs < 6e4 ? Math.max(1, Math.round(durMs / 1000)) + 's'
+          : durMs < 36e5 ? Math.round(durMs / 6e4) + 'm'
+          : durMs < 1728e5 ? (Math.floor(durMs / 36e5) + 'h ' + Math.round((durMs % 36e5) / 6e4) + 'm')
+          : Math.round(durMs / 864e5) + 'd';
+        var lab = (dp >= 0 ? '+' : '') + fmtNum(dp) + ' (' + (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%) · ' + nb + ' bars · ' + dur;
+        var lx = (mx1 + mx2) / 2, ly = (my1 + my2) / 2;
+        g.font = '10px sans-serif';
+        var lw = 0;
+        try { lw = g.measureText(lab).width; } catch (_) { lw = lab.length * 6; }
+        var bx = Math.max(2, Math.min(cw - lw - 12, lx - lw / 2)), by = Math.max(12, Math.min(ph - 14, ly - 20));
+        g.fillStyle = 'rgba(5,7,12,.88)';
+        if (g.roundRect) g.roundRect(bx - 5, by - 3, lw + 10, 15, 4); else g.rect(bx - 5, by - 3, lw + 10, 15);
+        g.fill();
+        g.fillStyle = '#e6e9ef';
+        g.fillText(lab, bx, by + 8);
       }
     });
+    /* v1.14.7 — stroke زندهٔ قلم آزاد (هنوز نهایی نشده) با همان سبک brush رسم می‌شود. */
+    if (liveBrush && liveBrush.pts && liveBrush.pts.length > 1) {
+      g.strokeStyle = COLORS.text; g.lineWidth = 2; g.lineJoin = 'round'; g.lineCap = 'round';
+      g.beginPath();
+      liveBrush.pts.forEach(function (q, qi) { var xx = pxOf(q.t, gg), yy = gg.Y(q.p); if (qi === 0) g.moveTo(xx, yy); else g.lineTo(xx, yy); });
+      g.stroke(); g.lineWidth = 1;
+    }
     /* نقطهٔ اولِ در انتظار + خط راهنما تا پیش‌نمایش (کشیدن) */
     if (pending) {
       var ppx = pxOf(pending.t, gg), ppy = gg.Y(pending.p);
@@ -339,13 +448,19 @@
       var btns = document.querySelectorAll ? document.querySelectorAll('#drawTools .tbtn') : [];
       for (var i = 0; i < btns.length; i++) {
         var b = btns[i];
-        if (b.classList && b.classList.toggle) b.classList.toggle('on', !!activeTool && b.dataset && b.dataset.draw === activeTool);
+        if (b.classList && b.classList.toggle) {
+          /* v1.14.7 — نشانگر وقتی روشن است که هیچ ابزار رسم فعال نیست؛ آهنربا حالت خودش را دارد. */
+          var on = (b.dataset && b.dataset.draw === 'cursor') ? !activeTool
+            : (b.dataset && b.dataset.draw === 'magnet') ? magnetOn
+            : (!!activeTool && b.dataset && b.dataset.draw === activeTool);
+          b.classList.toggle('on', on);
+        }
       }
       var del = document.getElementById ? document.getElementById('delDrawBtn') : null;
       if (del) del.disabled = !selectedId;
     } catch (_) {}
   }
-  function resetSession() { pending = null; preview = null; selectedId = null; moveStart = null; syncUI(); }
+  function resetSession() { pending = null; preview = null; selectedId = null; moveStart = null; liveBrush = null; syncUI(); }
 
   window.OnellaDraw = {
     list: function () { return list(); },
@@ -357,7 +472,7 @@
     select: select,
     selected: function () { return selectedId; },
     tool: function () { return activeTool; },
-    setTool: setTool,
+    setTool: setTool, magnet: function () { return magnetOn; }, setMagnet: setMagnet,
     pending: function () { return pending; },
     setPreview: setPreview,
     tap: tap,

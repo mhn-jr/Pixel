@@ -1355,7 +1355,13 @@ async function handlePcHeartbeat(req) {
     ? body.priceHours.filter(h => Number.isInteger(h) && h >= 0 && h <= 23).slice(0, 12) : CH_PRICE_HOURS;
   const newsTimes = Array.isArray(body.newsTimes)
     ? body.newsTimes.filter(t => /^\d{2}:\d{2}$/.test(String(t))).slice(0, 8) : CH_NEWS_TIMES;
-  await kv.put('pc-heartbeat', JSON.stringify({ ts, channels, digestTimes: digestTimes.length ? digestTimes : CH_DIGEST_TIMES, priceHours: priceHours.length ? priceHours : CH_PRICE_HOURS, newsTimes: newsTimes.length ? newsTimes : CH_NEWS_TIMES }));
+  /* v1.14.6 — kv.put بدون try/catch بود: اگر نوشتن در KV خطا بدهد (مثلاً
+     بایندینگ ALERTS_KV خراب است)، استثنا از هندلر بیرون می‌زد و کلادفلر
+     ۵۰۰ خام برمی‌گرداند — ربات فقط «HTTP 500» می‌دید و دلیلش معلوم نبود
+     (گزارش زندهٔ مالک ۲۰۲۶-۱۱-۱۰). حالا ۵۰۲ با خطای مشخص برمی‌گردد. */
+  try {
+    await kv.put('pc-heartbeat', JSON.stringify({ ts, channels, digestTimes: digestTimes.length ? digestTimes : CH_DIGEST_TIMES, priceHours: priceHours.length ? priceHours : CH_PRICE_HOURS, newsTimes: newsTimes.length ? newsTimes : CH_NEWS_TIMES }));
+  } catch (e) { return json({ ok: false, error: 'kv_put_failed' }, 502); }
   return json({ ok: true });
 }
 /* علامت اسلاتِ PC — کلیدِ channel.js ('digest:YYYY-MM-DD:HH:MM' یا
@@ -1372,7 +1378,7 @@ async function handleChannelPosted(req) {
   if (!/^(digest|prices|news):\d{4}-\d{2}-\d{2}:(\d{2}:\d{2}|\d{2})$/.test(key) || !ts || Math.abs(Date.now() - ts) > 300000) return json({ ok: false, error: 'bad' }, 400);
   const expected = toHex(await hmacBytes(new TextEncoder().encode(token), 'channel-posted:' + key + ':' + ts));
   if (!sig || expected !== sig.toLowerCase()) return json({ ok: false, error: 'bad_auth' }, 401);
-  await kv.put('ch:' + key, '1');
+  try { await kv.put('ch:' + key, '1'); } catch (e) { return json({ ok: false, error: 'kv_put_failed' }, 502); }
   return json({ ok: true });
 }
 

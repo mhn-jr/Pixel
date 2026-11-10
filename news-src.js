@@ -139,6 +139,14 @@ function parseRss(xml) {
 
 function fmtTimeUTC(ms, lang) {
   if (!ms) return '';
+  /* v1.14.7 — در منطقهٔ زمانیِ انتخاب‌شده (پیش‌فرض UTC) + برچسب زون؛
+     بدون OnellaDate/OnellaTZ همان قالب قبلی UTC می‌ماند. */
+  try {
+    if (typeof window !== 'undefined' && window.OnellaDate && window.OnellaTZ) {
+      var zl = window.OnellaTZ.shortLabel(window.OnellaTZ.get());
+      return window.OnellaDate.fmt(ms, 'cd') + ' ' + window.OnellaDate.fmt(ms, 'hm') + ' ' + zl;
+    }
+  } catch (_) {}
   const d = new Date(ms);
   const day = d.getUTCDate();
   const mon = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getUTCMonth()];

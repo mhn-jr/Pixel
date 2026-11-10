@@ -49,8 +49,19 @@
 
   /* ---- برچسب‌های محور زمان ---- */
   /* ===== v1.68: OnellaDate — تاریخ/ساعت بر پایه‌ی تنظیمات سیستم (زبان، منطقه‌ی زمانی، تقویم، ۱۲/۲۴ ساعته)؛ انتخاب دستی: میلادی/شمسی/قمری ===== */
-  var DK='onella_date_v1',DP={cal:'auto'},DCAL={gregory:'gregory',persian:'persian',islamic:'islamic-umalqura'},dcache={},fcache={};
-  try{var dr=JSON.parse(localStorage.getItem(DK)||'null');if(dr&&(dr.cal==='auto'||DCAL[dr.cal]))DP.cal=dr.cal}catch(_){}
+  /* v1.14.7 — منطقهٔ زمانیِ انتخاب‌شده (پیش‌فرض UTC، قانون این خط؛ نه System):
+     همهٔ نمایش‌های زمان (محور چارت، ساعت، خبر، هشدار) از همین زون می‌آیند —
+     epoch همیشه UTC می‌ماند و فقط نمایش با Intl و timeZone تبدیل می‌شود. */
+  var DK='onella_date_v1',DP={cal:'auto',tz:'UTC'},DCAL={gregory:'gregory',persian:'persian',islamic:'islamic-umalqura'},dcache={},fcache={};
+  function validTZ(z){if(z==='UTC')return true;if(typeof z!=='string'||!z)return false;try{Intl.DateTimeFormat('en',{timeZone:z});return true}catch(_){return false}}
+  try{var dr=JSON.parse(localStorage.getItem(DK)||'null');if(dr&&(dr.cal==='auto'||DCAL[dr.cal]))DP.cal=dr.cal;if(dr&&validTZ(dr.tz))DP.tz=dr.tz}catch(_){}
+  function effTZ(){return validTZ(DP.tz)?DP.tz:'UTC'}
+  /* افست زون نسبت به UTC در یک لحظه، به میلی‌ثانیه (با DST همان لحظه). */
+  function tzOffMs(ms){if(effTZ()==='UTC')return 0;
+    try{var f=new Intl.DateTimeFormat('en-US',{timeZone:effTZ(),hourCycle:'h23',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}),o={};
+      f.formatToParts(new Date(ms)).forEach(function(x){o[x.type]=x.value});
+      return Date.UTC(+o.year,+o.month-1,+o.day,+o.hour,+o.minute,+o.second)-ms}catch(_){return 0}}
+  function tzWall(ms){return ms+tzOffMs(ms)}
   function sysLoc(){try{var s=String((navigator.languages&&navigator.languages[0])||navigator.language||'en').split('-u-')[0].split('@')[0].split('.')[0].replace(/_/g,'-');Intl.getCanonicalLocales(s);return s||'en'}catch(_){return 'en'}}
   function sysCal(){try{return new Intl.DateTimeFormat(sysLoc()).resolvedOptions().calendar||'gregory'}catch(_){return 'gregory'}}
   function sysTZ(){try{return Intl.DateTimeFormat().resolvedOptions().timeZone||''}catch(_){return ''}}
@@ -63,23 +74,23 @@
   var FO={m:{month:'short'},md:{month:'short',day:'numeric'},y:{year:'numeric'},hm:{hour:'2-digit',minute:'2-digit',hourCycle:'h23'},hms:{hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'},
     cd:{year:'numeric',month:'short',day:'numeric'},ct:{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23'},
     full:{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}};
-  function dfmt(ms,kind){try{var L=dispLoc(),key=kind+'|'+L,f=fcache[key]||(fcache[key]=new Intl.DateTimeFormat(L,FO[kind]));return f.format(ms)}catch(_){return new Date(ms).toLocaleString()}}
-  function dparts(ms){var k=Math.floor((ms-new Date(ms).getTimezoneOffset()*6e4)/864e5),r=dcache[k];if(r)return r;
-    try{var c=effCal(),f=fcache['p|'+c]||(fcache['p|'+c]=new Intl.DateTimeFormat('en-u-ca-'+c+'-nu-latn',{year:'numeric',month:'numeric',day:'numeric'})),o={};
+  function dfmt(ms,kind){try{var L=dispLoc(),tz=effTZ(),key=kind+'|'+L+'|'+tz,f=fcache[key]||(fcache[key]=new Intl.DateTimeFormat(L,Object.assign({},FO[kind],{timeZone:tz})));return f.format(ms)}catch(_){return new Date(ms).toLocaleString()}}
+  function dparts(ms){var k=Math.floor(tzWall(ms)/864e5),r=dcache[k];if(r)return r;
+    try{var c=effCal(),tz=effTZ(),f=fcache['p|'+c+'|'+tz]||(fcache['p|'+c+'|'+tz]=new Intl.DateTimeFormat('en-u-ca-'+c+'-nu-latn',{year:'numeric',month:'numeric',day:'numeric',timeZone:tz})),o={};
       f.formatToParts(ms).forEach(function(x){o[x.type]=parseInt(x.value,10)});r={y:o.year||0,m:o.month||1,d:o.day||1}}
-    catch(_){var d=new Date(ms);r={y:d.getFullYear(),m:d.getMonth()+1,d:d.getDate()}}
+    catch(_){var d=new Date(tzWall(ms));r={y:d.getUTCFullYear(),m:d.getUTCMonth()+1,d:d.getUTCDate()}}
     r.k=r.y*10000+r.m*100+r.d;if(Object.keys(dcache).length>6000)dcache={};dcache[k]=r;return r}
   function dsetCal(c){if(c!=='auto'&&!DCAL[c])return;DP.cal=c;dcache={};fcache={};try{localStorage.setItem(DK,JSON.stringify(DP))}catch(_){}
     try{if(typeof renderDateRow==='function')renderDateRow()}catch(_){}redraw()}
-  /* برچسب کامل (ردیف OHLC): حالت سیستم = دقیقاً toLocaleString خود سیستم */
-  function dfull(ms){return DP.cal==='auto'?new Date(ms).toLocaleString():dfmt(ms,'full')}
+  function dsetTZ(z){if(!validTZ(z))return false;DP.tz=z;dcache={};fcache={};try{localStorage.setItem(DK,JSON.stringify(DP))}catch(_){}redraw();return true}
+  /* برچسب کامل (ردیف OHLC): همیشه در زون انتخاب‌شده. */
+  function dfull(ms){return dfmt(ms,'full')}
   /* v1.70: تاریخ در پیام‌ها/هدرها. حالت «سیستم» = دقیقاً رفتار قبلی (فارسی/انگلیسیِ زبان برنامه)؛ دستی = تقویم انتخاب‌شده */
   var APO={md:[{month:'short',day:'numeric'},1],long:[{weekday:'long',month:'long',day:'numeric'},1],longy:[{weekday:'long',year:'numeric',month:'long',day:'numeric'},1],
     med:[{dateStyle:'medium',timeStyle:'short'},0],ts:[{year:'numeric',month:'numeric',day:'numeric',hour:'numeric',minute:'numeric',second:'numeric'},0],d:[{year:'numeric',month:'numeric',day:'numeric'},1]};
   function dapp(ms,kind,fa){var q=APO[kind]||APO.d,o=q[0],dt=new Date(ms);
-    try{if(DP.cal==='auto'){var L=fa?'fa-IR':'en-US';return q[1]?dt.toLocaleDateString(L,kind==='d'?undefined:o):dt.toLocaleString(L,kind==='ts'?undefined:o)}
-      var key='a|'+kind+'|'+dispLoc(),f=fcache[key]||(fcache[key]=new Intl.DateTimeFormat(dispLoc(),o));return f.format(dt)}catch(_){return ''}}
-  window.OnellaDate={app:dapp,get:function(){return {cal:DP.cal,effective:effCal(),locale:dispLoc(),timeZone:sysTZ()}},set:dsetCal,fmt:dfmt,parts:dparts,full:dfull,cross:function(ms,daily){return dfmt(ms,daily?'cd':'ct')}};
+    try{var L=DP.cal==='auto'?(fa?'fa-IR':'en-US'):dispLoc(),tz=effTZ(),key='a|'+kind+'|'+L+'|'+tz,f=fcache[key]||(fcache[key]=new Intl.DateTimeFormat(L,Object.assign({},o,{timeZone:tz})));return f.format(dt)}catch(_){return ''}}
+  window.OnellaDate={app:dapp,get:function(){return {cal:DP.cal,effective:effCal(),locale:dispLoc(),timeZone:effTZ(),sysTimeZone:sysTZ()}},set:dsetCal,setTZ:dsetTZ,fmt:dfmt,parts:dparts,full:dfull,cross:function(ms,daily){return dfmt(ms,daily?'cd':'ct')}};
   /* ردیف تنظیمات داخل پنل ⚙ برنامه */
   var DLAB=[['auto','سیستم','System'],['gregory','میلادی','Gregorian'],['persian','شمسی','Solar Hijri'],['islamic','قمری','Lunar Hijri']];
   function renderDateRow(){var P=document.getElementById('settingsPanel');if(!P)return;var row=document.getElementById('odRow'); // Mini App: پنل تنظیمات نیست؛ تابع فقط برای سازگاری مانده
@@ -92,7 +103,7 @@
   function intr0(dt){return dt<864e5-1}
   function timeAxis(g,k){var v=k.v,n=v.length,X=k.X;if(n<2)return;
     var dt=Math.abs(v[1].t-v[0].t)||864e5,intr=dt<864e5-1,st=k.st,minPx=(intr0(dt)||dt<6e4)?72:46,marks=[],i,c,pr,lt,lp,p,pp;
-    function loc(t){return t-new Date(t).getTimezoneOffset()*6e4}
+    function loc(t){return tzWall(t)}
     if(intr&&dt<6e4){   /* v1.176: تایم‌فریم ثانیه‌ای/زیرثانیه‌ای — برچسب ساعت با ثانیه (قبلاً فقط سر هر دقیقه؛ در 1s هیچ برچسبی نبود) */
       var cs2=[1,2,5,10,15,30,60,120,300,600,900,1800,3600],iv2=3600,j2;
       for(j2=0;j2<cs2.length;j2++){if(cs2[j2]*1000/dt*st>=minPx){iv2=cs2[j2];break}}

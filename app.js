@@ -65,6 +65,11 @@
   } catch (e) { /* en */ }
   document.documentElement.lang = lang;
   document.documentElement.dir = lang === 'fa' ? 'rtl' : 'ltr';
+  /* v1.14.7 — همگام‌سازی زون ذخیره‌شدهٔ انتخاب‌گر (onella_tz_v1) با موتور تاریخ
+     چارت (onella_date_v1)؛ اگر اختلاف باشد، انتخاب‌گر برنده است. */
+  try {
+    if (window.OnellaTZ && window.OnellaDate && window.OnellaTZ.get() !== window.OnellaDate.get().timeZone) window.OnellaDate.setTZ(window.OnellaTZ.get());
+  } catch (e) {}
   var L = {
     en: { catalog: 'Catalog', back: '‹ Back', price: 'Price', change24: '24h change', high: 'High 24h', low: 'Low 24h', volume: 'Volume 24h',
       chart: 'Chart', analysis: 'Analysis', fundamentals: 'Fundamentals', news: 'News', impactNews: 'Important & impactful news',
@@ -282,6 +287,13 @@
   function fmtPct(n) {
     if (typeof n !== 'number' || !Number.isFinite(n)) return '—';
     return (n >= 0 ? '+' : '') + (Math.round(n * 100) / 100) + '%';
+  }
+  /* v1.14.7 — زمان خبر در منطقهٔ زمانیِ انتخاب‌شده (پیش‌فرض UTC) + برچسب زون. */
+  function fmtNewsTime(ms) {
+    try {
+      if (window.OnellaDate) return window.OnellaDate.fmt(ms, 'cd') + ' ' + window.OnellaDate.fmt(ms, 'hm') + ' ' + (window.OnellaTZ ? window.OnellaTZ.shortLabel(window.OnellaTZ.get()) : 'UTC');
+    } catch (e) {}
+    return new Date(ms).toUTCString().slice(5, 22) + ' UTC';
   }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function normQ(s) {
@@ -615,6 +627,8 @@
   /* v1.2.1 — آیکون‌های SVG اپ (به‌جای ایموجی؛ stroke currentColor، هماهنگ با تم). */
   var ICON = {
     bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.7 21a2 2 0 0 1-3.4 0"></path></svg>',
+    /* v1.14.7 — ساعت زنگ‌دار برای دکمهٔ Alert و ردیف هشدارِ شیت محور قیمت. */
+    alarm: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l2.5 2.5"></path><path d="M9 2.5L7.5 4"></path><path d="M15 2.5l1.5 1.5"></path></svg>',
     chart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 21h18"/><path d="M7 17v-6"/><path d="M12 17V7"/><path d="M17 17v-3"/></svg>',
     dash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="10" rx="1.5"/><rect x="13" y="3" width="8" height="6" rx="1.5"/><rect x="13" y="11" width="8" height="10" rx="1.5"/><rect x="3" y="15" width="8" height="6" rx="1.5"/></svg>',
     flame: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12c2-2.96 0-7-1-8 0 3.038-1.773 4.741-3 6-1.226 1.26-2 3.24-2 5a6 6 0 1 0 12 0c0-1.532-1.056-3.94-2-5-1.786 3-2.791 3-4 2z"/></svg>',
@@ -1389,8 +1403,10 @@
        همه پشت دکمهٔ شناور (FAB) روی چارت باز می‌شوند، نه ردیف زیر چارت. */
     var TOOLS = [['fib', 'فیبوناچی', 'Fibonacci'], ['sr', 'حمایت/مقاومت', 'Support/Resistance'], ['tl', 'خط روند', 'Trendline'], ['bb', 'بولینگر', 'Bollinger'], ['pv', 'پیوت', 'Pivot'], ['ema', 'میانگین نمایی', 'EMA'], ['vwap', 'وی‌واپ', 'VWAP'], ['donch', 'دونچیان', 'Donchian'], ['kelt', 'کلتنر', 'Keltner'], ['super', 'سوپرترند', 'Supertrend'], ['sar', 'پارابولیک', 'SAR'], ['ichi', 'ایچیموکو', 'Ichimoku'], ['ribbon', 'روبان میانگین', 'EMA ribbon']];
     /* v1.4.0 — ۵ ابزار رسم تعاملی (مرحله ۳): در همان پنل شناور، زیر ابزارهای محاسبه‌شده.
-       v1.9.0 — +۲ رسم: پرتو افقی (از نقطه به راست) و خط عمودی (در زمان نقطه). */
-    var DRAW_TOOLS = [['trend', 'خط روند', 'Trendline'], ['hline', 'خط افقی', 'Horizontal'], ['rect', 'مستطیل', 'Rectangle'], ['fib', 'فیبوناچی', 'Fibonacci'], ['text', 'متن', 'Text'], ['ray', 'پرتو افقی', 'Ray'], ['vline', 'خط عمودی', 'Vertical']];
+       v1.9.0 — +۲ رسم: پرتو افقی (از نقطه به راست) و خط عمودی (در زمان نقطه).
+       v1.14.7 — +۵ رسم به سبک تریدینگ‌ویو: نشانگر (انتخاب)، قلم آزاد، خط‌کش، آهنربا،
+       پاک‌کن — هر ردیف آیکون + برچسب فارسی دارد (نوار بلند قابل‌اسکرول). */
+    var DRAW_TOOLS = [['cursor', 'نشانگر', 'Cursor'], ['trend', 'خط روند', 'Trendline'], ['hline', 'خط افقی', 'Horizontal'], ['vline', 'خط عمودی', 'Vertical'], ['ray', 'پرتو افقی', 'Ray'], ['fib', 'فیبوناچی', 'Fibonacci'], ['brush', 'قلم', 'Brush'], ['text', 'متن', 'Text'], ['measure', 'خط‌کش', 'Measure'], ['rect', 'مستطیل', 'Rectangle'], ['magnet', 'آهنربا', 'Magnet'], ['eraser', 'پاک‌کن', 'Eraser']];
     /* v1.5.0 — آیکون‌های نوار ابزار (SVG ساده، بدون self-closing تا ماک تست هم parse کند). */
     var IC = function (inner) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + inner + '</svg>'; };
     var TOOL_ICONS = {
@@ -1409,13 +1425,18 @@
       ribbon: IC('<path d="M3 8c5-3 10 3 18-2"></path><path d="M3 13c5-3 10 3 18-2"></path><path d="M3 18c5-3 10 3 18-2"></path>')
     };
     var DRAW_ICONS = {
+      cursor: IC('<path d="M6 3l13 7.5-5.6 1.4-2.6 5.6L8.4 12 6 3z"></path>'),
       trend: IC('<path d="M5 19L19 5"></path><circle cx="5" cy="19" r="2" fill="currentColor" stroke="none"></circle><circle cx="19" cy="5" r="2" fill="currentColor" stroke="none"></circle>'),
       hline: IC('<path d="M3 12h18"></path>'),
-      rect: IC('<rect x="5" y="7" width="14" height="10" rx="1"></rect>'),
-      fib: IC('<path d="M5 5l14 14"></path><path d="M5 8h14"></path><path d="M5 13h14"></path><path d="M5 18h14"></path>'),
-      text: IC('<path d="M6 6h12"></path><path d="M12 6v12"></path>'),
+      vline: IC('<path d="M12 3v18"></path><path d="M8 7l4-4 4 4"></path>'),
       ray: IC('<path d="M4 12h16"></path><path d="M16 8l4 4-4 4"></path>'),
-      vline: IC('<path d="M12 3v18"></path><path d="M8 7l4-4 4 4"></path>')
+      fib: IC('<path d="M5 5l14 14"></path><path d="M5 8h14"></path><path d="M5 13h14"></path><path d="M5 18h14"></path>'),
+      brush: IC('<path d="M18 3l3 3-8.5 8.5-3-3L18 3z"></path><path d="M9.5 12.5L5 17l4.5.5-1-5z"></path><path d="M4 20c1.5.6 3.2-.3 3.8-1.8"></path>'),
+      text: IC('<path d="M6 6h12"></path><path d="M12 6v12"></path>'),
+      measure: IC('<path d="M3 17L17 3l4 4L7 21l-4-4z"></path><path d="M8 12l2 2"></path><path d="M11 9l2 2"></path><path d="M14 6l2 2"></path>'),
+      rect: IC('<rect x="5" y="7" width="14" height="10" rx="1"></rect>'),
+      magnet: IC('<path d="M6 4v8a6 6 0 0 0 12 0V4"></path><path d="M6 4h4v4H6z"></path><path d="M14 4h4v4h-4z"></path>'),
+      eraser: IC('<path d="M9 19l-5.5-5.5L13 4l5.5 5.5L13 15H9z"></path><path d="M4 21h16"></path>')
     };
     var TRASH_ICON = IC('<path d="M5 7h14"></path><path d="M9 7V5h6v2"></path><path d="M8 7l1 12h6l1-12"></path><path d="M10 11v5"></path><path d="M14 11v5"></path>');
     var CLEAR_ICON = IC('<path d="M6 6l12 12"></path><path d="M18 6L6 18"></path>');
@@ -1449,16 +1470,17 @@
       '<div id="tfRow" class="tf-wrap"><div class="tf-group"><button id="tfBtn" type="button" title="' + esc(T('تایم‌فریم', 'Timeframe')) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg><span class="tf-cur">' + esc(state.tf) + '</span> ▾</button>'
       + '<button id="fsBtn" class="tf-fs" type="button" title="' + esc(T('تمام‌صفحه', 'Fullscreen')) + '">' + FS_ICONS.on + '</button></div>'
       + '<div class="tf-group"><button class="tf-fs" id="setBtn" type="button" title="' + esc(T('تنظیمات چارت', 'Chart settings')) + '">' + SET_ICON + '</button>'
+      + '<button class="tf-alert" id="alertTopBtn" type="button" title="' + esc(T('هشدار قیمت', 'Price alert')) + '">' + ICON.alarm + '<span>Alert</span></button>'
       + '<button class="tf-fs" id="toolsFab" type="button" title="' + esc(T('ابزارهای چارت', 'Chart tools')) + '">' + ICON.tools + '</button></div>'
       + '<div id="tfPanel" class="tf-panel">' + tfs.map(function (k) {
           return '<button data-tf="' + k + '"' + (state.tf === k ? ' class="on"' : '') + ' type="button">' + k + '</button>';
         }).join('') + '</div></div>'
       + '<div class="chartwrap" id="chartWrap"><div id="nv" style="position:relative;height:260px"><div id="px" class="px px-ov"></div><div id="lastPxTag" style="display:none"></div><div id="xhBox" class="xh-box" dir="ltr" style="display:none"></div><canvas id="cc" dir="ltr" style="width:100%;height:260px;display:block"></canvas><button class="axis-btn" id="tvAutoBtn" type="button" style="display:none">A</button><button class="axis-btn" id="tvLatestBtn" type="button" style="display:none">⏭</button><button class="axis-plus" id="axisPlusBtn" type="button" style="display:none">+</button><div class="axis-track" id="axisTrack" style="display:none"></div>'
       + '<div class="tools-strip" id="toolsStrip"><div class="strip-group" id="chartTools">' + TOOLS.map(function (t) {
-          return '<button class="tbtn' + (toolOn[t[0]] ? ' on' : '') + '" data-tool="' + t[0] + '" type="button" title="' + esc(lang === 'fa' ? t[1] : t[2]) + '">' + (TOOL_ICONS[t[0]] || esc(lang === 'fa' ? t[1] : t[2])) + '</button>';
+          return '<button class="tbtn' + (toolOn[t[0]] ? ' on' : '') + '" data-tool="' + t[0] + '" type="button" title="' + esc(lang === 'fa' ? t[1] : t[2]) + '">' + (TOOL_ICONS[t[0]] || esc(lang === 'fa' ? t[1] : t[2])) + '<span class="tb-lb">' + esc(lang === 'fa' ? t[1] : t[2]) + '</span></button>';
         }).join('') + '</div><div class="strip-sep"></div><div class="strip-group" id="drawTools">' + DRAW_TOOLS.map(function (t) {
-          return '<button class="tbtn" data-draw="' + t[0] + '" type="button" title="' + esc(lang === 'fa' ? t[1] : t[2]) + '">' + (DRAW_ICONS[t[0]] || esc(lang === 'fa' ? t[1] : t[2])) + '</button>';
-        }).join('') + '</div><div class="strip-sep"></div><div class="strip-group"><button class="tbtn" id="delDrawBtn" type="button" disabled title="' + esc(T('حذف انتخاب‌شده', 'Delete selected')) + '">' + TRASH_ICON + '</button><button class="tbtn" id="clearDrawBtn" type="button" title="' + esc(T('پاک کردن همه', 'Clear all')) + '">' + CLEAR_ICON + '</button></div><button class="strip-more" id="stripMore" type="button" style="display:none">﹀</button></div>'
+          return '<button class="tbtn" data-draw="' + t[0] + '" type="button" title="' + esc(lang === 'fa' ? t[1] : t[2]) + '">' + (DRAW_ICONS[t[0]] || esc(lang === 'fa' ? t[1] : t[2])) + '<span class="tb-lb">' + esc(lang === 'fa' ? t[1] : t[2]) + '</span></button>';
+        }).join('') + '</div><div class="strip-sep"></div><div class="strip-group"><button class="tbtn" id="delDrawBtn" type="button" disabled title="' + esc(T('حذف انتخاب‌شده', 'Delete selected')) + '">' + TRASH_ICON + '<span class="tb-lb">' + esc(T('حذف', 'Delete')) + '</span></button><button class="tbtn" id="clearDrawBtn" type="button" title="' + esc(T('پاک کردن همه', 'Clear all')) + '">' + CLEAR_ICON + '<span class="tb-lb">' + esc(T('پاک کردن همه', 'Clear all')) + '</span></button></div><button class="strip-more" id="stripMore" type="button" style="display:none">﹀</button></div>'
       + '<div class="settings-panel" id="settingsPanel"><div class="settings-panel-h"><span>' + esc(T('تنظیمات چارت', 'Chart settings')) + '</span><button class="tbtn" id="setClose" type="button">✕</button></div><div class="set-sec-h">' + esc(T('نوع چارت', 'Chart type')) + '</div><div class="set-type-grid" id="setTypes">' + SET_TYPES.map(function (t) {
           return '<button class="set-type' + (st.type === t[0] ? ' on' : '') + '" data-type="' + t[0] + '" type="button">' + (SET_TYPE_ICONS[t[0]] || '') + '<span>' + esc(lang === 'fa' ? t[1] : t[2]) + '</span></button>';
         }).join('') + '</div><div class="set-sec-h">' + esc(T('رنگ کندل‌ها', 'Candle colors')) + '</div><div class="set-pal-row" id="setPals">' + SET_PALS.map(function (p) {
@@ -1466,6 +1488,7 @@
         }).join('') + '</div><div class="set-sec-h">' + esc(T('نمایش', 'Display')) + '</div><div id="setToggles">' + SET_TOGGLES.map(function (tg) {
           return '<div class="set-row"><span>' + esc(lang === 'fa' ? tg[1] : tg[2]) + '</span><button class="switch' + (st[tg[0]] ? ' on' : '') + '" data-set="' + tg[0] + '" type="button" aria-label="' + esc(lang === 'fa' ? tg[1] : tg[2]) + '"></button></div>';
         }).join('') + '</div></div></div></div>'
+      + '<div class="chart-status"><button id="tzClockBtn" type="button" dir="ltr" title="' + esc(T('منطقهٔ زمانی', 'Timezone')) + '"></button></div>'
       + '<div class="tool-note-bar" id="toolNote" style="display:none"></div>'
       + '<div class="panes" id="panes"><div class="pane-row" id="rsiRow"><div class="pane-h"><span>RSI (14)</span><b id="rsiVal">—</b></div><canvas id="rsiCv" class="pane-cv" dir="ltr"></canvas></div><div class="pane-row" id="macdRow"><div class="pane-h"><span>MACD (12, 26, 9)</span><b id="macdVal">—</b></div><canvas id="macdCv" class="pane-cv" dir="ltr"></canvas></div><div class="pane-row" id="stochRow" style="display:none"><div class="pane-h"><span>استوکاستیک (14, 3, 3)</span><b id="stochVal">—</b></div><canvas id="stochCv" class="pane-cv" dir="ltr"></canvas></div><div class="pane-row" id="obvRow" style="display:none"><div class="pane-h"><span>OBV</span><b id="obvVal">—</b></div><canvas id="obvCv" class="pane-cv" dir="ltr"></canvas></div></div>'
       + '<div class="toolbar" id="chartToolbar">'
@@ -1552,6 +1575,12 @@
     $('stochBtn').addEventListener('click', function () { try { window.OnellaPanes.toggle('stoch'); } catch (e) {} });
     $('obvBtn').addEventListener('click', function () { try { window.OnellaPanes.toggle('obv'); } catch (e) {} });
     $('alertBtn').addEventListener('click', function () { openAlertModal(); });
+    /* v1.14.7 — دکمهٔ Alert کنار تنظیمات چارت + ساعت زنده/انتخاب‌گر منطقهٔ زمانی. */
+    var alertTopBtn = $('alertTopBtn');
+    if (alertTopBtn) alertTopBtn.addEventListener('click', function () { openAlertModal(); });
+    var tzClockBtn = $('tzClockBtn');
+    if (tzClockBtn) tzClockBtn.addEventListener('click', function () { openTZPicker(); });
+    startClockTick();
     refreshAlertBadge();
     try { if (window.OnellaPanes) window.OnellaPanes.applyVis(); } catch (e) {}
     $('zoomInBtn').addEventListener('click', function () { zoomBy(1.4); });
@@ -1645,14 +1674,14 @@
         try { var sh = strip.scrollHeight || 0, ch = strip.clientHeight || 0; strip.scrollTop = Math.min(Math.max(0, sh - ch), (strip.scrollTop || 0) + 200); } catch (e) {}
         updateStripMore();
       });
-      /* v1.9.1 — دکمه + محور قیمت: زدن + منوی هشدار/خط افقی را با همان قیمت باز می‌کند. */
+      /* v1.14.7 — دکمه + محور قیمت: زدن + شیت «افزودن هشدار» را با همان قیمت نمایشی باز می‌کند. */
       var apb = $('axisPlusBtn');
       if (apb) apb.addEventListener('click', function (e) {
         try { if (e && e.stopPropagation) e.stopPropagation(); } catch (e2) {}
         if (axisPlusPrice == null) return;
         var r = null;
         try { r = apb.getBoundingClientRect(); } catch (e3) {}
-        showPriceAxisMenu(axisPlusPrice, r ? (r.left + r.width / 2) : 100, r ? (r.top + r.height / 2) : 100);
+        showPriceAxisMenu(axisPlusDisp != null ? axisPlusDisp : axisPlusPrice, r ? (r.left + r.width / 2) : 100, r ? (r.top + r.height / 2) : 100);
       });
       if (sb && setP) sb.addEventListener('click', function () {
         var open2 = !setP.classList.contains('open');
@@ -1736,20 +1765,15 @@
           try { window.head(); window.draw(); } catch (err) {}
         }, 380);
       }
-      /* v1.9.0 — نگه‌داشتن انگشت روی محور قیمت = منوی قیمت (هشدار / خط افقی)،
-         مثل تریدینگ‌ویو؛ حرکت زودهنگام = لغو (همان pscale قبلی). */
+      /* v1.14.7 — نگه‌داشتن انگشت روی محور قیمت فقط برچسب + را نشان می‌دهد
+         (مثل تریدینگ‌ویو)؛ منو خودکار باز نمی‌شود — زدنِ + شیت را باز می‌کند.
+         حرکت زودهنگام = لغو (همان pscale قبلی). */
       if (zoneOf(p) === 'p') {
         var Gp = window.__geo || {};
         if (Gp.inv && Gp.ph) {
           lpAxisX = p.x; lpAxisY = p.y; lpAxisCX = e.clientX; lpAxisCY = e.clientY;
           lpAxisPrice = Gp.inv(Math.max(0, Math.min(Gp.ph, p.y)));
           showAxisPlus(lpAxisPrice); // v1.9.1 — + همان لحظهٔ لمس محور دیده می‌شود.
-          if (lpAxisTimer) { try { clearTimeout(lpAxisTimer); } catch (err) {} }
-          lpAxisTimer = setTimeout(function () {
-            lpAxisTimer = null;
-            if (pointers.size !== 1 || gMoved) return;
-            showPriceAxisMenu(lpAxisPrice, lpAxisCX, lpAxisCY);
-          }, 380);
         }
       }
     });
@@ -2079,7 +2103,7 @@
   var liveAlertPrices = {};
   var alertLiveTimer = null;
   /* v1.9.1 — وضعیت + محور قیمت و کراس‌هیر (سطح بیرونی تا تست و head هم ببینند). */
-  var axisPlusPrice = null, xhPinned = false;
+  var axisPlusPrice = null, axisPlusDisp = null, xhPinned = false;
   function curAlertPrice() {
     if (state.priceMode === 'iran' && state.priceIran) return state.priceIran.price;
     return state.priceUsd ? state.priceUsd.price : null;
@@ -2099,7 +2123,7 @@
     var b = $('alertBanner');
     if (!b) return;
     var tm = '';
-    try { tm = new Date(a.firedAt || Date.now()).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }); } catch (e) {}
+    try { tm = window.OnellaDate ? window.OnellaDate.fmt(a.firedAt || Date.now(), 'hm') : new Date(a.firedAt || Date.now()).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }); } catch (e) {}
     b.innerHTML = '<span class="al-bell">' + ICON.bell + '</span><span class="al-bmsg">' + esc(a.msg || '') + '</span><span class="al-bpx">' + esc(fmt(a.firedPrice)) + ' • ' + esc(tm) + '</span><button class="al-bx" id="alBannerX" type="button">✕</button>';
     b.style.display = 'flex';
     var x = $('alBannerX');
@@ -2190,9 +2214,6 @@
     var banner = document.createElement('div');
     banner.id = 'alertBanner'; banner.className = 'al-banner'; banner.style.display = 'none';
     bd.appendChild(banner);
-    var menu = document.createElement('div');
-    menu.id = 'axisMenu'; menu.className = 'axis-menu'; menu.style.display = 'none';
-    bd.appendChild(menu);
     var modal = document.createElement('div');
     modal.id = 'alertModal'; modal.className = 'al-modal'; modal.style.display = 'none';
     modal.innerHTML = '<div class="al-card">'
@@ -2226,13 +2247,81 @@
     $('alCancel').addEventListener('click', function () { modal.style.display = 'none'; stopAlertLivePrices(); });
     modal.addEventListener('click', function (e) { if (e.target === modal) { modal.style.display = 'none'; stopAlertLivePrices(); } });
     $('alCreate').addEventListener('click', function () { createAlertFromModal(); });
-    document.addEventListener('click', function (e) {
-      var m2 = $('axisMenu');
-      if (m2 && m2.style.display !== 'none' && !(e.target && e.target.closest && e.target.closest('#axisMenu'))) m2.style.display = 'none';
-    });
   }
   function toLatinNum(s) {
     return String(s == null ? '' : s).replace(/[۰-۹]/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'.indexOf(d); }).replace(/[٠-٩]/g, function (d) { return '٠١٢٣٤٥٦٧٨٩'.indexOf(d); }).replace(/[٬,]/g, '').trim();
+  }
+  /* ===== v1.14.7 — ساعت زنده + انتخاب‌گر منطقهٔ زمانی (به سبک تریدینگ‌ویو) ===== */
+  var tzTickTimer = null;
+  function updateClock() {
+    var b = $('tzClockBtn');
+    if (!b) return;
+    try {
+      b.textContent = window.OnellaTZ ? window.OnellaTZ.fmtClock(Date.now()) : '';
+    } catch (e) {}
+  }
+  function startClockTick() {
+    if (tzTickTimer) { updateClock(); return; }
+    updateClock();
+    tzTickTimer = setInterval(function () { updateClock(); }, 1000);
+  }
+  /* زونِ صرافیِ نماد فعلی (ردیف «Exchange» در انتخاب‌گر): بورس ایران → تهران،
+     یاهو (سهام آمریکا) → نیویورک، کریپتو/فارکس → UTC. */
+  function exchangeZoneFor() {
+    var q = state.quote || {};
+    if (q.provider === 'mofid' || q.mode === 'iran' || state.priceMode === 'iran') return 'Asia/Tehran';
+    if (q.provider === 'yahoo') return 'America/New_York';
+    return 'UTC';
+  }
+  function ensureTZUI() {
+    var m = $('tzModal');
+    if (m) return m;
+    var d = document.createElement('div');
+    d.id = 'tzModal'; d.className = 'al-modal';
+    d.innerHTML = '<div class="al-card"><div class="al-h"><b>' + esc(T('منطقهٔ زمانی', 'Timezone')) + '</b><button class="tbtn" id="tzClose" type="button">✕</button></div>'
+      + '<label class="o-input"><input id="tzSearch" type="search" placeholder="' + esc(T('جستجوی شهر…', 'Search city…')) + '" autocomplete="off"></label>'
+      + '<div class="tz-list" id="tzList"></div></div>';
+    document.body.appendChild(d);
+    d.addEventListener('click', function (e) { if (e.target === d) d.style.display = 'none'; });
+    $('tzClose').addEventListener('click', function () { d.style.display = 'none'; });
+    $('tzSearch').addEventListener('input', function () { renderTZList($('tzSearch').value || ''); });
+    return d;
+  }
+  function renderTZList(q) {
+    var list = $('tzList'); if (!list) return;
+    var TZ = window.OnellaTZ; if (!TZ) return;
+    var now = Date.now(), cur = TZ.get(), ex = exchangeZoneFor();
+    q = (q || '').trim().toLowerCase();
+    var items = [{ iana: 'UTC', fa: 'هماهنگ جهانی' }];
+    if (ex !== 'UTC') items.push({ iana: ex, fa: TZ.rowLabel(ex, now), ex: true });
+    TZ.sortedZones(now).forEach(function (z) { if (z[0] !== 'UTC' && z[0] !== ex) items.push({ iana: z[0], fa: z[2] }); });
+    var rows = '';
+    items.forEach(function (it) {
+      var lb = it.ex ? 'Exchange' : TZ.rowLabel(it.iana, now);
+      if (q) {
+        var hay = (it.iana + ' ' + lb + ' ' + (it.fa || '')).toLowerCase();
+        if (hay.indexOf(q) < 0) return;
+      }
+      rows += '<button class="tz-row" type="button" data-tz="' + esc(it.iana) + '"><span class="tz-ck">' + (cur === it.iana ? '✓' : '') + '</span><span class="tz-lb">' + esc(lb) + '</span>' + (it.fa ? '<span class="tz-fa">' + esc(it.fa) + '</span>' : '') + '</button>';
+    });
+    list.innerHTML = rows || '<div class="al-note">' + esc(T('شهری پیدا نشد.', 'No city found.')) + '</div>';
+    list.querySelectorAll('.tz-row').forEach(function (b) {
+      b.addEventListener('click', function () { applyTimezone(b.dataset.tz); var m = $('tzModal'); if (m) m.style.display = 'none'; });
+    });
+  }
+  function openTZPicker() {
+    var m = ensureTZUI();
+    var s = $('tzSearch'); if (s) s.value = '';
+    renderTZList('');
+    m.style.display = 'flex';
+  }
+  function applyTimezone(iana) {
+    if (!window.OnellaTZ || !window.OnellaTZ.set(iana)) return;
+    updateClock();
+    try { window.draw(); window.head(); } catch (e) {}
+    /* اگر تب خبر باز است، زمان‌هایش را هم با زون تازه رندر کن؛ فهرست هشدار هم اگر باز است. */
+    try { if (state.tab === 'news') renderNews(); } catch (e) {}
+    try { var am = $('alertModal'); if (am && am.style.display !== 'none') renderAlertList(); } catch (e) {}
   }
   function openAlertModal(prefillPrice) {
     ensureAlertUI();
@@ -2282,7 +2371,7 @@
     var others = all.filter(function (x) { return x.sym !== q.symbol; });
     function expTxt(a) {
       if (!a.expiresAt) return '';
-      try { return ' • ' + T('تا ', 'until ') + new Date(a.expiresAt).toLocaleDateString('fa-IR'); } catch (e) { return ''; }
+      try { return ' • ' + T('تا ', 'until ') + (window.OnellaDate ? window.OnellaDate.fmt(a.expiresAt, 'cd') : new Date(a.expiresAt).toLocaleDateString('fa-IR')); } catch (e) { return ''; }
     }
     function row(a, kind) {
       var sub = A.condLabel(a.cond, lang) + ' ' + fmt(a.price) + ' • ' + (a.repeat === 'every' ? T('هر بار', 'Every time') : T('فقط یک بار', 'Once only')) + expTxt(a);
@@ -2294,7 +2383,7 @@
       }
       var fired = '';
       if (kind === 'fired' && a.firedAt) {
-        try { fired = ' • ' + T('فعال شد ', 'Fired ') + new Date(a.firedAt).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }); } catch (e) {}
+        try { fired = ' • ' + T('فعال شد ', 'Fired ') + (window.OnellaDate ? window.OnellaDate.fmt(a.firedAt, 'hm') : new Date(a.firedAt).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })); } catch (e) {}
       }
       var tgBadge = a.shared ? ' <span class="al-tg">📲</span>' : '';
       var btns = '';
@@ -2464,12 +2553,16 @@
     var y = G.Y(price);
     if (!isFinite(y) || y < -11 || y > G.ph + 11) { hideAxisPlus(); return; }
     axisPlusPrice = price;
+    /* v1.14.7 — برچسب مشکیِ قیمت روی محور (مثل تریدینگ‌ویو): ⊕ + قیمت نمایشی
+       با اعشار همان نماد؛ قیمت نمایشی برای هشدار جداگانه می‌ماند. */
+    var mul = (window.__dispMul && isFinite(window.__dispMul)) ? window.__dispMul : 1;
+    axisPlusDisp = price * mul;
     var b = $('axisPlusBtn'), t = $('axisTrack');
-    if (b) { b.style.top = Math.max(11, Math.min(G.ph - 11, y)) + 'px'; b.style.display = ''; }
+    if (b) { b.textContent = '⊕ ' + ((typeof window.__pfmt === 'function') ? window.__pfmt(price) : fmt(price)); b.style.top = Math.max(11, Math.min(G.ph - 11, y)) + 'px'; b.style.display = ''; }
     if (t) { t.style.top = Math.max(0, Math.min(G.ph, y)) + 'px'; t.style.display = ''; }
   }
   function hideAxisPlus() {
-    axisPlusPrice = null;
+    axisPlusPrice = null; axisPlusDisp = null;
     var b = $('axisPlusBtn'), t = $('axisTrack');
     if (b) b.style.display = 'none';
     if (t) t.style.display = 'none';
@@ -2524,24 +2617,30 @@
     more.style.display = (sh > ch + 4 && st + ch < sh - 4) ? '' : 'none';
   }
   function showPriceAxisMenu(price, clientX, clientY) {
+    /* v1.14.7 — شیت پایین (مثل تریدینگ‌ویو، ولی فقط «افزودن هشدار» — بدون
+       ردیف معامله و بدون «خط افقی»؛ اپ معامله نمی‌کند). price قیمت نمایشی است. */
     if (price == null || !isFinite(price) || !state.quote) return;
-    hideAxisPlus(); // v1.9.1 — منو جای + را می‌گیرد.
-    ensureAlertUI();
-    axisMenuPrice = price;
-    var m = $('axisMenu');
-    var px = fmt(price);
-    m.innerHTML = '<button class="ax-item" id="axAlert" type="button">' + ICON.bell + '<span>' + esc(T('هشدار در ', 'Add alert at ') + px) + '</span></button>'
-      + '<button class="ax-item" id="axLine" type="button"><span class="ax-ic">—</span><span>' + esc(T('خط افقی در ', 'Draw horizontal line at ') + px) + '</span></button>';
-    var vw = 0, vh = 0;
-    try { vw = window.innerWidth || 0; vh = window.innerHeight || 0; } catch (e) {}
-    m.style.left = Math.max(8, Math.min(clientX - 10, (vw || 400) - 230)) + 'px';
-    m.style.top = Math.max(8, Math.min(clientY - 10, (vh || 700) - 110)) + 'px';
-    m.style.display = 'block';
-    $('axAlert').addEventListener('click', function () { m.style.display = 'none'; openAlertModal(axisMenuPrice); });
-    $('axLine').addEventListener('click', function () {
-      m.style.display = 'none';
-      try { if (window.OnellaDraw) { window.OnellaDraw.add({ type: 'hline', p: axisMenuPrice }); window.draw(); } } catch (e) {}
+    var sheet = $('axisSheet');
+    if (!sheet) {
+      sheet = document.createElement('div');
+      sheet.id = 'axisSheet'; sheet.className = 'al-modal'; sheet.style.display = 'none';
+      sheet.innerHTML = '<div class="al-card"><div class="al-h"><b id="axSheetTitle"></b><button class="tbtn" id="axSheetClose" type="button">✕</button></div><div id="axSheetBody"></div></div>';
+      document.body.appendChild(sheet);
+      sheet.addEventListener('click', function (e) { if (e.target === sheet) sheet.style.display = 'none'; });
+      $('axSheetClose').addEventListener('click', function () { sheet.style.display = 'none'; });
+    }
+    var q = state.quote || {};
+    var disp = (q.display || q.label || q.symbol || '');
+    var pxTxt = fmt(price);
+    $('axSheetTitle').textContent = disp;
+    $('axSheetBody').innerHTML = '<button class="sheet-row" id="axSheetAlert" type="button">' + ICON.alarm + '<span>' + esc(T('هشدار در ', 'Add alert on ') + disp + T(' در ', ' at ') + pxTxt) + '</span></button>';
+    $('axSheetAlert').addEventListener('click', function () {
+      sheet.style.display = 'none';
+      hideAxisPlus();
+      openAlertModal(price);
     });
+    hideAxisPlus();
+    sheet.style.display = 'flex';
   }
 
   /* ---- تحلیل (همان موتور ربات؛ DOM به‌جای HTML تلگرام) ---- */
@@ -2853,7 +2952,7 @@
         var lv = N.impactOf(it.title);
         html += '<div class="news-card imp-' + (lv === 'high' ? 'high' : lv === 'medium' ? 'med' : 'low') + '"><div class="news-tag"><span class="news-chip">[' + esc(tag) + ']</span>' + impactBadge(lv) + '</div>'
           + '<div class="news-title">' + esc(it.title) + '</div>'
-          + (it.time ? '<div class="news-time">' + new Date(it.time).toUTCString().slice(5, 22) + ' UTC</div>' : '')
+          + (it.time ? '<div class="news-time">' + fmtNewsTime(it.time) + '</div>' : '')
           + '</div>';
       });
       html += '</div><div class="warn">' + esc(T('تاثیر از روی کلیدواژهٔ تیتر تخمین زده شده؛ قطعی نیست.', 'Impact is a keyword estimate, not certain.')) + '</div>';
@@ -2959,7 +3058,7 @@
   function tradesRowsHtml() {
     if (!liveTrades.length) return '<div class="muted">' + esc(T('در انتظار اولین معامله…', 'Waiting for the first trade…')) + '</div>';
     return liveTrades.map(function (tr) {
-      return '<div class="tr-row"><span class="' + (tr.buy ? 'dn' : 'up') + '">' + fmt(tr.p) + '</span><span>' + fmt(tr.q) + '</span><span class="tr-t">' + new Date(tr.t).toUTCString().slice(17, 25) + '</span></div>';
+      return '<div class="tr-row"><span class="' + (tr.buy ? 'dn' : 'up') + '">' + fmt(tr.p) + '</span><span>' + fmt(tr.q) + '</span><span class="tr-t">' + (window.OnellaDate ? window.OnellaDate.fmt(tr.t, 'hms') : new Date(tr.t).toUTCString().slice(17, 25)) + '</span></div>';
     }).join('');
   }
   function parseDepth(j) {
@@ -3281,7 +3380,7 @@
     var upN = 0;
     data.rows.forEach(function (r) { if (r.changePct > 0) upN++; });
     var dgDate = '';
-    try { dgDate = new Date(data.at || Date.now()).toLocaleDateString(lang === 'fa' ? 'fa-IR' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' }); } catch (e) {}
+    try { dgDate = window.OnellaDate ? window.OnellaDate.app(data.at || Date.now(), 'long', lang === 'fa') : new Date(data.at || Date.now()).toLocaleDateString(lang === 'fa' ? 'fa-IR' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' }); } catch (e) {}
     function moodWord(avg, upPct) {
       var w;
       if (avg >= 2) w = T('طمع شدید', 'Extreme Greed');
@@ -3370,7 +3469,7 @@
            می‌شود — بالا/متوسط/کم — بدون هیچ درصدی. */
         newsHtml += '<div class="news-card imp-' + (lv === 'high' ? 'high' : lv === 'medium' ? 'med' : 'low') + '"><div class="news-tag"><span class="news-chip">[' + esc(tag) + ']</span>' + impactBadge(lv) + '</div>'
           + '<div class="news-title">' + esc(it.title) + '</div>'
-          + (it.time ? '<div class="news-time">' + new Date(it.time).toUTCString().slice(5, 22) + ' UTC</div>' : '')
+          + (it.time ? '<div class="news-time">' + fmtNewsTime(it.time) + '</div>' : '')
           + '</div>';
       });
       newsHtml += '<div class="warn">' + esc(T('تاثیر از روی کلیدواژهٔ تیتر تخمین زده شده؛ قطعی نیست.', 'Impact is a keyword estimate, not certain.')) + '</div>';
@@ -3426,7 +3525,7 @@
     loadDash: loadDash, renderDash: renderDash, confluence: confluence, renderGauge: renderGauge, renderDepth: renderDepth, renderDepthData: renderDepthData, fetchDepth: fetchDepth, stopDepthPoll: stopDepthPoll, applyDepthDiff: applyDepthDiff, tradesRowsHtml: tradesRowsHtml, getDepthData: function () { return depthData; }, getLiveTrades: function () { return liveTrades; }, setLiveTrades: function (t) { liveTrades = t || []; }, positionLastPxTag: positionLastPxTag,
     yahooSearch: yahooSearch, mofidResolve: mofidResolve, rememberQuote: rememberQuote,
     iranRate: iranRate, perfFromDaily: perfFromDaily, frankfurterWeek: frankfurterWeek, iranRatesBulk: iranRatesBulk, dailyCandlesFor: dailyCandlesFor,
-    openAlertModal: openAlertModal, showPriceAxisMenu: showPriceAxisMenu, checkAlertsNow: checkAlertsNow, refreshAlertBadge: refreshAlertBadge, renderAlertList: renderAlertList, refreshAlertLivePrices: refreshAlertLivePrices, stopAlertLivePrices: stopAlertLivePrices,
+    openAlertModal: openAlertModal, showPriceAxisMenu: showPriceAxisMenu, axisPriceAtY: axisPriceAtY, getAxisPlusDisplay: function () { return axisPlusDisp; }, checkAlertsNow: checkAlertsNow, refreshAlertBadge: refreshAlertBadge, renderAlertList: renderAlertList, refreshAlertLivePrices: refreshAlertLivePrices, stopAlertLivePrices: stopAlertLivePrices, openTZPicker: openTZPicker, applyTimezone: applyTimezone, updateClock: updateClock, exchangeZoneFor: exchangeZoneFor,
     showAxisPlus: showAxisPlus, hideAxisPlus: hideAxisPlus, refreshAxisPlus: refreshAxisPlus, snapXhPrice: snapXhPrice, updateStripMore: updateStripMore, dismissCrosshair: dismissCrosshair, isXhPinned: function () { return xhPinned; }, getAxisPlusPrice: function () { return axisPlusPrice; },
     pmScale: pmScale, pmPan: pmPan, autoScale: autoScale, toLatest: toLatest, refreshAxisBtns: refreshAxisBtns,
     toggleFav: toggleFav, isFav: isFav, lookupQuote: lookupQuote, yahooMulti: yahooMulti, mofidBulk: mofidBulk, cgMarkets: cgMarkets };
