@@ -85,7 +85,7 @@
       evidence: 'Evidence confluence', bullish: 'Bullish', bearish: 'Bearish', neutral: 'Neutral',
       autoScale: 'Auto scale', latest: 'Latest candle', tools: 'Tools', fib: 'Fibonacci', sr: 'Support / Resistance', tl: 'Trendline', bb: 'Bollinger', pv: 'Pivot',
       noChangeData: 'No daily-change data for this market in the source.', needsWorker120: 'Needs the new Worker (v1.2.0) — redeploy worker.js on Cloudflare.' },
-    fa: { catalog: 'کاتولوگ', back: '‹ بازگشت', price: 'قیمت', change24: 'تغییر ۲۴ ساعت', high: 'سقف ۲۴ ساعت', low: 'کف ۲۴ ساعت', volume: 'حجم ۲۴ ساعت',
+    fa: { catalog: 'کاتالوگ', back: '‹ بازگشت', price: 'قیمت', change24: 'تغییر ۲۴ ساعت', high: 'سقف ۲۴ ساعت', low: 'کف ۲۴ ساعت', volume: 'حجم ۲۴ ساعت',
       chart: 'چارت', analysis: 'تحلیل', fundamentals: 'بنیادی', news: 'خبر', impactNews: 'خبرهای مهم و تاثیرگذار',
       notAvailable: 'فعلاً در دسترس نیست.', needProxy: 'داده فعلاً از اینجا در دسترس نیست.',
       iranStockNote: 'سهام ایران به ربات روی PC نیاز دارد — از IP خارجی بلاک است.',
@@ -698,7 +698,7 @@
   }
   /* v1.2.0 — کاتولوگ تب‌دار (مثل اپ اصلی): یک بازار در هر لحظه + واچ‌لیست. */
   function renderCatalog() {
-    $('catalogTitle').textContent = T('کاتولوگ', 'Catalog');
+    $('catalogTitle').textContent = T('کاتالوگ', 'Catalog');
     var tabsHtml = '';
     MARKET_ORDER.forEach(function (k) {
       tabsHtml += '<button type="button" data-mkt="' + k + '"' + (state.catalogMarket === k ? ' class="on"' : '') + '><span class="mkt-dot" style="background:' + (MKT_COLOR[k] || 'var(--mut)') + '"></span>' + esc(marketLabel(k)) + '</button>';
@@ -3607,7 +3607,7 @@
     $('tabBtn-fund').innerHTML = ICON.fund + '<span>' + esc(T('بنیادی', 'Fundamentals')) + '</span>';
     $('tabBtn-news').innerHTML = ICON.news + '<span>' + esc(T('خبر', 'News')) + '</span>';
     $('tabBtn-depth').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"></path><path d="M3 13l9 5 9-5"></path></svg><span>' + esc(T('عمق', 'Depth')) + '</span>';
-    $('backBtn').textContent = T('‹ بازگشت', '‹ Back');
+    $('backBtn').setAttribute('aria-label', T('بازگشت', 'Back')); $('backBtn').title = T('بازگشت', 'Back'); // v1.15.0 — دکمهٔ بازگشت آیکون است؛ متن نمی‌نویسیم.
     $('mainTab-chart').innerHTML = ICON.chart + esc(T('چارت', 'Chart'));
     $('mainTab-dash').innerHTML = ICON.dash + esc(T('داشبورد', 'Dashboard'));
     wrapHeadOnce();

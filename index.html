@@ -477,19 +477,80 @@
   /* v1.14.8 — ردیف بزرگ‌نمایی در پنل تنظیمات (جایگزین دکمه‌های −/+ نوار پایین). */
   .set-zoom-row { display: flex; gap: 6px; }
   .set-zoom-row .tbtn { flex: 1; padding: 8px; font-size: 16px; font-weight: 800; text-align: center; }
+
+  /* ===== v1.15.0 — پاس طراحی (override؛ برای برگشت، همین بلوک را حذف کن) ===== */
+  /* پس‌زمینه: درز گرادیانِ ته صفحه از بین رفت؛ گرادیان به ویوپورت ثابت است. */
+  html { background: var(--bg); min-height: 100%; }
+  body { background-repeat: no-repeat; background-attachment: fixed; min-height: 100dvh; }
+  /* هدر: بالای امن، خط نارنجیِ محو در لبهٔ پایین، لوگو دقیقاً وسط. */
+  header { padding: calc(10px + env(safe-area-inset-top)) 14px 10px; min-height: 56px; border-bottom: 1px solid transparent; background: linear-gradient(180deg, rgba(5,7,12,.94), rgba(5,7,12,.82)); }
+  header::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; background: linear-gradient(90deg, transparent, rgba(240,106,21,.45) 50%, transparent); pointer-events: none; }
+  header h1 { top: calc(50% + env(safe-area-inset-top) / 2); font-size: 18px; letter-spacing: .2px; }
+  header h1 img.logo { height: 28px; width: 28px; box-shadow: 0 0 0 1px rgba(240,106,21,.5), 0 0 14px rgba(240,106,21,.35); }
+  header h1 span.lite { font-size: 10px; padding: 1px 7px; background: rgba(240,106,21,.12); }
+  /* دکمهٔ بازگشت: فقط آیکون، گرد، شیشه‌ای، چسبیده به لبهٔ صفحه — کنار لوگو نمی‌چسبد. */
+  #backBtn { width: 38px; height: 38px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(13,19,32,.85); border: 1px solid var(--line); box-shadow: 0 2px 10px rgba(0,0,0,.35); transition: border-color .15s, background .15s; }
+  #backBtn[style*="display: none"] { display: none !important; }
+  #backBtn svg { width: 20px; height: 20px; }
+  html[dir="rtl"] #backBtn svg { transform: scaleX(-1); }
+  #backBtn:active { border-color: var(--acc); background: rgba(240,106,21,.14); }
+  /* جستجو + تب‌های دسته: فاصلهٔ درست با عنوان زیرشان. */
+  .o-input { margin-top: 6px; border-radius: 14px; background: linear-gradient(180deg, rgba(20,30,50,.9), var(--card)); }
+  #catalogTabs { padding: 10px 0 8px !important; }
+  #catalogTitle { margin-top: 12px; }
+  .mkt-h { font-size: 15px; letter-spacing: .1px; }
+  /* کارت نمادها: نور ملایم از بالا + حلقهٔ لمس نارنجی (به‌جای کارت‌های یکنواخت). */
+  .sym { background: linear-gradient(180deg, rgba(24,34,56,.85), var(--card) 70%); border-radius: 14px; min-height: 72px; font-weight: 700; letter-spacing: .3px; transition: border-color .15s, box-shadow .15s, transform .1s; }
+  .sym:active { border-color: var(--acc); box-shadow: 0 0 0 3px rgba(240,106,21,.18), 0 6px 18px rgba(240,106,21,.15); }
+  /* نوار پایین: شناور و شیشه‌ای، دکمه‌ها گردتر. */
+  #mainTabs { left: 10px; right: 10px; bottom: calc(8px + env(safe-area-inset-bottom)); padding: 6px; gap: 6px; border: 1px solid var(--line); border-radius: 20px; background: rgba(10,15,26,.82); backdrop-filter: blur(16px); box-shadow: 0 10px 30px rgba(0,0,0,.55); }
+  #mainTabs button { border: 0; background: transparent; color: var(--mut); border-radius: 15px; padding: 12px 4px; display: flex; align-items: center; justify-content: center; gap: 7px; }
+  #mainTabs button svg { width: 18px; height: 18px; }
+  #mainTabs button.on { color: #fff; }
+  main { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+  @media (prefers-reduced-motion: reduce) { .sym, #backBtn { transition: none; } }
+
+  /* ===== v1.15.1 — پاس طراحی ۲: داشبورد، تحلیل، بنیادی، خبر، عمق (چارت دست‌نخورده) ===== */
+  .dash-h { font-size: 20px; font-weight: 800; margin: 10px 0 12px; }
+  .dash-h button { width: 40px; height: 40px; padding: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: rgba(13,19,32,.85); box-shadow: 0 2px 10px rgba(0,0,0,.35); }
+  .dash-h button:active { border-color: var(--acc); background: rgba(240,106,21,.14); }
+  /* کارت‌ها: یک زبان واحد — گوشهٔ ۱۶، نور ملایم از بالا، حاشیهٔ هم‌رنگ. */
+  .dash-sec, .an-card, .gauge { border-radius: 16px; background: linear-gradient(180deg, rgba(22,32,54,.78), var(--card) 65%); }
+  .dash-sec { padding: 14px; margin-bottom: 12px; }
+  .dash-sec h3 { font-size: 15px; font-weight: 800; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid rgba(28,39,64,.8); }
+  .dash-sec h3 svg { width: 20px; height: 20px; }
+  .an-card { padding: 13px 14px; }
+  .an-card h4 { font-size: 13.5px; font-weight: 800; }
+  .an-grid { gap: 10px; }
+  .gauge { padding: 12px 14px; }
+  /* خبر: هر خبر یک ردیف خوانا با فاصلهٔ بهتر. */
+  .news-item { padding: 14px 4px; }
+  .news-title { line-height: 1.75; font-size: 14.5px; }
+  /* ردیف‌ها و حالت خالی. */
+  .row { padding: 10px 2px; }
+  .na, .muted { color: var(--mut); text-align: center; padding: 14px 8px; font-size: 13.5px; line-height: 1.8; }
+  /* دکمه‌های قطعه‌ای (تایم‌فریم و …): قرصی‌تر. */
+  .seg button { border-radius: 999px; padding: 7px 13px; font-weight: 700; transition: border-color .15s; }
+  .seg button:active { border-color: var(--acc); }
+  /* تب‌های نماد: قرص بزرگ‌تر و شیشه‌ای. */
+  .tabs { border-radius: 18px; padding: 4px; background: rgba(10,15,26,.82); backdrop-filter: blur(10px); }
+  .tabs button { border-radius: 14px; padding: 9px 2px; }
+  /* انتخاب نماد بالای صفحهٔ نماد. */
+  #priceBox, .px { font-variant-numeric: tabular-nums; }
+  @media (prefers-reduced-motion: reduce) { .seg button { transition: none; } }
 </style>
 </head>
 <body>
 <header>
   <div class="hdr-dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
-  <button id="backBtn" type="button" style="display:none">‹ بازگشت</button>
+  <button id="backBtn" type="button" style="display:none" aria-label="بازگشت" title="بازگشت"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
   <h1><img class="logo" src="logo.png" alt="Onella Nelora Lite"> Onella <span>Nelora</span> <span class="lite">Lite</span></h1>
 </header>
 <main>
   <div id="view-catalog">
     <label class="o-input" id="searchTrigger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.8-3.8"/></svg><input id="searchInput" type="search" autocomplete="off" placeholder="جستجو…" readonly></label>
     <div class="sm-tabs" id="catalogTabs" style="padding:6px 0"></div>
-    <div id="catalogTitle" class="mkt-h">کاتولوگ</div>
+    <div id="catalogTitle" class="mkt-h">کاتالوگ</div>
     <div id="catalog"></div>
     <div id="searchResults"></div>
   </div>
