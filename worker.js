@@ -515,6 +515,41 @@ async function tgSend(token, chatId, text) {
     return r.ok;
   } catch (e) { return false; }
 }
+/* v1.14.3 — عکسِ پست کانال از گیت‌هاب: تلگرام sendPhoto با URL هم قبول
+   می‌کند؛ پس ورکر لازم نیست فایل آپلود کند — عکس‌ها در همان ریپوی گیت‌هاب
+   (mhn-jr.github.io/Pixel) هستند و ورکر فقط آدرسشان را می‌فرستد. همان
+   منطقِ PC: متن ≤۱۰۲۴ کاراکتر → عکس با کپشن؛ طولانی‌تر (خبر) → عکس
+   (بدون کپشن) + متن جدا. اگر عکس ناموفق بود، متن تنها می‌رود. */
+const CH_PHOTO_BASE = 'https://mhn-jr.github.io/Pixel/';
+const CH_PHOTOS = {
+  digest: { en: 'channel-digest-en.jpg', fa: 'channel-digest-fa.jpg' },
+  prices: { en: 'channel-prices-en.jpg', fa: 'channel-prices-fa.jpg' },
+  news: { en: 'channel-news-en.jpg', fa: 'channel-news-fa.jpg' }
+};
+async function tgSendPhoto(token, chatId, photoUrl, caption) {
+  try {
+    const body = { chat_id: chatId, photo: photoUrl };
+    if (caption) { body.caption = caption; body.parse_mode = 'HTML'; }
+    const r = await fetch('https://api.telegram.org/bot' + token + '/sendPhoto', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(15000)
+    });
+    return r.ok;
+  } catch (e) { return false; }
+}
+async function postChannelWithPhoto(token, c, kind, text) {
+  const file = CH_PHOTOS[kind] && CH_PHOTOS[kind][c.lang];
+  if (file) {
+    const url = CH_PHOTO_BASE + file;
+    if (text.length <= 1024) {
+      if (await tgSendPhoto(token, c.chatId, url, text)) return true;
+    } else if (await tgSendPhoto(token, c.chatId, url, null)) {
+      return await tgSend(token, c.chatId, text);
+    }
+  }
+  return await tgSend(token, c.chatId, text);
+}
 async function binancePrice(sym) {
   try {
     const r = await fetch('https://data-api.binance.vision/api/v3/ticker/price?symbol=' + encodeURIComponent(sym), { signal: AbortSignal.timeout(8000) });
@@ -1322,7 +1357,7 @@ async function runChannelCron(nowMs) {
       for (const c of channels) {
         const text = buildChannelDigest(c.lang, data, now);
         if (!text) continue;
-        if (await tgSend(token, c.chatId, text)) sent++;
+        if (await postChannelWithPhoto(token, c, 'digest', text)) sent++;
       }
       if (sent > 0) { await kv.put(key, '1').catch(() => {}); out.digest = sent; }
     }
@@ -1338,7 +1373,7 @@ async function runChannelCron(nowMs) {
       for (const c of channels) {
         const text = buildChannelPrices(c.lang, data, now);
         if (!text) continue;
-        if (await tgSend(token, c.chatId, text)) sent++;
+        if (await postChannelWithPhoto(token, c, 'prices', text)) sent++;
       }
       if (sent > 0) { await kv.put(key, '1').catch(() => {}); out.prices = sent; }
     }
@@ -1353,7 +1388,7 @@ async function runChannelCron(nowMs) {
         const res = await fetchChannelNews(c.lang).catch(() => null);
         const text = res ? buildChannelNews(c.lang, res, now) : null;
         if (!text) continue;
-        if (await tgSend(token, c.chatId, text)) sent++;
+        if (await postChannelWithPhoto(token, c, 'news', text)) sent++;
       }
       if (sent > 0) { await kv.put(key, '1').catch(() => {}); out.news = sent; }
     }
@@ -1438,7 +1473,7 @@ async function handleAdmin(req) {
   const posted = [];
   for (const c of channels) {
     if (!texts[c.lang]) continue;
-    if (await tgSend(token, c.chatId, texts[c.lang])) posted.push(c.lang);
+    if (await postChannelWithPhoto(token, c, kind, texts[c.lang])) posted.push(c.lang);
   }
   if (!posted.length) return json({ ok: false, error: 'send_failed' }, 502);
   return json({ ok: true, kind, target, posted });
