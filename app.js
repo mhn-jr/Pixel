@@ -1850,16 +1850,8 @@
         if (gMode === 'xh') { setCurFromX(p); xhPriceAtY(p.y); try { window.head(); window.draw(); } catch (err) {} return; }
         if (gMode === 'pscale' && pm0) {
           try {
-            /* v1.14.8-fix — کشیدنِ عمودی روی محور قیمت = جابه‌جاییِ عمودیِ مقیاس
-               (مثل تریدینگ‌ویو): قیمتی که زیر انگشت بود زیر انگشت می‌ماند. */
             window.__ov = window.__ov || {};
-            var G2 = window.__geo || {};
-            var pA = (typeof G2.inv === 'function') ? G2.inv(Math.max(0, Math.min(G2.ph || 0, gy0))) : null;
-            var pB = (typeof G2.inv === 'function') ? G2.inv(Math.max(0, Math.min(G2.ph || 0, p.y))) : null;
-            if (pA != null && pB != null && isFinite(pA) && isFinite(pB)) {
-              var dp = pB - pA;
-              window.__ov.pm = { hi: pm0.hi + dp, lo: pm0.lo + dp };
-            }
+            window.__ov.pm = pmScale(pm0, Math.exp(dy / 170), window.__geo || {});
             setAxisXh(p.y); // v1.14.8 — برچسب + ⊕ با انگشت روی محور حرکت می‌کنند.
             window.draw(); window.head(); refreshAxisBtns();
           } catch (err) {}
@@ -1941,6 +1933,32 @@
         gMode = null;
       }
     }
+    /* v1.14.9 — باگ: کشیدن عمودی روی محور قیمت فقط صفحه را بالا/پایین می‌برد.
+       علت: touch-action: pan-y روی کانواس (برای اسکرول صفحه از روی چارت) محور قیمت را هم
+       شامل می‌شد و مرورگر ژست را می‌گرفت (pointercancel). touch-action ثابت است و بعد از
+       pointerdown دیگر عوض نمی‌شود؛ پس در touchstart (non-passive) اگر لمس داخل ناحیهٔ
+       محور قیمت بود، preventDefault می‌زنیم تا مرورگر اسکرول را شروع نکند و کشیدن =
+       کش‌آمدن مقیاس قیمت (مثل TradingView). بقیهٔ چارت همچنان صفحه را اسکرول می‌کند. */
+    var axisTouchLock = false;
+    function touchInAxis(t) {
+      var r = cvs.getBoundingClientRect();
+      var x = t.clientX - r.left, y = t.clientY - r.top;
+      return zoneOf({ x: x, y: y, w: r.width, h: r.height }) === 'p';
+    }
+    cvs.addEventListener('touchstart', function (e) {
+      axisTouchLock = false;
+      if (!e.touches || !e.touches.length) return;
+      if (touchInAxis(e.touches[0])) {
+        axisTouchLock = true;
+        if (e.cancelable) { try { e.preventDefault(); } catch (err) {} }
+      }
+    }, { passive: false });
+    cvs.addEventListener('touchmove', function (e) {
+      if ((axisTouchLock || gMode === 'pscale') && e.cancelable) { try { e.preventDefault(); } catch (err) {} }
+    }, { passive: false });
+    function axisTouchEnd() { axisTouchLock = false; }
+    cvs.addEventListener('touchend', axisTouchEnd);
+    cvs.addEventListener('touchcancel', axisTouchEnd);
     cvs.addEventListener('pointerup', ptrEnd);
     cvs.addEventListener('pointercancel', ptrEnd);
     cvs.addEventListener('pointerleave', function (e) { if (lpTimer) { try { clearTimeout(lpTimer); } catch (err) {} lpTimer = null; } var dwL = DW(); if (dwL) dwL.setPreview(null); if (pointers.size === 0 && !xhPinned) { window.cur = -1; window.__xhPrice = null; try { window.head(); window.draw(); } catch (err) {} } });
