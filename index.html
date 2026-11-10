@@ -162,6 +162,9 @@
   .heat-bar .hb-up { background: var(--up); height: 100%; }
   .heat-bar .hb-dn { background: var(--dn); height: 100%; }
   .heat-row .heat-v { width: 64px; flex: none; text-align: end; font-weight: 700; }
+  /* v1.12.0 — ردیف‌های خلاصهٔ بازار: برچسب راست، مقدار چپ (قیمت + تغییر). */
+  .dg-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; font-size: 13px; }
+  .dg-row .dg-v { font-weight: 700; text-align: end; }
   .mv-row { display: flex; align-items: center; gap: 10px; width: 100%; background: none; border: 0; border-bottom: 1px solid var(--line); color: var(--txt); padding: 9px 2px; font-size: 14px; cursor: pointer; text-align: start; }
   .mv-row:last-child { border-bottom: 0; }
   .mv-lb { font-weight: 700; }
@@ -422,6 +425,7 @@
   </div>
   <div id="view-dash" style="display:none">
     <div class="dash-h"><span id="dashTitle">داشبورد</span><button id="dashRefresh" type="button">↻</button></div>
+    <div id="dashDigest"></div>
     <div id="dashHeat"></div>
     <div id="dashMovers"></div>
     <div id="dashNews"></div>
