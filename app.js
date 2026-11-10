@@ -3268,29 +3268,69 @@
     });
     if (!data.rows.length) heatHtml += '<div class="' + (data.rowsLoading ? 'muted' : 'na') + '">' + esc(data.rowsLoading ? T('در حال بارگذاری…', 'Loading…') : T('فعلاً در دسترس نیست.', 'Not available right now.')) + '</div>';
     heatHtml += '</div>';
-    /* v1.12.0 — خلاصهٔ بازار، بالای داشبورد (مرحلهٔ ۱ از مسیر «اول PC، اگر
-       خاموش بود مینی‌اپ»): ترکیب همان داده‌های داشبورد — حال بازار، breadth،
-       قیمت‌های سرخط، ترس و طمع — بدون منبع تازه و بدون عدد ساختگی؛ هر پایه
-       که نیامد، خطش نمی‌آید. */
+    /* v1.12.1 — خلاصهٔ بازار، بازطراحی (دستور مالک: دیزاین بهتر شود + ترس
+       و طمع برای همهٔ بازارها): هیرو با کلمهٔ حال + نوار نشانگر، قیمت‌های
+       سرخط به‌صورت کارت، و «حال هر بازار» برای هر ۹ بازار. حال هر بازار از
+       breadth واقعی (سهم نمادهای سبز) + میانگین تغییر همان بازار حساب
+       می‌شود — نه از شاخصی که وجود ندارد (CNN ربات را بلاک می‌کند؛ تست
+       زنده ۲۰۲۶-۱۱-۱۰: «I'm a teapot. You're a bot.» + ۴۱۸؛ برای بازارهای
+       غیرکریپتو شاخصِ رایگانِ معتبری نیست). پس کلمهٔ حال (ترس/خنثی/طمع)
+       تفسیرِ دادهٔ واقعی است، نه عدد ساختگی — هیچ ۰–۱۰۰ ساختگی نشان داده
+       نمی‌شود؛ تنها شاخصِ واقعیِ ترس و طمع همان alternative.me کریپتو است
+       و جداگانه می‌ماند. */
     var upN = 0;
     data.rows.forEach(function (r) { if (r.changePct > 0) upN++; });
     var dgDate = '';
     try { dgDate = new Date(data.at || Date.now()).toLocaleDateString(lang === 'fa' ? 'fa-IR' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' }); } catch (e) {}
+    function moodWord(avg, upPct) {
+      var w;
+      if (avg >= 2) w = T('طمع شدید', 'Extreme Greed');
+      else if (avg >= 0.5) w = T('طمع', 'Greed');
+      else if (avg <= -2) w = T('ترس شدید', 'Extreme Fear');
+      else if (avg <= -0.5) w = T('ترس', 'Fear');
+      else w = T('خنثی', 'Neutral');
+      if (w !== T('خنثی', 'Neutral')) {
+        if ((w === T('طمع', 'Greed') || w === T('طمع شدید', 'Extreme Greed')) && upPct <= 25) w = T('خنثی', 'Neutral');
+        if ((w === T('ترس', 'Fear') || w === T('ترس شدید', 'Extreme Fear')) && upPct >= 75) w = T('خنثی', 'Neutral');
+      }
+      return w;
+    }
+    function moodCls(w) {
+      return (w === T('طمع', 'Greed') || w === T('طمع شدید', 'Extreme Greed')) ? 'up'
+        : (w === T('ترس', 'Fear') || w === T('ترس شدید', 'Extreme Fear')) ? 'dn' : '';
+    }
     var dg = '<div class="dash-sec"><h3>' + ICON.book + esc(T('خلاصهٔ بازار', 'Market digest')) + '</h3>';
-    if (dgDate) dg += '<div class="muted" style="margin-bottom:8px">' + esc(dgDate) + '</div>';
-    if (avgAll != null) {
-      dg += '<div class="dg-row"><span>' + esc(T('حال بازار', 'Market mood')) + '</span><span class="dg-v ' + (avgAll >= 0 ? 'up' : 'dn') + '">' + esc(tempTxt) + ' ' + fmtPct(avgAll) + '</span></div>';
+    if (dgDate) dg += '<div class="muted" style="margin-bottom:4px">' + esc(dgDate) + '</div>';
+    if (avgAll != null && data.rows.length) {
+      var heroW = moodWord(avgAll, Math.round((upN / data.rows.length) * 100));
+      var heroPos = Math.max(0, Math.min(100, (5 - Math.max(-5, Math.min(5, avgAll))) / 10 * 100));
+      dg += '<div class="dg-hero"><div class="dg-hero-mood ' + moodCls(heroW) + '">' + esc(heroW) + '</div>'
+        + '<div class="dg-hero-avg">' + esc(T('میانگین تغییر بازار', 'Average market change')) + ' ' + fmtPct(avgAll) + '</div>'
+        + '<div class="dg-bar"><span class="dg-marker" style="right:' + heroPos + '%"></span></div>'
+        + '<div class="dg-breadth">' + upN + ' ' + esc(T('از', 'of')) + ' ' + data.rows.length + ' ' + esc(T('نماد سبز', 'symbols green')) + '</div></div>';
     }
-    if (data.rows.length) {
-      dg += '<div class="dg-row"><span>' + esc(T('نمادهای سبز', 'Green symbols')) + '</span><span class="dg-v">' + upN + ' ' + esc(T('از', 'of')) + ' ' + data.rows.length + '</span></div>';
-    }
-    function headRow(sym) {
+    function headStat(sym) {
       var r = null;
       data.rows.forEach(function (x) { if (!r && x.quote && x.quote.symbol === sym) r = x; });
       if (!r) return '';
-      return '<div class="dg-row"><span>' + esc(r.quote.display || r.quote.label || sym) + '</span><span class="dg-v"><b>' + fmt(r.price) + ' ' + esc(r.currency || '') + '</b> <span class="' + (r.changePct >= 0 ? 'up' : 'dn') + '">' + fmtPct(r.changePct) + '</span></span></div>';
+      return '<div class="dg-stat"><div class="dg-lb">' + esc(r.quote.display || r.quote.label || sym) + '</div>'
+        + '<div class="dg-px">' + fmt(r.price) + ' ' + esc(r.currency || '') + '</div>'
+        + '<div class="dg-ch ' + (r.changePct >= 0 ? 'up' : 'dn') + '">' + fmtPct(r.changePct) + '</div></div>';
     }
-    dg += headRow('BTCUSDT') + headRow('ETHUSDT') + headRow('PAXGUSDT') + headRow('usd');
+    var stats = headStat('BTCUSDT') + headStat('ETHUSDT') + headStat('PAXGUSDT') + headStat('usd');
+    if (stats) dg += '<div class="dg-grid">' + stats + '</div>';
+    var moods = '';
+    MARKET_ORDER.forEach(function (k) {
+      var b = byMarket[k];
+      if (!b) return;
+      var upPct = Math.round((b.up / b.total) * 100);
+      var avg = b.sum / b.total;
+      var w = moodWord(avg, upPct);
+      moods += '<div class="dg-mood"><span class="dg-lb">' + esc(marketLabel(k)) + '</span>'
+        + '<span class="heat-bar"><span class="hb-up" style="width:' + upPct + '%"></span><span class="hb-dn" style="width:' + (100 - upPct) + '%"></span></span>'
+        + '<span class="dg-w ' + moodCls(w) + '">' + esc(w) + ' ' + fmtPct(avg) + '</span></div>';
+    });
+    if (moods) dg += '<div class="dg-moods">' + moods + '</div>';
     if (data.fearGreed && isFinite(data.fearGreed.value)) {
       var fgLbl = { 'Extreme Fear': T('ترس شدید', 'Extreme Fear'), 'Fear': T('ترس', 'Fear'), 'Neutral': T('خنثی', 'Neutral'), 'Greed': T('طمع', 'Greed'), 'Extreme Greed': T('طمع شدید', 'Extreme Greed') }[data.fearGreed.label] || data.fearGreed.label;
       dg += '<div class="dg-row"><span>' + esc(T('ترس و طمع کریپتو', 'Crypto Fear & Greed')) + '</span><span class="dg-v">' + data.fearGreed.value + ' · ' + esc(fgLbl) + '</span></div>';

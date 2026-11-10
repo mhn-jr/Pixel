@@ -165,6 +165,23 @@
   /* v1.12.0 — ردیف‌های خلاصهٔ بازار: برچسب راست، مقدار چپ (قیمت + تغییر). */
   .dg-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; font-size: 13px; }
   .dg-row .dg-v { font-weight: 700; text-align: end; }
+  /* v1.12.1 — بازطراحی خلاصه: هیرو با نوار حال بازار، کارت‌های قیمت سرخط،
+     و ردیف «حال هر بازار» با نوار breadth. */
+  .dg-hero { text-align: center; padding: 6px 0 2px; }
+  .dg-hero-mood { font-size: 24px; font-weight: 800; }
+  .dg-hero-avg { font-size: 13px; color: var(--mut); margin-top: 2px; }
+  .dg-bar { position: relative; height: 8px; border-radius: 99px; margin: 12px 4px 4px; background: linear-gradient(to left, var(--up), #e8c33c, var(--dn)); }
+  .dg-marker { position: absolute; top: 50%; width: 16px; height: 16px; border-radius: 50%; background: var(--txt); border: 2px solid var(--bg); transform: translate(50%, -50%); }
+  .dg-breadth { font-size: 12px; color: var(--mut); }
+  .dg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
+  .dg-stat { background: rgba(255,255,255,.03); border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; }
+  .dg-stat .dg-lb { font-size: 12px; color: var(--mut); }
+  .dg-stat .dg-px { font-size: 15px; font-weight: 800; margin-top: 2px; }
+  .dg-stat .dg-ch { font-size: 12px; font-weight: 700; }
+  .dg-moods { margin-top: 4px; }
+  .dg-mood { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13px; }
+  .dg-mood .dg-lb { width: 86px; flex: none; }
+  .dg-mood .dg-w { width: 92px; flex: none; text-align: end; font-weight: 700; }
   .mv-row { display: flex; align-items: center; gap: 10px; width: 100%; background: none; border: 0; border-bottom: 1px solid var(--line); color: var(--txt); padding: 9px 2px; font-size: 14px; cursor: pointer; text-align: start; }
   .mv-row:last-child { border-bottom: 0; }
   .mv-lb { font-weight: 700; }
