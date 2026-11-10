@@ -128,7 +128,9 @@
     var c = paneCtx('rsiCv'), valEl = document.getElementById('rsiVal');
     var s = rsiSeries(closesOf(cs), 14);
     if (!c || !s) { if (valEl) valEl.textContent = 'در دسترس نیست'; return; }
-    var last = s[s.length - 1];
+    /* v1.14.8 — با کراس‌هیر فعال، مقدار همان کندلِ زیر نشانگر نشان داده می‌شود؛ وگرنه آخرین مقدار. */
+    var vi = (typeof window.cur === 'number' && window.cur >= 0 && window.cur < n) ? off + window.cur : s.length - 1;
+    var last = s[vi];
     if (valEl) valEl.textContent = (last == null ? 'در دسترس نیست' : last.toFixed(1));
     var g = c.g, H = c.H;
     var Y = function (v) { return 4 + (100 - v) / 100 * (H - 8); };
@@ -151,7 +153,9 @@
     var c = paneCtx('macdCv'), valEl = document.getElementById('macdVal');
     var m = macdSeries(closesOf(cs));
     if (!c || !m) { if (valEl) valEl.textContent = 'در دسترس نیست'; return; }
-    var last = m.hist[m.hist.length - 1];
+    /* v1.14.8 — با کراس‌هیر فعال، هیستوگرام همان کندلِ زیر نشانگر؛ وگرنه آخرین مقدار. */
+    var vi = (typeof window.cur === 'number' && window.cur >= 0 && window.cur < n) ? off + window.cur : m.hist.length - 1;
+    var last = m.hist[vi];
     if (valEl) valEl.textContent = (last == null ? 'در دسترس نیست' : (last >= 0 ? '+' : '') + fmtNum(last));
     var g = c.g, H = c.H;
     var mn = Infinity, mx = -Infinity, i, j;
@@ -187,7 +191,9 @@
     var c = paneCtx('stochCv'), valEl = document.getElementById('stochVal');
     var s = stochSeries(cs, 14, 3);
     if (!c || !s) { if (valEl) valEl.textContent = 'در دسترس نیست'; return; }
-    var last = s.k[s.k.length - 1];
+    /* v1.14.8 — با کراس‌هیر فعال، مقدار همان کندلِ زیر نشانگر؛ وگرنه آخرین مقدار. */
+    var vi = (typeof window.cur === 'number' && window.cur >= 0 && window.cur < n) ? off + window.cur : s.k.length - 1;
+    var last = s.k[vi];
     if (valEl) valEl.textContent = (last == null ? 'در دسترس نیست' : last.toFixed(1));
     var g = c.g, H = c.H;
     var Y = function (v) { return 4 + (100 - v) / 100 * (H - 8); };
@@ -210,7 +216,9 @@
     var c = paneCtx('obvCv'), valEl = document.getElementById('obvVal');
     var s = obvSeries(cs);
     if (!c || !s) { if (valEl) valEl.textContent = 'در دسترس نیست'; return; }
-    var last = s[s.length - 1];
+    /* v1.14.8 — با کراس‌هیر فعال، مقدار همان کندلِ زیر نشانگر؛ وگرنه آخرین مقدار. */
+    var vi = (typeof window.cur === 'number' && window.cur >= 0 && window.cur < n) ? off + window.cur : s.length - 1;
+    var last = s[vi];
     if (valEl) valEl.textContent = compactNum(last);
     var g = c.g, H = c.H;
     var mn = Infinity, mx = -Infinity, i;
@@ -244,11 +252,63 @@
     if (r2) r2.style.display = on.macd ? '' : 'none';
     if (r3) r3.style.display = on.stoch ? '' : 'none';
     if (r4) r4.style.display = on.obv ? '' : 'none';
-    var b1 = document.getElementById('rsiBtn'), b2 = document.getElementById('macdBtn'), b3 = document.getElementById('stochBtn'), b4 = document.getElementById('obvBtn');
-    if (b1) b1.classList.toggle('on', !!on.rsi);
-    if (b2) b2.classList.toggle('on', !!on.macd);
-    if (b3) b3.classList.toggle('on', !!on.stoch);
-    if (b4) b4.classList.toggle('on', !!on.obv);
+    /* v1.14.8 — سوییچ‌های پنل در تنظیمات چارت (جایگزین دکمه‌های نوار ابزار پایین). */
+    var s1 = document.getElementById('setPaneRsi'), s2 = document.getElementById('setPaneMacd'), s3 = document.getElementById('setPaneStoch'), s4 = document.getElementById('setPaneObv');
+    if (s1) s1.classList.toggle('on', !!on.rsi);
+    if (s2) s2.classList.toggle('on', !!on.macd);
+    if (s3) s3.classList.toggle('on', !!on.stoch);
+    if (s4) s4.classList.toggle('on', !!on.obv);
+  }
+
+  /* v1.14.8 — ژست پنل‌های اندیکاتور: کشیدنِ افقی/ضربه کراس‌هیر را جابه‌جا می‌کند
+     (مثل چارت اصلی)؛ کشیدنِ عمودی صفحه را اسکرول می‌کند (touch-action: pan-y
+     در CSS + بدون setPointerCapture، تا مرورگر اسکرول عمودی را بگیرد). */
+  function paneIndexFromX(cv, clientX) {
+    var G = window.__geo, cs = window.cs;
+    if (!G || !Array.isArray(cs) || !cs.length) return -1;
+    var r = null;
+    try { r = cv.getBoundingClientRect(); } catch (_) {}
+    var x = r ? clientX - r.left : clientX;
+    var st = G.st || 7;
+    var cw = (G.W || 0) - (G.pw || 46);
+    var n = Math.min(cs.length - G.off, Math.floor(cw / st));
+    if (n < 2) return -1;
+    var i = Math.floor(x / st);
+    if (i < 0) i = 0;
+    if (i > n - 1) i = n - 1;
+    return i;
+  }
+  function paneScrub(cv, clientX) {
+    var i = paneIndexFromX(cv, clientX);
+    if (i < 0) return false;
+    try {
+      if (typeof window.__pinXh === 'function') { window.__pinXh(i); return true; }
+    } catch (_) {}
+    window.cur = i;
+    window.__xhPrice = null;
+    try { if (typeof window.head === 'function') window.head(); } catch (_) {}
+    try { if (typeof window.draw === 'function') window.draw(); } catch (_) {}
+    return true;
+  }
+  function attachPaneGestures() {
+    ['rsiCv', 'macdCv', 'stochCv', 'obvCv'].forEach(function (id) {
+      var cv = document.getElementById(id);
+      if (!cv || cv.__paneGestures) return;
+      cv.__paneGestures = true;
+      var startX = null, startY = null;
+      cv.addEventListener('pointerdown', function (e) {
+        startX = e.clientX; startY = e.clientY;
+        paneScrub(cv, e.clientX);
+      });
+      cv.addEventListener('pointermove', function (e) {
+        if (startX == null) return;
+        /* فقط حرکتِ عمدتاً افقی کراس‌هیر را می‌برد؛ حرکت عمودی را مرورگر اسکرول می‌کند. */
+        if (Math.abs(e.clientX - startX) > Math.abs(e.clientY - startY)) paneScrub(cv, e.clientX);
+      });
+      function end() { startX = null; startY = null; }
+      cv.addEventListener('pointerup', end);
+      cv.addEventListener('pointercancel', end);
+    });
   }
 
   window.drawPanes = drawPanes;
@@ -259,6 +319,7 @@
   window.OnellaPanes = {
     get on() { return on; },
     toggle: function (id) { if (id === 'rsi' || id === 'macd' || id === 'stoch' || id === 'obv') { on[id] = !on[id]; save(); applyVis(); try { drawPanes(); } catch (_) {} } },
-    applyVis: applyVis
+    applyVis: applyVis,
+    attachPaneGestures: attachPaneGestures
   };
 })();

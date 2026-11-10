@@ -14,12 +14,27 @@
   button { -webkit-tap-highlight-color: transparent; }
   button:active { transform: scale(.97); }
   body { margin: 0; background: radial-gradient(640px 320px at 85% -5%, rgba(240,106,21,.10), transparent 60%), radial-gradient(520px 280px at 8% 0%, rgba(122,162,214,.07), transparent 60%), var(--bg); color: var(--txt); font-family: -apple-system, "Segoe UI", Tahoma, sans-serif; }
-  header { padding: 12px 14px 6px; display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 30; background: rgba(5,7,12,.88); backdrop-filter: blur(10px); }
-  header h1 { font-size: 17px; margin: 0; display: flex; align-items: center; gap: 8px; direction: ltr; }
+  header { padding: 12px 14px 6px; min-height: 46px; display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 30; background: rgba(5,7,12,.88); backdrop-filter: blur(10px); }
+  /* v1.14.8 — لوگو + نام دقیقاً وسط هدر (absolute + translate)؛ دکمهٔ بازگشت
+     در جریان عادی می‌ماند و مرکز را جابه‌جا نمی‌کند. */
+  header h1 { font-size: 17px; margin: 0; display: flex; align-items: center; gap: 8px; direction: ltr; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 1; white-space: nowrap; }
+  /* v1.14.8 — پس‌زمینهٔ مینیمال هدر: مشکی + چند نقطهٔ کوچکِ درخشانِ آرام —
+     کم‌تعداد، کوچک، کم‌نور، فقط transform/opacity (ارزان برای گوشی)؛
+     با prefers-reduced-motion ثابت می‌مانند؛ هرگز روی متن نمی‌آیند. */
+  .hdr-dots { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+  .hdr-dots i { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: rgba(240,106,21,.55); box-shadow: 0 0 6px 2px rgba(240,106,21,.28); animation: hdrTw 7s ease-in-out infinite alternate; }
+  .hdr-dots i:nth-child(1) { left: 10%; top: 28%; animation-delay: 0s; }
+  .hdr-dots i:nth-child(2) { left: 24%; top: 68%; animation-delay: 1.2s; animation-duration: 8s; background: rgba(122,162,214,.5); box-shadow: 0 0 6px 2px rgba(122,162,214,.25); }
+  .hdr-dots i:nth-child(3) { left: 76%; top: 26%; animation-delay: .6s; animation-duration: 6s; }
+  .hdr-dots i:nth-child(4) { left: 88%; top: 66%; animation-delay: 2s; background: rgba(230,233,239,.45); box-shadow: 0 0 6px 2px rgba(230,233,239,.22); }
+  .hdr-dots i:nth-child(5) { left: 46%; top: 78%; animation-delay: 1.6s; animation-duration: 9s; width: 2px; height: 2px; }
+  .hdr-dots i:nth-child(6) { left: 62%; top: 18%; animation-delay: .3s; animation-duration: 7.5s; width: 2px; height: 2px; }
+  @keyframes hdrTw { from { opacity: .15; transform: translate(0, 0); } to { opacity: .5; transform: translate(4px, -3px); } }
+  @media (prefers-reduced-motion: reduce) { .hdr-dots i { animation: none; } }
   header h1 img.logo { height: 26px; width: 26px; border-radius: 50%; }
   header h1 span { color: var(--acc); }
   header h1 span.lite { font-size: 11px; border: 1px solid var(--acc); border-radius: 999px; padding: 1px 7px; }
-  #backBtn { background: none; border: 1px solid var(--line); color: var(--txt); border-radius: 8px; padding: 6px 10px; font-size: 13px; cursor: pointer; }
+  #backBtn { position: relative; z-index: 1; background: none; border: 1px solid var(--line); color: var(--txt); border-radius: 8px; padding: 6px 10px; font-size: 13px; cursor: pointer; }
   main { padding: 6px 14px 24px; max-width: 560px; margin: 0 auto; }
   .mkt { margin-top: 14px; }
   .mkt-h { font-size: 14px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 7px; border-inline-start: 3px solid var(--acc); padding-inline-start: 8px; }
@@ -53,8 +68,10 @@
   .chip { text-transform: capitalize; }
   .px { font-size: 14px; padding: 6px 2px; min-height: 24px; }
   .px b { margin-inline-start: 6px; }
-  .chartwrap { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
-  #cc { touch-action: none; }
+  .chartwrap { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; position: relative; }
+  /* v1.14.8 — کشیدنِ عمودی روی چارتِ اصلی صفحه را اسکرول می‌کند (فقط کشیدنِ
+     افقی چارت را جابه‌جا می‌کند و فقط کشیدن روی محور قیمت مقیاس را می‌کشد). */
+  #cc { touch-action: pan-y; }
   .news-item { padding: 12px 2px; border-bottom: 1px solid var(--line); }
   .news-tag { font-size: 12px; margin-bottom: 4px; }
   .news-title { font-size: 14px; line-height: 1.6; }
@@ -84,7 +101,6 @@
   .srow:active { border-color: var(--acc); }
   .srow-lb { font-weight: 700; }
   .srow-ds { color: var(--mut); font-size: 12px; }
-  .toolbar { display: flex; gap: 6px; margin: 10px 0 4px; flex-wrap: wrap; }
   .tbtn { background: var(--card); border: 1px solid var(--line); color: var(--txt); border-radius: 8px; padding: 6px 11px; font-size: 12px; cursor: pointer; transition: background .15s, border-color .15s, box-shadow .15s; }
   .tbtn.on { border-color: transparent; color: #fff; background: linear-gradient(135deg, #f06a15, #ff8a1f); box-shadow: 0 3px 10px rgba(240,106,21,.3); }
   .tbtn:active { border-color: var(--acc); }
@@ -98,9 +114,8 @@
   .xh-box { position: absolute; top: 44px; right: 8px; z-index: 4; background: rgba(13,19,32,.92); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; font-size: 11px; line-height: 1.7; color: var(--txt); pointer-events: none; text-align: left; max-width: calc(100% - 20px); }
   .xh-box b { color: var(--txt); }
   .panes { margin-top: 8px; }
-  /* v1.9.0 — هشدار (به سبک تریدینگ‌ویو): دیالوگ، بنر، منوی محور قیمت، بج دکمه. */
-  #alertBtn { position: relative; }
-  #alertBtn svg { width: 16px; height: 16px; display: block; }
+  /* v1.9.0 — هشدار (به سبک تریدینگ‌ویو): دیالوگ، بنر، منوی محور قیمت، بج دکمه.
+     v1.14.8 — بج آلرت روی دکمهٔ Alert نوار بالا نشست (دکمهٔ پایین حذف شد). */
   .al-badge { position: absolute; top: -5px; inset-inline-end: -5px; min-width: 15px; height: 15px; border-radius: 999px; background: var(--acc); color: #fff; font-size: 10px; font-weight: 800; line-height: 15px; text-align: center; padding: 0 3px; }
   .al-banner { position: fixed; top: calc(10px + env(safe-area-inset-top)); left: 12px; right: 12px; z-index: 70; display: flex; align-items: center; gap: 8px; background: #1a1408; border: 1px solid var(--acc); border-radius: 12px; padding: 10px 12px; font-size: 13px; color: var(--txt); box-shadow: 0 8px 24px rgba(0,0,0,.5); }
   .al-banner .al-bell { color: var(--acc); flex: none; }
@@ -109,8 +124,8 @@
   .al-banner .al-bpx { color: var(--mut); font-size: 12px; white-space: nowrap; }
   .al-banner .al-bx { background: none; border: 0; color: var(--mut); font-size: 15px; cursor: pointer; padding: 2px 6px; }
   .axis-menu { position: fixed; z-index: 75; width: 220px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 6px; box-shadow: 0 10px 28px rgba(0,0,0,.55); }
-  /* v1.9.1 — دکمه + روی محور قیمت (سبک تریدینگ‌ویو) + خط ردیابی قیمت. */
-  .axis-plus { position: absolute; z-index: 6; right: 2px; width: auto; min-width: 30px; height: 22px; transform: translateY(-50%); background: #000; color: #fff; border: 1px solid #3a4358; border-radius: 6px; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; direction: ltr; white-space: nowrap; line-height: 1; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.5); padding: 0 7px; }
+  /* v1.9.1 — خط ردیابی قیمت روی محور (تک‌خط، هم‌قیمتِ برچسب قیمت آخر).
+     v1.14.8 — برچسب + روی محور حذف شد؛ ⊕ حالا داخلِ همان برچسب قیمت آخر است. */
   .axis-track { position: absolute; left: 0; right: 0; height: 0; border-top: 1px dashed rgba(240,106,21,.75); z-index: 3; pointer-events: none; }
   .axis-menu .ax-item { display: flex; align-items: center; gap: 10px; width: 100%; background: none; border: 0; color: var(--txt); font-size: 13px; font-weight: 700; text-align: start; padding: 10px 8px; border-radius: 8px; cursor: pointer; font-family: inherit; }
   .axis-menu .ax-item:hover { background: rgba(240,106,21,.12); }
@@ -144,7 +159,9 @@
   .pane-row { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin-bottom: 8px; }
   .pane-h { display: flex; justify-content: space-between; padding: 6px 10px 0; font-size: 12px; color: var(--mut); }
   .pane-h b { color: var(--txt); font-weight: 700; }
-  .pane-cv { width: 100%; height: 84px; display: block; touch-action: none; }
+  /* v1.14.8 — کشیدنِ عمودی روی پنل‌های اندیکاتور صفحه را اسکرول می‌کند
+     (فقط کشیدنِ افقی کراس‌هیر را می‌برد). */
+  .pane-cv { width: 100%; height: 84px; display: block; touch-action: pan-y; }
   /* v1.2.0 — دو تب اصلی (چارت / داشبورد) + مودال سرچ + گیج + داشبورد */
   main { padding-bottom: 84px; }
   /* v1.6.0 — کارت‌ها: سایهٔ نرم + هایلایت بالا؛ ناوبری پایین شیشه‌ای. */
@@ -231,7 +248,11 @@
   .dash-sec h3 svg { width: 18px; height: 18px; color: var(--acc); flex: none; }
   .px-ov { position: absolute; top: 8px; inset-inline-start: 10px; z-index: 4; pointer-events: none; background: rgba(5,7,12,.6); border-radius: 7px; padding: 4px 8px; font-size: 13px; min-height: 0; }
   .px-ov b { font-size: 15px; }
-  #lastPxTag { position: absolute; z-index: 4; right: 0; transform: translateY(-50%); background: var(--up); color: #04120b; font-size: 11px; font-weight: 800; border-radius: 4px 0 0 4px; padding: 3px 6px; pointer-events: none; white-space: nowrap; }
+  #lastPxTag { position: absolute; z-index: 4; right: 0; transform: translateY(-50%); background: var(--up); color: #04120b; font-size: 11px; font-weight: 800; border-radius: 4px 0 0 4px; padding: 3px 6px; pointer-events: none; white-space: nowrap; display: flex; align-items: center; gap: 4px; direction: ltr; }
+  /* v1.14.8 — ⊕ چسبیده به برچسب قیمت آخر (سمت چپِ قیمت، روی محور)؛ همان قیمت
+     برچسب را دارد؛ فقط خودِ دکمه کلیک می‌خورد (بقیهٔ برچسب pointer-events ندارد). */
+  #lastPxTag .ax-plus { pointer-events: auto; flex: none; width: 20px; height: 20px; border-radius: 6px; border: 1px solid rgba(255,255,255,.4); background: rgba(0,0,0,.55); color: #fff; font-size: 13px; font-weight: 800; line-height: 1; cursor: pointer; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+  #lastPxTag .lpx-tx { font-variant-numeric: tabular-nums; }
   #lastPxTag.dn { background: var(--dn); color: #fff; }
   .imp-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-inline-end: 4px; }
   .imp-dot.high { background: #ff5d6c; } .imp-dot.med { background: #ffb347; } .imp-dot.low { background: var(--mut); }
@@ -257,9 +278,13 @@
      دکمهٔ تنظیمات چارت (بالا-راست چارت، مثل اپ اصلی) + پنل تنظیمات قابل اسکرول. */
   /* v1.7.0 — پنل تنظیمات زیر دکمهٔ تنظیمات (سمت چپ) باز می‌شود؛ نوار ابزار
      دستی هم از همان سمت چپ، زیر ردیف بالا. */
-  .tools-strip { display: none; position: absolute; left: 8px; top: 8px; bottom: 8px; width: 176px; overflow-y: auto; overflow-x: hidden; touch-action: pan-y; overscroll-behavior: contain; scrollbar-width: thin; background: rgba(13,19,32,.97); border: 1px solid var(--line); border-radius: 12px; padding: 4px 4px 22px; z-index: 6; }
+  .tools-strip { display: none; position: absolute; left: 8px; top: 8px; bottom: 8px; width: 176px; overflow-y: auto; overflow-x: hidden; touch-action: pan-y; overscroll-behavior: contain; scrollbar-width: thin; background: rgba(13,19,32,.97); border: 1px solid var(--line); border-radius: 12px; padding: 4px 4px 34px; z-index: 6; }
   .tools-strip.open { display: block; }
-  .strip-more { position: sticky; bottom: 0; display: block; width: 100%; height: 18px; margin-top: 6px; flex: none; background: var(--card); border: 1px solid var(--line); border-radius: 6px; color: var(--mut); font-size: 10px; line-height: 1; cursor: pointer; padding: 0; }
+  /* v1.14.8 — دکمهٔ «⌄» دیگر وسطِ لیستِ اسکرول‌شونده نیست؛ یک ردیف فوترِ ثابت
+     در پایین پنل است (هم‌عرض نوار، جدا از ردیف‌های ابزار با border-top)؛
+     ⌄ = اسکرول به پایین، ⌃ (در انتها) = برگشت به بالا. */
+  .strip-more { position: absolute; left: 8px; bottom: 8px; width: 176px; height: 30px; z-index: 7; display: block; background: var(--card); border: 1px solid var(--line); border-top: 1px solid var(--line); border-radius: 0 0 11px 11px; color: var(--mut); font-size: 12px; line-height: 1; cursor: pointer; padding: 0; }
+  .strip-sec-h { font-size: 11px; font-weight: 700; color: var(--mut); padding: 7px 8px 3px; flex: none; }
   .tools-strip::-webkit-scrollbar { width: 4px; }
   .tools-strip::-webkit-scrollbar-thumb { background: rgba(124,138,160,.5); border-radius: 2px; }
   .strip-group { display: flex; flex-direction: column; gap: 4px; }
@@ -267,8 +292,10 @@
   .tools-strip .tbtn { width: 100%; height: 38px; padding: 4px 10px; display: flex; align-items: center; justify-content: flex-start; gap: 9px; flex: none; }
   .tools-strip .tbtn svg { width: 20px; height: 20px; display: block; flex: none; }
   .tools-strip .tbtn .tb-lb { font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .tools-strip #chartTools .tbtn.on { border-color: var(--p-vol); color: var(--p-vol); }
-  .tools-strip #drawTools .tbtn.on { border-color: var(--acc); color: var(--acc); }
+  /* v1.14.8 — ردیفِ انتخاب‌شده در نوار: متنِ تیره روی گرادیان نارنجی (کنتراست
+     واقعی)؛ قبلاً متن نارنجی/فیروزه‌ای روی همان نارنجی محو می‌شد. */
+  .tools-strip #chartTools .tbtn.on { border-color: transparent; color: #1a1005; }
+  .tools-strip #drawTools .tbtn.on { border-color: transparent; color: #1a1005; }
   .tools-strip .tbtn:disabled { opacity: .4; }
   .tool-note-bar { font-size: 12px; color: var(--mut); line-height: 1.6; padding: 6px 2px 0; }
   .set-fab { display: none; }
@@ -409,7 +436,7 @@
   .live-dot.live-ws { color: var(--up); }
   .live-dot.live-poll { color: #ffb347; }
   /* v1.14.7 — دکمهٔ Alert کنار تنظیمات چارت (مثل تریدینگ‌ویو: آیکون ساعت + «Alert») */
-  .tf-alert { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 6px 11px; background: var(--card); border: 1px solid var(--line); color: var(--txt); border-radius: 10px; cursor: pointer; flex: none; font-size: 12px; font-weight: 700; font-family: inherit; }
+  .tf-alert { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 6px 11px; background: var(--card); border: 1px solid var(--line); color: var(--txt); border-radius: 10px; cursor: pointer; flex: none; font-size: 12px; font-weight: 700; font-family: inherit; position: relative; }
   .tf-alert svg { width: 17px; height: 17px; display: block; }
   .tf-alert:active { border-color: var(--acc); }
   /* v1.14.7 — نوار وضعیت پایین چارت: ساعت زنده + منطقهٔ زمانی (مثل تریدینگ‌ویو). */
@@ -427,10 +454,34 @@
   .sheet-row { display: flex; align-items: center; gap: 10px; width: 100%; background: var(--card); border: 1px solid var(--line); color: var(--txt); border-radius: 10px; padding: 12px; font-size: 14px; font-weight: 700; cursor: pointer; text-align: start; margin-bottom: 8px; font-family: inherit; }
   .sheet-row:active { border-color: var(--acc); }
   .sheet-row svg { width: 18px; height: 18px; color: var(--acc); flex: none; }
+  /* v1.14.8 — حالت تمرکز (فقط داخل تمام‌صفحه): همهٔ کرومِ صفحه پنهان می‌شود و
+     فقط خودِ چارت می‌ماند (محور قیمت + کندل‌ها + برچسب قیمت آخر می‌مانند؛
+     فقط ⊕ برچسب پنهان می‌شود). خروج با دکمهٔ شناور؛ خروج از تمام‌صفحه هم
+     تمرکز را خاموش می‌کند. */
+  body.focus-mode header,
+  body.focus-mode #mainTabs,
+  body.focus-mode #view-symbol .tabs,
+  body.focus-mode #symBar,
+  body.focus-mode #priceBox,
+  body.focus-mode #gaugeBox,
+  body.focus-mode .tf-wrap,
+  body.focus-mode #toolsStrip,
+  body.focus-mode .strip-more,
+  body.focus-mode .panes,
+  body.focus-mode .chart-status,
+  body.focus-mode .tool-note-bar { display: none !important; }
+  body.focus-mode #lastPxTag .ax-plus { display: none !important; }
+  body.focus-mode #tab-chart #nv { height: calc(100dvh - 16px) !important; }
+  #focusExitBtn { position: absolute; top: 8px; inset-inline-end: 8px; z-index: 9; background: rgba(13,19,32,.92); border: 1px solid var(--line); color: var(--txt); border-radius: 999px; padding: 7px 12px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; }
+  #focusExitBtn:active { border-color: var(--acc); }
+  /* v1.14.8 — ردیف بزرگ‌نمایی در پنل تنظیمات (جایگزین دکمه‌های −/+ نوار پایین). */
+  .set-zoom-row { display: flex; gap: 6px; }
+  .set-zoom-row .tbtn { flex: 1; padding: 8px; font-size: 16px; font-weight: 800; text-align: center; }
 </style>
 </head>
 <body>
 <header>
+  <div class="hdr-dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
   <button id="backBtn" type="button" style="display:none">‹ بازگشت</button>
   <h1><img class="logo" src="logo.png" alt="Onella Nelora Lite"> Onella <span>Nelora</span> <span class="lite">Lite</span></h1>
 </header>

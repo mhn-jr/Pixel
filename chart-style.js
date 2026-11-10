@@ -52,9 +52,13 @@
   /* v1.14.7 — منطقهٔ زمانیِ انتخاب‌شده (پیش‌فرض UTC، قانون این خط؛ نه System):
      همهٔ نمایش‌های زمان (محور چارت، ساعت، خبر، هشدار) از همین زون می‌آیند —
      epoch همیشه UTC می‌ماند و فقط نمایش با Intl و timeZone تبدیل می‌شود. */
-  var DK='onella_date_v1',DP={cal:'auto',tz:'UTC'},DCAL={gregory:'gregory',persian:'persian',islamic:'islamic-umalqura'},dcache={},fcache={};
+  /* v1.14.8 — قانون این خط: پیش‌فرض میلادی + UTC (نه System، نه شمسی).
+     تقویمِ ذخیره‌شدهٔ 'auto' هم نادیده گرفته می‌شود تا دستگاه‌های fa-IR
+     دیگر به‌صورت پیش‌فرض شمسی نبینند؛ انتخاب دستیِ کاربر (میلادی/شمسی/قمری)
+     در شیت منطقهٔ زمانی است و در همین store می‌ماند. */
+  var DK='onella_date_v1',DP={cal:'gregory',tz:'UTC'},DCAL={gregory:'gregory',persian:'persian',islamic:'islamic-umalqura'},dcache={},fcache={};
   function validTZ(z){if(z==='UTC')return true;if(typeof z!=='string'||!z)return false;try{Intl.DateTimeFormat('en',{timeZone:z});return true}catch(_){return false}}
-  try{var dr=JSON.parse(localStorage.getItem(DK)||'null');if(dr&&(dr.cal==='auto'||DCAL[dr.cal]))DP.cal=dr.cal;if(dr&&validTZ(dr.tz))DP.tz=dr.tz}catch(_){}
+  try{var dr=JSON.parse(localStorage.getItem(DK)||'null');if(dr&&DCAL[dr.cal])DP.cal=dr.cal;if(dr&&validTZ(dr.tz))DP.tz=dr.tz}catch(_){}
   function effTZ(){return validTZ(DP.tz)?DP.tz:'UTC'}
   /* افست زون نسبت به UTC در یک لحظه، به میلی‌ثانیه (با DST همان لحظه). */
   function tzOffMs(ms){if(effTZ()==='UTC')return 0;
@@ -93,13 +97,13 @@
   window.OnellaDate={app:dapp,get:function(){return {cal:DP.cal,effective:effCal(),locale:dispLoc(),timeZone:effTZ(),sysTimeZone:sysTZ()}},set:dsetCal,setTZ:dsetTZ,fmt:dfmt,parts:dparts,full:dfull,cross:function(ms,daily){return dfmt(ms,daily?'cd':'ct')}};
   /* ردیف تنظیمات داخل پنل ⚙ برنامه */
   var DLAB=[['auto','سیستم','System'],['gregory','میلادی','Gregorian'],['persian','شمسی','Solar Hijri'],['islamic','قمری','Lunar Hijri']];
-  function renderDateRow(){var P=document.getElementById('settingsPanel');if(!P)return;var row=document.getElementById('odRow'); // Mini App: پنل تنظیمات نیست؛ تابع فقط برای سازگاری مانده
-    if(!row){row=document.createElement('div');row.id='odRow';row.className='setting-row od-row';P.appendChild(row);
-      row.addEventListener('click',function(e){e.stopPropagation();var b=e.target.closest('button[data-cal]');if(b)dsetCal(b.dataset.cal)})}
-    row.innerHTML='<div class="setting-copy"><b>'+tt('تاریخ و ساعت','Date & time')+'</b><small>'+tt('پیش‌فرض: تنظیمات سیستم شما','Default: your system settings')+(sysTZ()?' ('+sysTZ()+')':'')+'</small></div>'+
+  /* v1.14.8 — Mini App: ردیف تقویم دیگر به پنل تنظیمات اضافه نمی‌شود —
+     انتخاب تقویم در شیت منطقهٔ زمانی است (app.js: renderCalList)؛ این تابع
+     فقط اگر ردیف از قبل وجود داشته باشد به‌روزش می‌کند و هرگز نمی‌سازد. */
+  function renderDateRow(){var P=document.getElementById('settingsPanel');if(!P)return;var row=document.getElementById('odRow');
+    if(!row)return;
+    row.innerHTML='<div class="setting-copy"><b>'+tt('تاریخ و ساعت','Date & time')+'</b><small>'+tt('پیش‌فرض: میلادی','Default: Gregorian')+(sysTZ()?' ('+sysTZ()+')':'')+'</small></div>'+
       '<div class="od-seg">'+DLAB.map(function(x){return '<button type="button" data-cal="'+x[0]+'" class="'+(DP.cal===x[0]?'on':'')+'">'+tt(x[1],x[2])+'</button>'}).join('')+'</div>'}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){try{renderDateRow()}catch(_){}});else try{renderDateRow()}catch(_){}
-  setTimeout(function(){try{renderDateRow()}catch(_){}},800);
   function intr0(dt){return dt<864e5-1}
   function timeAxis(g,k){var v=k.v,n=v.length,X=k.X;if(n<2)return;
     var dt=Math.abs(v[1].t-v[0].t)||864e5,intr=dt<864e5-1,st=k.st,minPx=(intr0(dt)||dt<6e4)?72:46,marks=[],i,c,pr,lt,lp,p,pp;

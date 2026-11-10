@@ -1088,7 +1088,8 @@
     bindPriceMode();
   }
   function mofidDate(ms) {
-    try { return new Date(ms).toLocaleDateString('fa-IR'); } catch (e) { return new Date(ms).toISOString().slice(0, 10); }
+    try { if (window.OnellaDate) return window.OnellaDate.fmt(ms, 'cd'); } catch (e) {}
+    try { return new Date(ms).toLocaleDateString('fa-IR-u-ca-gregory'); } catch (e) { return new Date(ms).toISOString().slice(0, 10); }
   }
   // به‌روزرسانی سبک قیمت در حالت زنده (بدون بازسازی کل باکس).
   // v1.6.0 — در حالت تومان، تیک زندهٔ دلاری (Binance) عدد باکس را به دلار برنمی‌گرداند.
@@ -1356,11 +1357,6 @@
   }
 
   /* ---- چارت: نوار ابزار، زوم، تمام‌صفحه، ژست‌ها (v1.1.0) ---- */
-  var CHART_TYPES = [['candle', 'کندل', 'Candles'], ['hollow', 'توخالی', 'Hollow'], ['bars', 'بار', 'OHLC'], ['ha', 'هیکین‌آشی', 'Heikin Ashi'], ['line', 'خطی', 'Line'], ['area', 'ناحیه‌ای', 'Area']];
-  function chartTypeLabel(t) {
-    for (var i = 0; i < CHART_TYPES.length; i++) if (CHART_TYPES[i][0] === t) return lang === 'fa' ? CHART_TYPES[i][1] : CHART_TYPES[i][2];
-    return t;
-  }
   function zoomBy(f) {
     try {
       window.__ov = window.__ov || {};
@@ -1369,34 +1365,99 @@
       window.draw(); window.head();
     } catch (e) {}
   }
+  /* v1.14.8 — تمام‌صفحهٔ واقعی در مینی‌اپ تلگرام (باگ #۷): نسخهٔ قبلی فقط
+     Element.requestFullscreen را صدا می‌زد؛ در WebView تلگرام (به‌خصوص iOS)
+     آن API یا نیست یا بی‌صدا رد می‌شود و دکمه هیچ کاری نمی‌کرد.
+     ترتیب: (۱) Telegram.WebApp.requestFullscreen (WebApp 8.0+)،
+     (۲) requestFullscreen استاندارد روی کانتینر چارت (اگر تا ۷۰۰ms واقعاً
+     وارد تمام‌صفحه نشد، به (۳) می‌رویم)، (۳) حالت درون‌برنامه‌ای (.fs).
+     fsMode وضعیت واقعی را نگه می‌دارد تا زدن دوبارهٔ دکمه همیشه خارج شود. */
+  var fsMode = 'none'; /* 'none' | 'tg' | 'native' | 'css' */
+  var fsNativeTimer = null;
+  var focusOn = false;
+  /* v1.14.8 — آیکن‌های تمام‌صفحه این‌جا هستند (نه در renderChartShell): applyFsUI
+     بیرون از renderChartShell است و به آن‌ها نیاز دارد — تعریفِ داخلِ renderChartShell
+     همان باگ #۷ بود: در WebView تلگرام، cssFs → applyFsUI روی FS_ICONSِ ناموجود
+     ReferenceError می‌داد و دکمه هیچ کاری نمی‌کرد. */
+  var FS_ICONS = {
+    on: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V5a1 1 0 0 1 1-1h4"></path><path d="M20 9V5a1 1 0 0 0-1-1h-4"></path><path d="M4 15v4a1 1 0 0 0 1 1h4"></path><path d="M20 15v4a1 1 0 0 1-1 1h-4"></path></svg>',
+    off: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5a1 1 0 0 1-1 1H4"></path><path d="M15 4v5a1 1 0 0 0 1 1h4"></path><path d="M9 20v-5a1 1 0 0 0-1-1H4"></path><path d="M15 20v-5a1 1 0 0 1 1-1h4"></path></svg>'
+  };
+  function fsSupportedTg() { try { return !!(tg && typeof tg.requestFullscreen === 'function'); } catch (e) { return false; } }
+  function applyFsUI(on) {
+    var btn = $('fsBtn');
+    if (btn) btn.innerHTML = on ? FS_ICONS.off : FS_ICONS.on;
+    var fb = $('focusBtn');
+    if (fb) fb.style.display = on ? '' : 'none';
+    if (!on) exitFocusMode(true);
+  }
   function toggleFs() {
+    if (fsMode !== 'none') { exitFs(); return; }
+    enterFs();
+  }
+  function enterFs() {
     var wrap = $('tab-chart');
     if (!wrap) return;
-    if (document.fullscreenElement) { try { document.exitFullscreen(); } catch (e) {} return; }
+    if (fsSupportedTg()) {
+      try { tg.requestFullscreen(); fsMode = 'tg'; applyFsUI(true); return; } catch (e) {}
+    }
     if (wrap.requestFullscreen) {
       try {
         var p = wrap.requestFullscreen();
-        if (p && p.catch) p.catch(function () { cssFs(true); });
-      } catch (e) { cssFs(true); }
-    } else cssFs(!wrap.classList.contains('fs'));
+        fsMode = 'native';
+        applyFsUI(true);
+        if (p && p.catch) p.catch(function () { if (fsMode === 'native') { fsMode = 'none'; cssFs(true); } });
+        if (fsNativeTimer) { try { clearTimeout(fsNativeTimer); } catch (e2) {} }
+        fsNativeTimer = setTimeout(function () { if (fsMode === 'native' && !document.fullscreenElement) { fsMode = 'none'; cssFs(true); } }, 700);
+        return;
+      } catch (e) {}
+    }
+    cssFs(true);
+  }
+  function exitFs() {
+    if (fsMode === 'tg') {
+      try { if (tg && typeof tg.exitFullscreen === 'function') tg.exitFullscreen(); } catch (e) {}
+      fsMode = 'none'; applyFsUI(false); cssFs(false);
+      return;
+    }
+    if (fsMode === 'native') {
+      try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {}
+      fsMode = 'none'; applyFsUI(false); cssFs(false);
+      return;
+    }
+    if (fsMode === 'css') { fsMode = 'none'; applyFsUI(false); cssFs(false); return; }
+    applyFsUI(false);
   }
   function cssFs(on) {
     var tc = $('tab-chart');
     if (!tc) return;
     tc.classList.toggle('fs', !!on);
-    var btn = $('fsBtn');
-    if (btn) btn.innerHTML = on ? FS_ICONS.off : FS_ICONS.on;
+    if (on && fsMode === 'none') fsMode = 'css';
+    if (!on && fsMode === 'css') fsMode = 'none';
+    applyFsUI(!!on);
     setTimeout(function () { try { window.draw(); window.head(); } catch (e) {} }, 120);
   }
+  /* v1.14.8 — حالت تمرکز (فقط داخل تمام‌صفحه): فقط خودِ چارت دیده می‌شود.
+     خروج از تمام‌صفحه تمرکز را هم خاموش می‌کند. */
+  function enterFocusMode() {
+    if (fsMode === 'none' || focusOn) return;
+    focusOn = true;
+    try { document.body.classList.add('focus-mode'); } catch (e) {}
+    var fb = $('focusExitBtn'); if (fb) fb.style.display = '';
+    setTimeout(function () { try { window.draw(); window.head(); } catch (e) {} }, 120);
+  }
+  function exitFocusMode(silent) {
+    if (!focusOn) return;
+    focusOn = false;
+    try { document.body.classList.remove('focus-mode'); } catch (e) {}
+    var fb = $('focusExitBtn'); if (fb) fb.style.display = 'none';
+    if (!silent) setTimeout(function () { try { window.draw(); window.head(); } catch (e) {} }, 120);
+  }
+  function toggleFocusMode() { if (focusOn) exitFocusMode(); else enterFocusMode(); }
   function renderChartShell() {
-    /* v1.9.1 — با هر بار ساخت دوبارهٔ چارت، وضعیت + محور قیمت و کراس‌هیر ریست می‌شود. */
-    axisPlusPrice = null; xhPinned = false;
+    /* v1.9.1 — با هر بار ساخت دوبارهٔ چارت، وضعیت کراس‌هیر ریست می‌شود. */
+    xhPinned = false;
     try { window.__xhPrice = null; } catch (e) {}
-    var types = (window.OnellaChartStyle && window.OnellaChartStyle.types) || ['candle'];
-    var cur = 'candle';
-    try { cur = window.OnellaChartStyle.get().type || 'candle'; } catch (e) {}
-    var maOn = false, volOn = false;
-    try { maOn = !!window.OnellaChartStyle.get().ma; volOn = !!window.OnellaChartStyle.get().vol; } catch (e) {}
     var tfs = TFS[state.quote.provider] || [];
     var toolOn = window.on || {};
     /* v1.2.2 — ۱۱ ابزار: ۵ قبلی + EMA، VWAP، دونچیان، کلتنر، سوپرترند، SAR.
@@ -1405,8 +1466,12 @@
     /* v1.4.0 — ۵ ابزار رسم تعاملی (مرحله ۳): در همان پنل شناور، زیر ابزارهای محاسبه‌شده.
        v1.9.0 — +۲ رسم: پرتو افقی (از نقطه به راست) و خط عمودی (در زمان نقطه).
        v1.14.7 — +۵ رسم به سبک تریدینگ‌ویو: نشانگر (انتخاب)، قلم آزاد، خط‌کش، آهنربا،
-       پاک‌کن — هر ردیف آیکون + برچسب فارسی دارد (نوار بلند قابل‌اسکرول). */
-    var DRAW_TOOLS = [['cursor', 'نشانگر', 'Cursor'], ['trend', 'خط روند', 'Trendline'], ['hline', 'خط افقی', 'Horizontal'], ['vline', 'خط عمودی', 'Vertical'], ['ray', 'پرتو افقی', 'Ray'], ['fib', 'فیبوناچی', 'Fibonacci'], ['brush', 'قلم', 'Brush'], ['text', 'متن', 'Text'], ['measure', 'خط‌کش', 'Measure'], ['rect', 'مستطیل', 'Rectangle'], ['magnet', 'آهنربا', 'Magnet'], ['eraser', 'پاک‌کن', 'Eraser']];
+       پاک‌کن — هر ردیف آیکون + برچسب فارسی دارد (نوار بلند قابل‌اسکرول).
+       v1.14.8 — +۱۱ رسم (دستور مالک: «هرچه بیشتر»): پیکان، دایره، بیضی، مثلث،
+       کانال موازی، اکستنشن فیبوناچی، بادبزن فیبوناچی، چنگال، برچسب قیمت،
+       خط شکسته، هایلایتر — همه در همان گروه «ابزارهای رسم». */
+    var DRAW_TOOLS = [['cursor', 'نشانگر', 'Cursor'], ['trend', 'خط روند', 'Trendline'], ['hline', 'خط افقی', 'Horizontal'], ['vline', 'خط عمودی', 'Vertical'], ['ray', 'پرتو افقی', 'Ray'], ['fib', 'فیبوناچی', 'Fibonacci'], ['brush', 'قلم', 'Brush'], ['text', 'متن', 'Text'], ['measure', 'خط‌کش', 'Measure'], ['rect', 'مستطیل', 'Rectangle'], ['magnet', 'آهنربا', 'Magnet'], ['eraser', 'پاک‌کن', 'Eraser'],
+      ['arrow', 'پیکان', 'Arrow'], ['circle', 'دایره', 'Circle'], ['ellipse', 'بیضی', 'Ellipse'], ['triangle', 'مثلث', 'Triangle'], ['channel', 'کانال موازی', 'Parallel channel'], ['fibext', 'اکستنشن فیبوناچی', 'Fib extension'], ['fibfan', 'بادبزن فیبوناچی', 'Fib fan'], ['pitchfork', 'چنگال', 'Pitchfork'], ['pricelabel', 'برچسب قیمت', 'Price label'], ['polyline', 'خط شکسته', 'Polyline'], ['highlighter', 'هایلایتر', 'Highlighter']];
     /* v1.5.0 — آیکون‌های نوار ابزار (SVG ساده، بدون self-closing تا ماک تست هم parse کند). */
     var IC = function (inner) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + inner + '</svg>'; };
     var TOOL_ICONS = {
@@ -1436,17 +1501,26 @@
       measure: IC('<path d="M3 17L17 3l4 4L7 21l-4-4z"></path><path d="M8 12l2 2"></path><path d="M11 9l2 2"></path><path d="M14 6l2 2"></path>'),
       rect: IC('<rect x="5" y="7" width="14" height="10" rx="1"></rect>'),
       magnet: IC('<path d="M6 4v8a6 6 0 0 0 12 0V4"></path><path d="M6 4h4v4H6z"></path><path d="M14 4h4v4h-4z"></path>'),
-      eraser: IC('<path d="M9 19l-5.5-5.5L13 4l5.5 5.5L13 15H9z"></path><path d="M4 21h16"></path>')
+      eraser: IC('<path d="M9 19l-5.5-5.5L13 4l5.5 5.5L13 15H9z"></path><path d="M4 21h16"></path>'),
+      /* v1.14.8 — آیکون ابزارهای تازه. */
+      arrow: IC('<path d="M4 20L20 4"></path><path d="M14 4h6v6"></path>'),
+      circle: IC('<circle cx="12" cy="12" r="8"></circle>'),
+      ellipse: IC('<ellipse cx="12" cy="12" rx="9" ry="6"></ellipse>'),
+      triangle: IC('<path d="M12 4l9 16H3z"></path>'),
+      channel: IC('<path d="M4 8l16-4"></path><path d="M4 16l16-4"></path>'),
+      fibext: IC('<path d="M5 5l14 14"></path><path d="M5 9h14"></path><path d="M5 14h14"></path><path d="M5 19h11"></path><path d="M18 17l3 3"></path>'),
+      fibfan: IC('<path d="M5 19L19 5"></path><path d="M5 19l14-2"></path><path d="M5 19l12 4"></path>'),
+      pitchfork: IC('<path d="M5 5l14 7"></path><path d="M5 19l14-7"></path><path d="M5 12h14"></path>'),
+      pricelabel: IC('<path d="M4 4h11v7l-6 6-5-5z"></path><circle cx="9" cy="9" r="1.5" fill="currentColor" stroke="none"></circle><path d="M9 17v4"></path>'),
+      polyline: IC('<path d="M4 18l4-8 4 5 4-9 4 4"></path>'),
+      highlighter: IC('<path d="M14 4l6 6-9 9H5v-6l9-9z"></path><path d="M4 20h16"></path>')
     };
     var TRASH_ICON = IC('<path d="M5 7h14"></path><path d="M9 7V5h6v2"></path><path d="M8 7l1 12h6l1-12"></path><path d="M10 11v5"></path><path d="M14 11v5"></path>');
     var CLEAR_ICON = IC('<path d="M6 6l12 12"></path><path d="M18 6L6 18"></path>');
     var BELL_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.7 21a2 2 0 0 1-3.4 0"></path></svg>';
     var SET_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="#f06a15" stroke-width="1.8" stroke-linecap="round"><path d="M7 3v4"></path><path d="M7 15v6"></path><rect x="4.5" y="7" width="5" height="8" rx="1" fill="#f06a15" stroke="none"></rect><path d="M17 3v3"></path><path d="M17 14v7"></path><rect x="14.5" y="6" width="5" height="8" rx="1" fill="#f06a15" stroke="none"></rect></svg>';
     /* v1.6.0 — تمام‌صفحه از نوار ابزار پایین چارت به گوشهٔ بالا-راست چارت رفت. */
-    var FS_ICONS = {
-      on: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V5a1 1 0 0 1 1-1h4"></path><path d="M20 9V5a1 1 0 0 0-1-1h-4"></path><path d="M4 15v4a1 1 0 0 0 1 1h4"></path><path d="M20 15v4a1 1 0 0 1-1 1h-4"></path></svg>',
-      off: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5a1 1 0 0 1-1 1H4"></path><path d="M15 4v5a1 1 0 0 0 1 1h4"></path><path d="M9 20v-5a1 1 0 0 0-1-1H4"></path><path d="M15 20v-5a1 1 0 0 1 1-1h4"></path></svg>'
-    };
+    /* (آیکن‌های FS_ICONS بیرون از renderChartShell‌اند — کنار applyFsUI.) */
     /* v1.6.0 — تایم‌فریم: یک تب واحد (دکمهٔ تایم‌فریم فعلی + پنل بازشونده)، جای ردیف ۱۱ دکمه. */
     /* v1.5.0 — پنل تنظیمات چارت (مثل اپ اصلی): نوع چارت + رنگ کندل‌ها + کلیدها. */
     var SET_TYPES = [['candle', 'کندل', 'Candles'], ['hollow', 'توخالی', 'Hollow'], ['bars', 'بار OHLC', 'OHLC'], ['line', 'خطی', 'Line'], ['area', 'ناحیه‌ای', 'Area'], ['ha', 'هیکین‌آشی', 'Heikin Ashi']];
@@ -1462,49 +1536,41 @@
     var SET_TOGGLES = [['vol', 'حجم معاملات', 'Volume'], ['ma', 'میانگین ۲۰', 'MA20'], ['grid', 'شبکه', 'Grid'], ['last', 'خط قیمت زنده', 'Last price line'], ['pct', 'مقیاس درصدی', 'Percentage scale'], ['log', 'مقیاس لگاریتمی', 'Log scale'], ['lock', 'قفل مقیاس قیمت', 'Lock price scale'], ['rob', 'مقیاس مقاوم', 'Robust scale'], ['cd', 'شمارش معکوس کندل', 'Countdown']];
     var st = { type: 'candle', vol: 1, ma: 1, grid: 1, last: 1, pct: 0, log: 0, lock: 0, rob: 0, cd: 1, pal: 'def' };
     try { var _st = window.OnellaChartStyle.get(); if (_st) st = _st; } catch (e) {}
-    /* v1.7.0 — قابلیت تازه از همان کندل‌های موجود: VWAP + EMA20 روی چارت،
-       بدون API تازه — فقط وقتی ابزار روشن است، روی نوار ابزار پایین می‌آید. */
-    var toolOn = window.on || {};
-    var vwapOn = !!toolOn.vwap, emaOn = !!toolOn.ema;
+    /* v1.14.8 — پنل‌های اندیکاتور در تنظیمات چارت (جایگزین دکمه‌های نوار ابزار پایین). */
+    var SET_PANES = [['rsi', 'RSI', 'RSI'], ['macd', 'MACD', 'MACD'], ['stoch', 'استوکاستیک', 'Stochastic'], ['obv', 'OBV', 'OBV']];
+    var panesOn = { rsi: true, macd: true, stoch: false, obv: false };
+    try { if (window.OnellaPanes && window.OnellaPanes.on) panesOn = window.OnellaPanes.on; } catch (e) {}
+    var FOCUS_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 8V5a1 1 0 0 1 1-1h3"></path><path d="M20 8V5a1 1 0 0 0-1-1h-3"></path><path d="M4 16v3a1 1 0 0 0 1 1h3"></path><path d="M20 16v3a1 1 0 0 1-1 1h-3"></path><circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"></circle></svg>';
     $('tab-chart').innerHTML =
       '<div id="tfRow" class="tf-wrap"><div class="tf-group"><button id="tfBtn" type="button" title="' + esc(T('تایم‌فریم', 'Timeframe')) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg><span class="tf-cur">' + esc(state.tf) + '</span> ▾</button>'
-      + '<button id="fsBtn" class="tf-fs" type="button" title="' + esc(T('تمام‌صفحه', 'Fullscreen')) + '">' + FS_ICONS.on + '</button></div>'
+      + '<button id="fsBtn" class="tf-fs" type="button" title="' + esc(T('تمام‌صفحه', 'Fullscreen')) + '">' + FS_ICONS.on + '</button>'
+      + '<button class="tf-alert" id="focusBtn" type="button" style="display:none" title="' + esc(T('تمرکز', 'Focus')) + '">' + FOCUS_ICON + '<span>' + esc(T('تمرکز', 'Focus')) + '</span></button></div>'
       + '<div class="tf-group"><button class="tf-fs" id="setBtn" type="button" title="' + esc(T('تنظیمات چارت', 'Chart settings')) + '">' + SET_ICON + '</button>'
-      + '<button class="tf-alert" id="alertTopBtn" type="button" title="' + esc(T('هشدار قیمت', 'Price alert')) + '">' + ICON.alarm + '<span>Alert</span></button>'
+      + '<button class="tf-alert" id="alertTopBtn" type="button" title="' + esc(T('هشدار قیمت', 'Price alert')) + '">' + ICON.alarm + '<span>Alert</span><span class="al-badge" id="alertBadge" style="display:none">0</span></button>'
       + '<button class="tf-fs" id="toolsFab" type="button" title="' + esc(T('ابزارهای چارت', 'Chart tools')) + '">' + ICON.tools + '</button></div>'
       + '<div id="tfPanel" class="tf-panel">' + tfs.map(function (k) {
           return '<button data-tf="' + k + '"' + (state.tf === k ? ' class="on"' : '') + ' type="button">' + k + '</button>';
         }).join('') + '</div></div>'
-      + '<div class="chartwrap" id="chartWrap"><div id="nv" style="position:relative;height:260px"><div id="px" class="px px-ov"></div><div id="lastPxTag" style="display:none"></div><div id="xhBox" class="xh-box" dir="ltr" style="display:none"></div><canvas id="cc" dir="ltr" style="width:100%;height:260px;display:block"></canvas><button class="axis-btn" id="tvAutoBtn" type="button" style="display:none">A</button><button class="axis-btn" id="tvLatestBtn" type="button" style="display:none">⏭</button><button class="axis-plus" id="axisPlusBtn" type="button" style="display:none">+</button><div class="axis-track" id="axisTrack" style="display:none"></div>'
-      + '<div class="tools-strip" id="toolsStrip"><div class="strip-group" id="chartTools">' + TOOLS.map(function (t) {
+      + '<div class="chartwrap" id="chartWrap"><div id="nv" style="position:relative;height:260px"><div id="px" class="px px-ov"></div><div id="lastPxTag" style="display:none"></div><div id="xhBox" class="xh-box" dir="ltr" style="display:none"></div><canvas id="cc" dir="ltr" style="width:100%;height:260px;display:block"></canvas><button class="axis-btn" id="tvAutoBtn" type="button" style="display:none">A</button><button class="axis-btn" id="tvLatestBtn" type="button" style="display:none">⏭</button><div class="axis-track" id="axisTrack" style="display:none"></div>'
+      + '<div class="tools-strip" id="toolsStrip"><div class="strip-sec-h">' + esc(T('اندیکاتورها', 'Indicators')) + '</div><div class="strip-group" id="chartTools">' + TOOLS.map(function (t) {
           return '<button class="tbtn' + (toolOn[t[0]] ? ' on' : '') + '" data-tool="' + t[0] + '" type="button" title="' + esc(lang === 'fa' ? t[1] : t[2]) + '">' + (TOOL_ICONS[t[0]] || esc(lang === 'fa' ? t[1] : t[2])) + '<span class="tb-lb">' + esc(lang === 'fa' ? t[1] : t[2]) + '</span></button>';
-        }).join('') + '</div><div class="strip-sep"></div><div class="strip-group" id="drawTools">' + DRAW_TOOLS.map(function (t) {
+        }).join('') + '</div><div class="strip-sep"></div><div class="strip-sec-h">' + esc(T('ابزارهای رسم', 'Drawing tools')) + '</div><div class="strip-group" id="drawTools">' + DRAW_TOOLS.map(function (t) {
           return '<button class="tbtn" data-draw="' + t[0] + '" type="button" title="' + esc(lang === 'fa' ? t[1] : t[2]) + '">' + (DRAW_ICONS[t[0]] || esc(lang === 'fa' ? t[1] : t[2])) + '<span class="tb-lb">' + esc(lang === 'fa' ? t[1] : t[2]) + '</span></button>';
-        }).join('') + '</div><div class="strip-sep"></div><div class="strip-group"><button class="tbtn" id="delDrawBtn" type="button" disabled title="' + esc(T('حذف انتخاب‌شده', 'Delete selected')) + '">' + TRASH_ICON + '<span class="tb-lb">' + esc(T('حذف', 'Delete')) + '</span></button><button class="tbtn" id="clearDrawBtn" type="button" title="' + esc(T('پاک کردن همه', 'Clear all')) + '">' + CLEAR_ICON + '<span class="tb-lb">' + esc(T('پاک کردن همه', 'Clear all')) + '</span></button></div><button class="strip-more" id="stripMore" type="button" style="display:none">﹀</button></div>'
+        }).join('') + '</div><div class="strip-sep"></div><div class="strip-sec-h">' + esc(T('اقدامات', 'Actions')) + '</div><div class="strip-group"><button class="tbtn" id="delDrawBtn" type="button" disabled title="' + esc(T('حذف انتخاب‌شده', 'Delete selected')) + '">' + TRASH_ICON + '<span class="tb-lb">' + esc(T('حذف', 'Delete')) + '</span></button><button class="tbtn" id="clearDrawBtn" type="button" title="' + esc(T('پاک کردن همه', 'Clear all')) + '">' + CLEAR_ICON + '<span class="tb-lb">' + esc(T('پاک کردن همه', 'Clear all')) + '</span></button></div></div>'
+      + '<button class="strip-more" id="stripMore" type="button" style="display:none">﹀</button>'
+      + '<button id="focusExitBtn" type="button" style="display:none">✕ ' + esc(T('خروج از تمرکز', 'Exit focus')) + '</button>'
       + '<div class="settings-panel" id="settingsPanel"><div class="settings-panel-h"><span>' + esc(T('تنظیمات چارت', 'Chart settings')) + '</span><button class="tbtn" id="setClose" type="button">✕</button></div><div class="set-sec-h">' + esc(T('نوع چارت', 'Chart type')) + '</div><div class="set-type-grid" id="setTypes">' + SET_TYPES.map(function (t) {
           return '<button class="set-type' + (st.type === t[0] ? ' on' : '') + '" data-type="' + t[0] + '" type="button">' + (SET_TYPE_ICONS[t[0]] || '') + '<span>' + esc(lang === 'fa' ? t[1] : t[2]) + '</span></button>';
         }).join('') + '</div><div class="set-sec-h">' + esc(T('رنگ کندل‌ها', 'Candle colors')) + '</div><div class="set-pal-row" id="setPals">' + SET_PALS.map(function (p) {
           return '<button class="set-pal' + (st.pal === p[0] ? ' on' : '') + '" data-pal="' + p[0] + '" type="button" title="' + esc(lang === 'fa' ? p[3] : p[4]) + '"><span class="sw" style="background:' + p[1] + '"></span><span class="sw" style="background:' + p[2] + '"></span></button>';
         }).join('') + '</div><div class="set-sec-h">' + esc(T('نمایش', 'Display')) + '</div><div id="setToggles">' + SET_TOGGLES.map(function (tg) {
           return '<div class="set-row"><span>' + esc(lang === 'fa' ? tg[1] : tg[2]) + '</span><button class="switch' + (st[tg[0]] ? ' on' : '') + '" data-set="' + tg[0] + '" type="button" aria-label="' + esc(lang === 'fa' ? tg[1] : tg[2]) + '"></button></div>';
-        }).join('') + '</div></div></div></div>'
+        }).join('') + '</div><div class="set-sec-h">' + esc(T('پنل‌های اندیکاتور', 'Indicator panels')) + '</div><div id="setPanes">' + SET_PANES.map(function (pn) {
+          return '<div class="set-row"><span>' + esc(lang === 'fa' ? pn[1] : pn[2]) + '</span><button class="switch' + (panesOn[pn[0]] ? ' on' : '') + '" id="setPane' + pn[0][0].toUpperCase() + pn[0].slice(1) + '" data-pane="' + pn[0] + '" type="button" aria-label="' + esc(lang === 'fa' ? pn[1] : pn[2]) + '"></button></div>';
+        }).join('') + '</div><div class="set-sec-h">' + esc(T('بزرگ‌نمایی', 'Zoom')) + '</div><div class="set-zoom-row"><button class="tbtn" id="setZoomOut" type="button">−</button><button class="tbtn" id="setZoomIn" type="button">+</button></div></div></div></div>'
       + '<div class="chart-status"><button id="tzClockBtn" type="button" dir="ltr" title="' + esc(T('منطقهٔ زمانی', 'Timezone')) + '"></button></div>'
       + '<div class="tool-note-bar" id="toolNote" style="display:none"></div>'
       + '<div class="panes" id="panes"><div class="pane-row" id="rsiRow"><div class="pane-h"><span>RSI (14)</span><b id="rsiVal">—</b></div><canvas id="rsiCv" class="pane-cv" dir="ltr"></canvas></div><div class="pane-row" id="macdRow"><div class="pane-h"><span>MACD (12, 26, 9)</span><b id="macdVal">—</b></div><canvas id="macdCv" class="pane-cv" dir="ltr"></canvas></div><div class="pane-row" id="stochRow" style="display:none"><div class="pane-h"><span>استوکاستیک (14, 3, 3)</span><b id="stochVal">—</b></div><canvas id="stochCv" class="pane-cv" dir="ltr"></canvas></div><div class="pane-row" id="obvRow" style="display:none"><div class="pane-h"><span>OBV</span><b id="obvVal">—</b></div><canvas id="obvCv" class="pane-cv" dir="ltr"></canvas></div></div>'
-      + '<div class="toolbar" id="chartToolbar">'
-      + '<button class="tbtn" id="typeBtn" type="button">' + esc(chartTypeLabel(cur)) + '</button>'
-      + '<button class="tbtn' + (maOn ? ' on' : '') + '" id="maBtn" type="button">MA20</button>'
-      + '<button class="tbtn' + (volOn ? ' on' : '') + '" id="volBtn" type="button">' + esc(T('حجم', 'Vol')) + '</button>'
-      + '<button class="tbtn' + (vwapOn ? ' on' : '') + '" id="vwapBtn" type="button">VWAP</button>'
-      + '<button class="tbtn' + (emaOn ? ' on' : '') + '" id="emaBtn" type="button">EMA20</button>'
-      + '<button class="tbtn on" id="rsiBtn" type="button">RSI</button>'
-      + '<button class="tbtn on" id="macdBtn" type="button">MACD</button>'
-      + '<button class="tbtn" id="stochBtn" type="button">Stoch</button>'
-      + '<button class="tbtn" id="obvBtn" type="button">OBV</button>'
-      + '<button class="tbtn" id="alertBtn" type="button">' + ICON.bell + '<span class="al-badge" id="alertBadge" style="display:none">0</span></button>'
-      + '<button class="tbtn" id="zoomOutBtn" type="button">−</button>'
-      + '<button class="tbtn" id="zoomInBtn" type="button">+</button>'
-      + '</div>'
       + '</div>';
     // v1.6.0 — تب واحد تایم‌فریم: دکمه باز/بسته می‌کند، انتخاب از پنل.
     $('tfBtn').addEventListener('click', function (e) { try { e.stopPropagation(); } catch (e2) {} var p = $('tfPanel'); if (p) p.classList.toggle('open'); });
@@ -1515,66 +1581,19 @@
     document.querySelectorAll('#tfPanel button').forEach(function (b) {
       b.addEventListener('click', function () { setTf(b.dataset.tf); });
     });
-    // سوییچ نوع چارت (چرخه‌ای، ۶ نوع اپ اصلی).
-    $('typeBtn').addEventListener('click', function () {
-      try {
-        var cur2 = window.OnellaChartStyle.get().type;
-        var idx = types.indexOf(cur2);
-        var nx = types[(idx + 1) % types.length];
-        window.OnellaChartStyle.set({ type: nx });
-        $('typeBtn').textContent = chartTypeLabel(nx);
-        window.draw();
-      } catch (e) {}
-    });
-    $('maBtn').addEventListener('click', function () {
-      try {
-        var v = !window.OnellaChartStyle.get().ma;
-        window.OnellaChartStyle.set({ ma: v ? 1 : 0 });
-        $('maBtn').classList.toggle('on', v);
-        window.draw();
-      } catch (e) {}
-    });
-    /* v1.7.0 — VWAP + EMA20 روی نوار ابزار پایین: همان ابزارهای chart-tools
-       (از روی کندل‌های موجود) که حالا از این‌جا هم روشن/خاموش می‌شوند. */
+    /* v1.14.8 — نوار ابزار پایین حذف شد (باگ‌های #۵/#۶ + قانون کلی): نوع چارت
+       فقط در تنظیمات چارت است، MA20/حجم فقط در کلیدهای نمایش، VWAP/EMA20 فقط
+       در نوار ابزارها، Alert فقط دکمهٔ بالای چارت، پنل‌ها فقط در تنظیمات،
+       زوم فقط در تنظیمات. پس این‌جا فقط همگام‌سازیِ نوار ابزارها می‌ماند. */
     (function () {
-      var vb = $('vwapBtn'), eb = $('emaBtn');
       var sync = function () {
-        if (vb) vb.classList.toggle('on', !!(window.on || {}).vwap);
-        if (eb) eb.classList.toggle('on', !!(window.on || {}).ema);
         var sb = document.querySelector('#chartTools [data-tool="vwap"]');
         if (sb) sb.classList.toggle('on', !!(window.on || {}).vwap);
         var se = document.querySelector('#chartTools [data-tool="ema"]');
         if (se) se.classList.toggle('on', !!(window.on || {}).ema);
       };
       window.__syncVwapEma = sync;
-      if (vb) vb.addEventListener('click', function () {
-        var o = window.on || {};
-        o.vwap = !o.vwap; window.on = o;
-        sync();
-        try { window.draw(); } catch (e) {}
-      });
-      if (eb) eb.addEventListener('click', function () {
-        var o = window.on || {};
-        o.ema = !o.ema; window.on = o;
-        sync();
-        try { window.draw(); } catch (e) {}
-      });
     })();
-    $('volBtn').addEventListener('click', function () {
-      try {
-        var v2 = !window.OnellaChartStyle.get().vol;
-        window.OnellaChartStyle.set({ vol: v2 ? 1 : 0 });
-        $('volBtn').classList.toggle('on', v2);
-        window.draw();
-      } catch (e) {}
-    });
-    // v1.3.0 — پنل‌های RSI/MACD (مرحله ۲): خاموش/روشن از نوار ابزار؛ حالت در
-    // localStorage می‌ماند (chart-panes.js). v1.9.0 — + استوکاستیک و OBV.
-    $('rsiBtn').addEventListener('click', function () { try { window.OnellaPanes.toggle('rsi'); } catch (e) {} });
-    $('macdBtn').addEventListener('click', function () { try { window.OnellaPanes.toggle('macd'); } catch (e) {} });
-    $('stochBtn').addEventListener('click', function () { try { window.OnellaPanes.toggle('stoch'); } catch (e) {} });
-    $('obvBtn').addEventListener('click', function () { try { window.OnellaPanes.toggle('obv'); } catch (e) {} });
-    $('alertBtn').addEventListener('click', function () { openAlertModal(); });
     /* v1.14.7 — دکمهٔ Alert کنار تنظیمات چارت + ساعت زنده/انتخاب‌گر منطقهٔ زمانی. */
     var alertTopBtn = $('alertTopBtn');
     if (alertTopBtn) alertTopBtn.addEventListener('click', function () { openAlertModal(); });
@@ -1583,8 +1602,15 @@
     startClockTick();
     refreshAlertBadge();
     try { if (window.OnellaPanes) window.OnellaPanes.applyVis(); } catch (e) {}
-    $('zoomInBtn').addEventListener('click', function () { zoomBy(1.4); });
-    $('zoomOutBtn').addEventListener('click', function () { zoomBy(1 / 1.4); });
+    try { if (window.OnellaPanes && window.OnellaPanes.attachPaneGestures) window.OnellaPanes.attachPaneGestures(); } catch (e) {}
+    /* v1.14.8 — بزرگ‌نمایی در تنظیمات چارت + حالت تمرکز (داخل تمام‌صفحه). */
+    var zIn = $('setZoomIn'), zOut = $('setZoomOut');
+    if (zIn) zIn.addEventListener('click', function () { zoomBy(1.4); });
+    if (zOut) zOut.addEventListener('click', function () { zoomBy(1 / 1.4); });
+    var focusBtn = $('focusBtn');
+    if (focusBtn) focusBtn.addEventListener('click', function () { toggleFocusMode(); });
+    var focusExitBtn = $('focusExitBtn');
+    if (focusExitBtn) focusExitBtn.addEventListener('click', function () { exitFocusMode(); });
     $('fsBtn').addEventListener('click', function () { toggleFs(); });
     $('tvAutoBtn').addEventListener('click', function () { autoScale(); });
     $('tvLatestBtn').addEventListener('click', function () { toLatest(); });
@@ -1596,9 +1622,6 @@
         document.querySelectorAll('#setTypes .set-type').forEach(function (b) { b.classList.toggle('on', b.dataset.type === s2.type); });
         document.querySelectorAll('#setPals .set-pal').forEach(function (b) { b.classList.toggle('on', b.dataset.pal === s2.pal); });
         document.querySelectorAll('#setToggles .switch').forEach(function (b) { b.classList.toggle('on', !!s2[b.dataset.set]); });
-        var tb = $('typeBtn'); if (tb) tb.textContent = chartTypeLabel(s2.type);
-        var mb = $('maBtn'); if (mb) mb.classList.toggle('on', !!s2.ma);
-        var vb = $('volBtn'); if (vb) vb.classList.toggle('on', !!s2.vol);
       } catch (e) {}
     }
     document.querySelectorAll('#setTypes .set-type').forEach(function (b) {
@@ -1621,6 +1644,13 @@
           window.OnellaChartStyle.set(o);
         } catch (e) {}
         syncSettingsUI();
+      });
+    });
+    /* v1.14.8 — سوییچ پنل‌های اندیکاتور در تنظیمات چارت (جایگزین دکمه‌های
+       RSI/MACD/Stoch/OBV نوار ابزار پایین؛ حالت در localStorage می‌ماند). */
+    document.querySelectorAll('#setPanes .switch').forEach(function (b) {
+      b.addEventListener('click', function () {
+        try { if (window.OnellaPanes) window.OnellaPanes.toggle(b.dataset.pane); } catch (e) {}
       });
     });
     // ابزارهای دستی روی چارت — نوار عمودی آیکون‌دار؛ خوانش ابزار در نوار زیر چارت.
@@ -1671,17 +1701,13 @@
       if (strip) strip.addEventListener('scroll', updateStripMore);
       var more = $('stripMore');
       if (more && strip) more.addEventListener('click', function () {
-        try { var sh = strip.scrollHeight || 0, ch = strip.clientHeight || 0; strip.scrollTop = Math.min(Math.max(0, sh - ch), (strip.scrollTop || 0) + 200); } catch (e) {}
+        /* v1.14.8 — فوتر ثابت پنل: ⌄ = اسکرول به پایین؛ ⌃ (در انتها) = برگشت به بالا. */
+        try {
+          var sh = strip.scrollHeight || 0, ch = strip.clientHeight || 0, st = strip.scrollTop || 0;
+          if (sh > ch + 4 && st + ch < sh - 4) strip.scrollTop = Math.min(Math.max(0, sh - ch), st + 200);
+          else strip.scrollTop = 0;
+        } catch (e) {}
         updateStripMore();
-      });
-      /* v1.14.7 — دکمه + محور قیمت: زدن + شیت «افزودن هشدار» را با همان قیمت نمایشی باز می‌کند. */
-      var apb = $('axisPlusBtn');
-      if (apb) apb.addEventListener('click', function (e) {
-        try { if (e && e.stopPropagation) e.stopPropagation(); } catch (e2) {}
-        if (axisPlusPrice == null) return;
-        var r = null;
-        try { r = apb.getBoundingClientRect(); } catch (e3) {}
-        showPriceAxisMenu(axisPlusDisp != null ? axisPlusDisp : axisPlusPrice, r ? (r.left + r.width / 2) : 100, r ? (r.top + r.height / 2) : 100);
       });
       if (sb && setP) sb.addEventListener('click', function () {
         var open2 = !setP.classList.contains('open');
@@ -1695,30 +1721,55 @@
     })();
     document.addEventListener('fullscreenchange', function () {
       var on = !!document.fullscreenElement;
-      var btn = $('fsBtn');
-      if (btn) btn.innerHTML = on ? FS_ICONS.off : FS_ICONS.on;
-      if (!on) cssFs(false);
+      if (fsNativeTimer) { try { clearTimeout(fsNativeTimer); } catch (e) {} fsNativeTimer = null; }
+      if (on) { fsMode = 'native'; applyFsUI(true); }
+      else if (fsMode === 'native') { fsMode = 'none'; applyFsUI(false); cssFs(false); }
       setTimeout(function () { try { window.draw(); window.head(); } catch (e) {} }, 120);
     });
+    /* v1.14.8 — رویداد تمام‌صفحهٔ تلگرام (خروج با ژست سیستمی/دکمهٔ تلگرام هم باید آیکن را برگرداند). */
+    if (!window.__tgFsBound) {
+      window.__tgFsBound = true;
+      try {
+        if (tg && typeof tg.onEvent === 'function') tg.onEvent('fullscreenChanged', function () {
+          var on = false;
+          try { on = !!(tg && tg.isFullscreen); } catch (e) {}
+          if (on) { if (fsMode === 'tg') applyFsUI(true); }
+          else if (fsMode === 'tg') { fsMode = 'none'; applyFsUI(false); cssFs(false); }
+        });
+      } catch (e) {}
+    }
     // ژست‌های TradingView (پورت js/06 اپ): اسکرول روی محور قیمت = زوم عمودی؛
-    // کشیدن روی محور قیمت = کش‌آمدن مقیاس؛ کشیدن عمودی روی چارت = جابه‌جایی قیمت؛
-    // دوبار لمس محور قیمت = مقیاس خودکار؛ اسکرول روی چارت = زوم افقی حول نشانگر.
+    // کشیدن روی محور قیمت = کش‌آمدن مقیاس؛ کشیدن عمودی روی چارت = اسکرول صفحه
+    // (v1.14.8: دیگر جابه‌جایی قیمت نیست)؛ دوبار لمس محور قیمت = مقیاس خودکار؛
+    // اسکرول روی چارت = زوم افقی حول نشانگر.
     var cvs = $('cc');
     var pointers = new Map(), pinchD = 0, pinchSt = 0, dragX = null, dragY = null, dragPan = 0;
-    var pm0 = null, gMode = null, gVert = false, gMoved = false, gx0 = 0, gy0 = 0, gs0 = 7, gPan0 = 0, gLastTap = { t: 0, x: 0, y: 0 };
+    var pm0 = null, gMode = null, gMoved = false, gx0 = 0, gy0 = 0, gs0 = 7, gPan0 = 0, gLastTap = { t: 0, x: 0, y: 0 };
     var lpTimer = null, lpX = 0, lpY = 0, xhActive = false, drawAnchor = null;
-    var lpAxisTimer = null, lpAxisX = 0, lpAxisY = 0, lpAxisPrice = null, lpAxisCX = 0, lpAxisCY = 0;
     function DW() { try { return window.OnellaDraw || null; } catch (e) { return null; } }
     function ptrPos(e) { var r = cvs.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top, w: r.width, h: r.height }; }
     function setCurFromX(p) { var st2 = ((window.__ov || {}).st || 7); var n = Math.min(cs.length, Math.floor((p.w - 46) / st2)); var i = Math.floor(p.x / st2); window.cur = (i >= 0 && i < n) ? i : -1; }
+    /* v1.14.8 — لمس محور قیمت = کراس‌هیر روی همان قیمت (باگ #۱): برچسب قیمت آخر
+       (+ ⊕ چسبیده به آن) همان قیمتِ آهنربا/آزاد را نشان می‌دهد؛ پس لمس محور،
+       کراس‌هیر را روی آخرین کندلِ دیده‌شده می‌نشاند و قیمتش را از y می‌گیرد.
+       pin=false برای هاور ماوس (پین نمی‌شود؛ با رفتن نشانگر خاموش می‌شود). */
+    function setAxisXh(y, pin) {
+      var G = window.__geo || {};
+      if (!G.inv || !G.ph) return;
+      var cs2 = window.cs || [];
+      if (!cs2.length) return;
+      var st = ((window.__ov || {}).st || 7);
+      var n = Math.min(cs2.length, Math.floor(((G.W || 360) - (G.pw || 46)) / st));
+      if (typeof window.cur !== 'number' || window.cur < 0 || window.cur >= n) window.cur = Math.max(0, n - 1);
+      xhPriceAtY(y);
+      if (pin !== false) { xhPinned = true; xhActive = true; }
+    }
     function axisW() { var G = window.__geo || {}; return Math.max(56, G.pw || 46); }
     function zoneOf(p) { if (p.y > p.h - 22) return 't'; if (p.x > p.w - axisW()) return 'p'; return 'c'; }
     cvs.addEventListener('pointerdown', function (e) {
       try { cvs.setPointerCapture(e.pointerId); } catch (err) {}
       pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       var p = ptrPos(e);
-      /* v1.9.1 — با رفتن انگشت روی چارت، + محور قیمت پنهان می‌شود. */
-      if (zoneOf(p) !== 'p') hideAxisPlus();
       if (pointers.size === 2) {
         if (lpTimer) { try { clearTimeout(lpTimer); } catch (err) {} lpTimer = null; }
         gMode = 'pinch'; gMoved = true;
@@ -1728,7 +1779,7 @@
         return;
       }
       gx0 = p.x; gy0 = p.y; gs0 = (window.__ov && window.__ov.st) || 7; gPan0 = (window.__ov && window.__ov.pan) || 0;
-      dragX = e.clientX; dragY = e.clientY; dragPan = gPan0; gMoved = false; gVert = false;
+      dragX = e.clientX; dragY = e.clientY; dragPan = gPan0; gMoved = false;
       var G = window.__geo || {};
       pm0 = (window.__ov && window.__ov.pm) ? { hi: window.__ov.pm.hi, lo: window.__ov.pm.lo } : (G.hi != null ? { hi: G.hi, lo: G.lo } : null);
       gMode = zoneOf(p) === 'p' ? 'pscale' : 'pan';
@@ -1765,16 +1816,11 @@
           try { window.head(); window.draw(); } catch (err) {}
         }, 380);
       }
-      /* v1.14.7 — نگه‌داشتن انگشت روی محور قیمت فقط برچسب + را نشان می‌دهد
-         (مثل تریدینگ‌ویو)؛ منو خودکار باز نمی‌شود — زدنِ + شیت را باز می‌کند.
-         حرکت زودهنگام = لغو (همان pscale قبلی). */
+      /* v1.14.8 — لمس محور قیمت = کراس‌هیر روی همان قیمت (برچسب + ⊕ با هم
+         همان‌جا می‌نشینند)؛ کشیدن روی محور هم‌زمان مقیاس را می‌کشد (pscale). */
       if (zoneOf(p) === 'p') {
-        var Gp = window.__geo || {};
-        if (Gp.inv && Gp.ph) {
-          lpAxisX = p.x; lpAxisY = p.y; lpAxisCX = e.clientX; lpAxisCY = e.clientY;
-          lpAxisPrice = Gp.inv(Math.max(0, Math.min(Gp.ph, p.y)));
-          showAxisPlus(lpAxisPrice); // v1.9.1 — + همان لحظهٔ لمس محور دیده می‌شود.
-        }
+        setAxisXh(p.y);
+        try { window.head(); window.draw(); } catch (err) {}
       }
     });
     cvs.addEventListener('pointermove', function (e) {
@@ -1798,7 +1844,6 @@
         /* v1.3.0 — حرکت زودهنگام = لغو long-press (همان pan قبلی)؛ در حالت
            کراس‌هیر، حرکت انگشت فقط نشانگر را جابه‌جا می‌کند، نه چارت را. */
         if (lpTimer && Math.hypot(p.x - lpX, p.y - lpY) > 10) { try { clearTimeout(lpTimer); } catch (err) {} lpTimer = null; }
-        if (lpAxisTimer && Math.hypot(p.x - lpAxisX, p.y - lpAxisY) > 10) { try { clearTimeout(lpAxisTimer); } catch (err) {} lpAxisTimer = null; }
         /* v1.4.0 — حالت رسم: کشیدن = خط راهنمای رسم؛ حالت جابه‌جایی: کشیدن = حرکت رسم. */
         if (gMode === 'draw') { var dwM = DW(); if (dwM) dwM.setPreview(dwM.pointFromXY(p.x, p.y)); try { window.draw(); } catch (err) {} return; }
         if (gMode === 'move') { var dwV = DW(); if (dwV) dwV.moveTo(p.x, p.y); try { window.draw(); } catch (err) {} return; }
@@ -1807,22 +1852,19 @@
           try {
             window.__ov = window.__ov || {};
             window.__ov.pm = pmScale(pm0, Math.exp(dy / 170), window.__geo || {});
+            setAxisXh(p.y); // v1.14.8 — برچسب + ⊕ با انگشت روی محور حرکت می‌کنند.
             window.draw(); window.head(); refreshAxisBtns();
-            var prA = axisPriceAtY(p.y); if (prA != null) showAxisPlus(prA); // v1.9.1 — + با انگشت روی محور حرکت می‌کند.
           } catch (err) {}
           return;
         }
         if (gMode === 'pan') {
-          if (!gVert && gMoved && Math.abs(dy) > 14 && Math.abs(dy) > 1.6 * Math.abs(dx)) gVert = true;
+          /* v1.14.8 — فقط کشیدنِ افقی چارت را جابه‌جا می‌کند؛ کشیدنِ عمودی را
+             مرورگر اسکرول می‌کند (touch-action: pan-y) — دیگر جابه‌جایی قیمت نیست. */
           try {
             window.__ov = window.__ov || {};
-            if (gVert && pm0 && (window.__geo || {}).ph) {
-              window.__ov.pm = pmPan(pm0, dy, window.__geo);
-            } else {
-              var st = ((window.__ov || {}).st || 7);
-              var maxPan = Math.max(0, (window.cs ? window.cs.length : 0) - Math.floor(p.w / st));
-              window.__ov.pan = Math.max(0, Math.min(maxPan, dragPan + dx / st));
-            }
+            var st = ((window.__ov || {}).st || 7);
+            var maxPan = Math.max(0, (window.cs ? window.cs.length : 0) - Math.floor(p.w / st));
+            window.__ov.pan = Math.max(0, Math.min(maxPan, dragPan + dx / st));
             window.draw(); window.head(); refreshAxisBtns();
           } catch (err) {}
           return;
@@ -1830,14 +1872,14 @@
       }
       // کراس‌هِر: همان pointermove اپ (native-chart.js).
       if (pointers.size === 0) {
-        /* v1.9.1 — هاور ماوس روی محور قیمت: + دنبال نشانگر می‌آید (دسکتاپ)؛
-           با رفتن نشانگر از محور، + پنهان می‌شود. */
-        if (zoneOf(p) === 'p') { var prH = axisPriceAtY(p.y); if (prH != null) showAxisPlus(prH); }
-        else hideAxisPlus();
         var st2 = ((window.__ov || {}).st || 7);
         var n = Math.min(cs.length, Math.floor((p.w - 46) / st2));
         var i = Math.floor(p.x / st2);
         window.cur = (i >= 0 && i < n) ? i : -1;
+        /* v1.14.8 — هاور ماوس روی محور قیمت: برچسب + ⊕ روی همان قیمت می‌نشینند
+           (پین نمی‌شود)؛ با رفتن نشانگر از محور، کراس‌هیر خاموش می‌شود — مگر پین‌شده باشد. */
+        if (zoneOf(p) === 'p') { setAxisXh(p.y, false); xhActive = true; }
+        else if (!xhPinned) { window.__xhPrice = null; xhActive = false; }
         try { window.head(); window.draw(); } catch (err) {}
       }
     });
@@ -1845,7 +1887,6 @@
       var wasMode = gMode;
       pointers.delete(e.pointerId);
       if (lpTimer) { try { clearTimeout(lpTimer); } catch (err) {} lpTimer = null; }
-      if (lpAxisTimer) { try { clearTimeout(lpAxisTimer); } catch (err) {} lpAxisTimer = null; }
       if (pointers.size < 2) pinchD = 0;
       if (pointers.size === 0) {
         dragX = null; dragY = null;
@@ -1894,7 +1935,7 @@
     }
     cvs.addEventListener('pointerup', ptrEnd);
     cvs.addEventListener('pointercancel', ptrEnd);
-    cvs.addEventListener('pointerleave', function (e) { if (lpTimer) { try { clearTimeout(lpTimer); } catch (err) {} lpTimer = null; } if (lpAxisTimer) { try { clearTimeout(lpAxisTimer); } catch (err) {} lpAxisTimer = null; } if (e && e.pointerType === 'mouse') hideAxisPlus(); var dwL = DW(); if (dwL) dwL.setPreview(null); if (pointers.size === 0 && !xhPinned) { window.cur = -1; window.__xhPrice = null; try { window.head(); window.draw(); } catch (err) {} } });
+    cvs.addEventListener('pointerleave', function (e) { if (lpTimer) { try { clearTimeout(lpTimer); } catch (err) {} lpTimer = null; } var dwL = DW(); if (dwL) dwL.setPreview(null); if (pointers.size === 0 && !xhPinned) { window.cur = -1; window.__xhPrice = null; try { window.head(); window.draw(); } catch (err) {} } });
     cvs.addEventListener('wheel', function (e) {
       try { e.preventDefault(); } catch (err) {}
       var G = window.__geo || {}, r = cvs.getBoundingClientRect(), x = e.clientX - r.left;
@@ -1947,28 +1988,61 @@
   /* v1.2.1 — برچسب قیمت آخر روی محور قیمت (سبک TradingView): دقیقاً همان کندلی را
      نشان می‌دهد که head() نشان می‌دهد (کراس‌هیر فعال → کندل زیر کراس‌هیر، وگرنه
      آخرین کندل — مثل head()، بدون pan)؛ رنگش جهت همان کندل است. هر بار head()
-     صدا زده شود، برچسب هم جابه‌جا می‌شود (wrap یک‌باره در init). */
+     صدا زده شود، برچسب هم جابه‌جا می‌شود (wrap یک‌باره در init).
+     v1.14.8 — باگ #۱: دیگر دو برچسب قیمت روی محور نیست — دکمهٔ ⊕ به همین برچسب
+     چسبیده (سمت چپ، روی محور) و همان قیمت را نشان می‌دهد؛ ⊕ همیشه دیده می‌شود
+     و خط‌چین نارنجی هم روی همان قیمت است. ⊕ یک بار ساخته می‌شود تا تیک زنده
+     قیمت را از زیر انگشت نبرد. */
+  var lastPxTagPrice = null;
   function positionLastPxTag() {
     var tag = document.getElementById('lastPxTag');
     if (!tag) return;
     var cs = window.cs;
     var G = window.__geo;
-    if (!cs || !cs.length || !G || typeof G.Y !== 'function') { tag.style.display = 'none'; return; }
+    if (!cs || !cs.length || !G || typeof G.Y !== 'function') { tag.style.display = 'none'; lastPxTagPrice = null; return; }
     var W = G.W || 360, stH = (window.__ov && window.__ov.st) || 7;
     var n = Math.min(cs.length, Math.floor((W - (G.pw || 46)) / stH));
     var cur = window.cur;
     var i = (typeof cur === 'number' && cur >= 0 && cur < n) ? cs.length - n + cur : cs.length - 1;
     var c = cs[i];
-    if (!c || typeof c.c !== 'number') { tag.style.display = 'none'; return; }
+    if (!c || typeof c.c !== 'number') { tag.style.display = 'none'; lastPxTagPrice = null; return; }
     /* v1.9.1 — با کراس‌هیر فعال، برچسب قیمتِ زیر نشانگر (آهنربا/آزاد) را نشان می‌دهد، نه بستهٔ کندل. */
     var xhP = (typeof cur === 'number' && cur >= 0 && typeof window.__xhPrice === 'number' && isFinite(window.__xhPrice)) ? window.__xhPrice : null;
     var px = (xhP != null) ? xhP : c.c;
     var y = G.Y(px);
-    if (!Number.isFinite(y)) { tag.style.display = 'none'; return; }
-    tag.style.top = Math.max(9, Math.min((G.ph || 240) - 9, y)) + 'px';
-    tag.textContent = (typeof window.__pfmt === 'function' ? window.__pfmt(px) : fmt(px));
+    if (!Number.isFinite(y)) { tag.style.display = 'none'; lastPxTagPrice = null; return; }
+    lastPxTagPrice = px;
+    /* ⊕ را فقط یک بار به برچسب بچسبان (ساختن دوباره در هر تیک، ضربه را می‌خورد). */
+    var plus = tag.querySelector('.ax-plus');
+    if (!plus) {
+      plus = document.createElement('button');
+      plus.type = 'button';
+      plus.className = 'ax-plus';
+      plus.textContent = '⊕';
+      plus.title = T('افزودن هشدار', 'Add alert');
+      plus.addEventListener('click', function (e) {
+        try { if (e && e.stopPropagation) e.stopPropagation(); } catch (e2) {}
+        if (lastPxTagPrice == null) return;
+        var mul = (window.__dispMul && isFinite(window.__dispMul)) ? window.__dispMul : 1;
+        var r = null;
+        try { r = plus.getBoundingClientRect(); } catch (e3) {}
+        showPriceAxisMenu(lastPxTagPrice * mul, r ? (r.left + r.width / 2) : 100, r ? (r.top + r.height / 2) : 100);
+      });
+      tag.appendChild(plus);
+    }
+    var tx = tag.querySelector('.lpx-tx');
+    if (!tx) {
+      tx = document.createElement('span');
+      tx.className = 'lpx-tx';
+      tag.appendChild(tx);
+    }
+    tx.textContent = (typeof window.__pfmt === 'function' ? window.__pfmt(px) : fmt(px));
+    var yy = Math.max(9, Math.min((G.ph || 240) - 9, y));
+    tag.style.top = yy + 'px';
     tag.className = (c.c >= c.o) ? '' : 'dn';
     tag.style.display = '';
+    var tr = document.getElementById('axisTrack');
+    if (tr) { tr.style.top = Math.max(0, Math.min(G.ph, y)) + 'px'; tr.style.display = ''; }
   }
   function wrapHeadOnce() {
     if (window.__pxTagWrapped || typeof window.head !== 'function') return;
@@ -1976,8 +2050,7 @@
     var _head = window.head;
     window.head = function () {
       var r = _head.apply(this, arguments);
-      try { positionLastPxTag(); } catch (e) {}
-      try { refreshAxisPlus(); } catch (e2) {} // v1.9.1 — + محور قیمت با هر رسم سر قیمتش می‌ماند.
+      try { positionLastPxTag(); } catch (e) {} // v1.14.8 — برچسب + ⊕ با هر رسم سر قیمتش می‌مانند.
       return r;
     };
   }
@@ -2102,8 +2175,8 @@
   /* v1.11.2 — قیمت لحظه‌ای هر نمادِ دارای هشدار فعال (برای ردیف‌های مودال). */
   var liveAlertPrices = {};
   var alertLiveTimer = null;
-  /* v1.9.1 — وضعیت + محور قیمت و کراس‌هیر (سطح بیرونی تا تست و head هم ببینند). */
-  var axisPlusPrice = null, axisPlusDisp = null, xhPinned = false;
+  /* v1.9.1 — وضعیت کراس‌هیر (سطح بیرونی تا تست و head هم ببینند). */
+  var xhPinned = false;
   function curAlertPrice() {
     if (state.priceMode === 'iran' && state.priceIran) return state.priceIran.price;
     return state.priceUsd ? state.priceUsd.price : null;
@@ -2280,7 +2353,8 @@
     d.id = 'tzModal'; d.className = 'al-modal';
     d.innerHTML = '<div class="al-card"><div class="al-h"><b>' + esc(T('منطقهٔ زمانی', 'Timezone')) + '</b><button class="tbtn" id="tzClose" type="button">✕</button></div>'
       + '<label class="o-input"><input id="tzSearch" type="search" placeholder="' + esc(T('جستجوی شهر…', 'Search city…')) + '" autocomplete="off"></label>'
-      + '<div class="tz-list" id="tzList"></div></div>';
+      + '<div class="tz-list" id="tzList"></div>'
+      + '<div class="set-sec-h">' + esc(T('تقویم', 'Calendar')) + '</div><div id="tzCalList"></div></div>';
     document.body.appendChild(d);
     d.addEventListener('click', function (e) { if (e.target === d) d.style.display = 'none'; });
     $('tzClose').addEventListener('click', function () { d.style.display = 'none'; });
@@ -2313,7 +2387,31 @@
     var m = ensureTZUI();
     var s = $('tzSearch'); if (s) s.value = '';
     renderTZList('');
+    renderCalList();
     m.style.display = 'flex';
+  }
+  /* v1.14.8 — باگ #۳: انتخاب تقویم در همان شیتِ زمان؛ پیش‌فرض میلادی (قانون
+     این خطِ اپ)؛ شمسی و هجری قمری کنارش. در همان فروشگاهِ تاریخ
+     (onella_date_v1) ذخیره می‌شود — مستقل از منطقهٔ زمانی. */
+  var CAL_OPTS = [['gregory', 'میلادی', 'Gregorian'], ['persian', 'شمسی', 'Solar Hijri'], ['islamic', 'هجری قمری', 'Lunar Hijri']];
+  function renderCalList() {
+    var list = $('tzCalList'); if (!list) return;
+    var OD = window.OnellaDate; if (!OD) return;
+    var cur = 'gregory';
+    try { cur = (OD.get() && OD.get().cal) || 'gregory'; } catch (e) {}
+    list.innerHTML = CAL_OPTS.map(function (c) {
+      return '<button class="tz-row" type="button" data-cal="' + c[0] + '"><span class="tz-ck">' + (cur === c[0] ? '✓' : '') + '</span><span class="tz-lb">' + esc(lang === 'fa' ? c[1] : c[2]) + '</span></button>';
+    }).join('');
+    list.querySelectorAll('.tz-row').forEach(function (b) {
+      b.addEventListener('click', function () {
+        try { if (OD.set) OD.set(b.dataset.cal); } catch (e) {}
+        renderCalList();
+        try { window.draw(); window.head(); } catch (e2) {}
+        try { if (state.tab === 'news') renderNews(); } catch (e3) {}
+        try { var am = $('alertModal'); if (am && am.style.display !== 'none') renderAlertList(); } catch (e4) {}
+        try { if (state.view === 'dashboard') loadDash(); } catch (e5) {}
+      });
+    });
   }
   function applyTimezone(iana) {
     if (!window.OnellaTZ || !window.OnellaTZ.set(iana)) return;
@@ -2371,7 +2469,7 @@
     var others = all.filter(function (x) { return x.sym !== q.symbol; });
     function expTxt(a) {
       if (!a.expiresAt) return '';
-      try { return ' • ' + T('تا ', 'until ') + (window.OnellaDate ? window.OnellaDate.fmt(a.expiresAt, 'cd') : new Date(a.expiresAt).toLocaleDateString('fa-IR')); } catch (e) { return ''; }
+      try { return ' • ' + T('تا ', 'until ') + (window.OnellaDate ? window.OnellaDate.fmt(a.expiresAt, 'cd') : new Date(a.expiresAt).toLocaleDateString('fa-IR-u-ca-gregory')); } catch (e) { return ''; }
     }
     function row(a, kind) {
       var sub = A.condLabel(a.cond, lang) + ' ' + fmt(a.price) + ' • ' + (a.repeat === 'every' ? T('هر بار', 'Every time') : T('فقط یک بار', 'Once only')) + expTxt(a);
@@ -2536,40 +2634,14 @@
     renderAlertList(); refreshAlertBadge();
     return true;
   }
-  /* v1.9.1 — دکمه + روی محور قیمت (سبک تریدینگ‌ویو): با حرکت روی محور، + و یک
-     خط‌چین نارنجیِ سراسری روی همان قیمت می‌نشینند؛ زدن + منوی هشدار/خط افقی را
-     باز می‌کند. + به قیمت گره خورده است (نه به y) — با زوم/اسکرول مقیاس، سر جایش
-     روی همان قیمت می‌ماند (refreshAxisPlus از head فراخوانی می‌شود). */
+  /* v1.14.8 — باگ #۱: دیگر برچسبِ جداگانهٔ ⊕ نیست؛ ⊕ به برچسب قیمت آخر چسبیده
+     (positionLastPxTag) و همان قیمت را نشان می‌دهد. خط‌چین نارنجی هم روی همان
+     قیمت است. پس این‌جا فقط قیمتِ y روی محور مانده است. */
   function axisPriceAtY(y) {
     var G = window.__geo;
     if (!G || typeof G.inv !== 'function' || !(G.ph > 0)) return null;
     var p = G.inv(Math.max(0, Math.min(G.ph, y)));
     return (typeof p === 'number' && isFinite(p)) ? p : null;
-  }
-  function showAxisPlus(price) {
-    if (price == null || !isFinite(price) || !state.quote) return;
-    var G = window.__geo;
-    if (!G || typeof G.Y !== 'function' || !(G.ph > 0)) return;
-    var y = G.Y(price);
-    if (!isFinite(y) || y < -11 || y > G.ph + 11) { hideAxisPlus(); return; }
-    axisPlusPrice = price;
-    /* v1.14.7 — برچسب مشکیِ قیمت روی محور (مثل تریدینگ‌ویو): ⊕ + قیمت نمایشی
-       با اعشار همان نماد؛ قیمت نمایشی برای هشدار جداگانه می‌ماند. */
-    var mul = (window.__dispMul && isFinite(window.__dispMul)) ? window.__dispMul : 1;
-    axisPlusDisp = price * mul;
-    var b = $('axisPlusBtn'), t = $('axisTrack');
-    if (b) { b.textContent = '⊕ ' + ((typeof window.__pfmt === 'function') ? window.__pfmt(price) : fmt(price)); b.style.top = Math.max(11, Math.min(G.ph - 11, y)) + 'px'; b.style.display = ''; }
-    if (t) { t.style.top = Math.max(0, Math.min(G.ph, y)) + 'px'; t.style.display = ''; }
-  }
-  function hideAxisPlus() {
-    axisPlusPrice = null; axisPlusDisp = null;
-    var b = $('axisPlusBtn'), t = $('axisTrack');
-    if (b) b.style.display = 'none';
-    if (t) t.style.display = 'none';
-  }
-  function refreshAxisPlus() {
-    if (axisPlusPrice == null) return;
-    showAxisPlus(axisPlusPrice);
   }
   /* v1.9.1 — آهنربای نرم کراس‌هیر (سبک تریدینگ‌ویو): خط افقی آزادانه قیمتِ زیر
      انگشت را نشان می‌دهد، ولی اگر تا ۱۰ پیکسلِ یکی از O/H/L/C کندلِ زیر نشانگر
@@ -2608,13 +2680,28 @@
     window.__xhPrice = null;
     try { window.head(); window.draw(); } catch (e) {}
   }
-  /* v1.9.1 — «﹀» پایین نوار ابزار: تا وقتی گزینهٔ پایین‌تر هست دیده می‌شود. */
+  /* v1.14.8 — پین کردن کراس‌هیر روی کندل i (برای اسکراب از پنل‌های اندیکاتور):
+     مثل ضربهٔ پین‌شده روی چارت عمل می‌کند؛ ضربهٔ بعدی روی چارت آن را می‌گیرد. */
+  function pinCrosshairAt(i) {
+    var cs = window.cs || [];
+    if (typeof i !== 'number' || !isFinite(i) || i < 0 || i >= cs.length) return false;
+    window.cur = i;
+    window.__xhPrice = null;
+    xhPinned = true;
+    try { window.head(); window.draw(); } catch (e) {}
+    return true;
+  }
+  window.__pinXh = pinCrosshairAt;
+  /* v1.14.8 — فوتر «⌄/⌃» پنل ابزار: ردیف ثابتِ پایین پنل است (نه وسط لیست)؛
+     فقط وقتی نوار باز است دیده می‌شود؛ ⌄ یعنی هنوز پایین‌تر گزینه هست،
+     ⌃ یعنی در انتهای لیست‌ایم (زدن برمی‌گردد بالا). */
   function updateStripMore() {
     var strip = $('toolsStrip'), more = $('stripMore');
     if (!strip || !more) return;
     if (!strip.classList.contains('open')) { more.style.display = 'none'; return; }
+    more.style.display = '';
     var sh = strip.scrollHeight || 0, ch = strip.clientHeight || 0, st = strip.scrollTop || 0;
-    more.style.display = (sh > ch + 4 && st + ch < sh - 4) ? '' : 'none';
+    more.textContent = (sh > ch + 4 && st + ch < sh - 4) ? '﹀' : '⌃';
   }
   function showPriceAxisMenu(price, clientX, clientY) {
     /* v1.14.7 — شیت پایین (مثل تریدینگ‌ویو، ولی فقط «افزودن هشدار» — بدون
@@ -2636,10 +2723,8 @@
     $('axSheetBody').innerHTML = '<button class="sheet-row" id="axSheetAlert" type="button">' + ICON.alarm + '<span>' + esc(T('هشدار در ', 'Add alert on ') + disp + T(' در ', ' at ') + pxTxt) + '</span></button>';
     $('axSheetAlert').addEventListener('click', function () {
       sheet.style.display = 'none';
-      hideAxisPlus();
       openAlertModal(price);
     });
-    hideAxisPlus();
     sheet.style.display = 'flex';
   }
 
@@ -3380,7 +3465,7 @@
     var upN = 0;
     data.rows.forEach(function (r) { if (r.changePct > 0) upN++; });
     var dgDate = '';
-    try { dgDate = window.OnellaDate ? window.OnellaDate.app(data.at || Date.now(), 'long', lang === 'fa') : new Date(data.at || Date.now()).toLocaleDateString(lang === 'fa' ? 'fa-IR' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' }); } catch (e) {}
+    try { dgDate = window.OnellaDate ? window.OnellaDate.app(data.at || Date.now(), 'long', lang === 'fa') : new Date(data.at || Date.now()).toLocaleDateString(lang === 'fa' ? 'fa-IR-u-ca-gregory' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' }); } catch (e) {}
     function moodWord(avg, upPct) {
       var w;
       if (avg >= 2) w = T('طمع شدید', 'Extreme Greed');
@@ -3525,8 +3610,9 @@
     loadDash: loadDash, renderDash: renderDash, confluence: confluence, renderGauge: renderGauge, renderDepth: renderDepth, renderDepthData: renderDepthData, fetchDepth: fetchDepth, stopDepthPoll: stopDepthPoll, applyDepthDiff: applyDepthDiff, tradesRowsHtml: tradesRowsHtml, getDepthData: function () { return depthData; }, getLiveTrades: function () { return liveTrades; }, setLiveTrades: function (t) { liveTrades = t || []; }, positionLastPxTag: positionLastPxTag,
     yahooSearch: yahooSearch, mofidResolve: mofidResolve, rememberQuote: rememberQuote,
     iranRate: iranRate, perfFromDaily: perfFromDaily, frankfurterWeek: frankfurterWeek, iranRatesBulk: iranRatesBulk, dailyCandlesFor: dailyCandlesFor,
-    openAlertModal: openAlertModal, showPriceAxisMenu: showPriceAxisMenu, axisPriceAtY: axisPriceAtY, getAxisPlusDisplay: function () { return axisPlusDisp; }, checkAlertsNow: checkAlertsNow, refreshAlertBadge: refreshAlertBadge, renderAlertList: renderAlertList, refreshAlertLivePrices: refreshAlertLivePrices, stopAlertLivePrices: stopAlertLivePrices, openTZPicker: openTZPicker, applyTimezone: applyTimezone, updateClock: updateClock, exchangeZoneFor: exchangeZoneFor,
-    showAxisPlus: showAxisPlus, hideAxisPlus: hideAxisPlus, refreshAxisPlus: refreshAxisPlus, snapXhPrice: snapXhPrice, updateStripMore: updateStripMore, dismissCrosshair: dismissCrosshair, isXhPinned: function () { return xhPinned; }, getAxisPlusPrice: function () { return axisPlusPrice; },
+    openAlertModal: openAlertModal, showPriceAxisMenu: showPriceAxisMenu, axisPriceAtY: axisPriceAtY, checkAlertsNow: checkAlertsNow, refreshAlertBadge: refreshAlertBadge, renderAlertList: renderAlertList, refreshAlertLivePrices: refreshAlertLivePrices, stopAlertLivePrices: stopAlertLivePrices, openTZPicker: openTZPicker, applyTimezone: applyTimezone, updateClock: updateClock, exchangeZoneFor: exchangeZoneFor,
+    getLastPxTagPrice: function () { return lastPxTagPrice; }, snapXhPrice: snapXhPrice, updateStripMore: updateStripMore, dismissCrosshair: dismissCrosshair, isXhPinned: function () { return xhPinned; }, pinCrosshairAt: pinCrosshairAt,
+    toggleFocus: toggleFocusMode, isFocusMode: function () { return focusOn; }, isFullscreen: function () { return fsMode !== 'none'; }, getFsMode: function () { return fsMode; },
     pmScale: pmScale, pmPan: pmPan, autoScale: autoScale, toLatest: toLatest, refreshAxisBtns: refreshAxisBtns,
     toggleFav: toggleFav, isFav: isFav, lookupQuote: lookupQuote, yahooMulti: yahooMulti, mofidBulk: mofidBulk, cgMarkets: cgMarkets };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
