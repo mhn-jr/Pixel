@@ -1766,18 +1766,6 @@
     }
     function axisW() { var G = window.__geo || {}; return Math.max(56, G.pw || 46); }
     function zoneOf(p) { if (p.y > p.h - 22) return 't'; if (p.x > p.w - axisW()) return 'p'; return 'c'; }
-    /* v1.14.8-fix — لمس محور قیمت نباید صفحه را اسکرول کند (touch-action: pan-y
-       روی بوم، اسکرولِ صفحه را به مرورگر می‌دهد؛ پس شروعِ لمس روی محور را با
-       touchstartِ غیرفعال (passive:false) متوقف می‌کنیم تا کشیدنِ عمودی، مقیاس
-       قیمت را جابه‌جا کند نه صفحه را). */
-    cvs.addEventListener('touchstart', function (e) {
-      try {
-        var t = (e.touches && e.touches[0]) ? e.touches[0] : null;
-        if (!t) return;
-        var p = ptrPos(t);
-        if (zoneOf(p) === 'p') e.preventDefault();
-      } catch (err) {}
-    }, { passive: false });
     cvs.addEventListener('pointerdown', function (e) {
       try { cvs.setPointerCapture(e.pointerId); } catch (err) {}
       pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
