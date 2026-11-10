@@ -41,7 +41,22 @@
    «هشدارهای من» می‌گیرد (قبلاً فقط فایل محلی خودش را می‌دید — از ۷–۸
    آلرت فقط یدونه می‌آمد). احراز با HMAC توکن روی "userId:ts" است.
    عنوان پیام ردشدن هم «هشدار به صدا درآمد» شد («رد شد» مثل ردشدنِ
-   درخواست خوانده می‌شد). */
+   درخواست خوانده می‌شد).
+   v1.13.0 — پست کانال وقتی PC خاموش است (جانشین، نه جایگزین): اصل مالک —
+   اول پروژهٔ اصلی + PC؛ اگر PC خاموش بود ورکر پست‌های کانال را می‌فرستد.
+   هماهنگی با دو نگهبان: (۱) ضربان — ربات PC هر ۵ دقیقه POST /pc-heartbeat
+   می‌زند (HMAC با توکن) و ورکر فقط وقتی ضربان بیش از ۱۰ دقیقه قدیمی است
+   پست می‌کند؛ (۲) علامت اسلات — PC بعد از هر پست موفق، کلید اسلات را با
+   POST /channel-posted در KV علامت می‌زند و ورکر آن اسلات را هرگز دوباره
+   نمی‌فرستد. اسلات‌ها از ضربان می‌آیند (پیش‌فرض خلاصه ۰۹:۰۰ و ۲۱:۰۰، قیمت
+   ۰۹/۱۹/۰۰ تهران)؛ ورکر ۵ دقیقه بعد از اسلات وارد می‌شود (مهلت به PC) و
+   فقط تازه‌ترین اسلاتِ رسیده را می‌فرستد. متن تنها — عکس ثابت کانال روی
+   PC است و ورکر فایل آپلود نمی‌کند. پست زمان‌بندی‌شدهٔ تک‌بار و خلاصهٔ DM
+   هنوز فقط با PC می‌آیند.
+   v1.14.0 — پست اخبار کانال هم وقتی PC خاموش است: همان اسلات ۱۸:۴۵، ۱۰ خبر
+   با سهم‌بندی نوبتی بین بازارها (در کانال فارسی بورس و فرابورس هم هست)،
+   هر خبر با تاثیر و نمادش؛ + روت GET /status برای اینکه مدیر ببیند ضربان
+   و آخرین پست‌های کانال در چه حال‌اند. */
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36';
 const TIMEOUT_MS = 15000;
@@ -713,6 +728,651 @@ async function runAlertCron() {
   return { ok: true, checked: alerts.length, fired };
 }
 
+/* ---- v1.13.0 — پست کانال وقتی PC خاموش است (جانشین، نه جایگزین) ----
+   متن‌ها دقیقاً همان ساختار پست‌های PC را دارند (channel.js + digest.js +
+   digest-snapshot.js) ولی با مسیرهای قیمتیِ خودِ ورکر: OKX برای کریپتو،
+   Yahoo برای سهام/فارکس/کالا/شاخص، Nerkhsanj برای نرخ‌های ایران،
+   alternative.me برای ترس و طمع، Forex Factory برای رویداد. هر پایه که
+   نیاید، خطش حذف می‌شود — عدد ساختگی هرگز. هر اسلات یک تلاشِ محدود دارد؛
+   اسلاتِ کاملاً ناموفق علامت نمی‌خورد و تیکِ بعدِ Cron دوباره امتحانش
+   می‌کند (همان قانون PC). */
+const CH_TZ = 'Asia/Tehran';
+const CH_GRACE_MS = 5 * 60 * 1000; // مهلت به PC بعد از اسلات
+const CH_HEARTBEAT_FRESH_MS = 10 * 60 * 1000; // ضربان تازه‌تر از این = PC زنده است
+const CH_DIGEST_TIMES = ['09:00', '21:00'];
+const CH_PRICE_HOURS = [9, 19, 0];
+
+function tehranParts(ms) {
+  try {
+    const dtf = new Intl.DateTimeFormat('en-CA', { timeZone: CH_TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
+    const p = {};
+    for (const x of dtf.formatToParts(new Date(ms))) p[x.type] = x.value;
+    return { day: p.year + '-' + p.month + '-' + p.day, hm: p.hour + ':' + p.minute, hour: +p.hour };
+  } catch (e) {
+    const d = new Date(ms + (3 * 60 + 30) * 60000);
+    return { day: d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0'), hm: String(d.getUTCHours()).padStart(2, '0') + ':' + String(d.getUTCMinutes()).padStart(2, '0'), hour: d.getUTCHours() };
+  }
+}
+function tehranOffsetMinutes(ms) {
+  const dtf = new Intl.DateTimeFormat('en-US', { timeZone: CH_TZ, hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const parts = Object.fromEntries(dtf.formatToParts(new Date(ms)).map(p => [p.type, p.value]));
+  const asUtc = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour % 24, +parts.minute, +parts.second);
+  return Math.round((asUtc - ms) / 60000);
+}
+function tehranWallToMs(day, hhmm) {
+  const [y, m, d] = day.split('-').map(Number);
+  const [h, mi] = hhmm.split(':').map(Number);
+  const naive = Date.UTC(y, m - 1, d, h, mi);
+  return naive - tehranOffsetMinutes(naive) * 60000;
+}
+function chTimeTehran(ms) {
+  try { return new Intl.DateTimeFormat('en-GB', { timeZone: CH_TZ, hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(ms)); } catch (e) { return ''; }
+}
+function chDateTehran(ms, lang) {
+  if (lang === 'fa') {
+    try { return new Intl.DateTimeFormat('fa-IR', { timeZone: CH_TZ, calendar: 'persian', day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(ms)); } catch (e) { /* پایین */ }
+  }
+  try { return new Intl.DateTimeFormat('en-GB', { timeZone: CH_TZ, day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(ms)); } catch (e) { return ''; }
+}
+function chFmtPrice(n) {
+  if (Math.abs(n) < 10) return Number(n).toLocaleString('en-US', { maximumFractionDigits: 5 });
+  return Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 });
+}
+function chEsc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function chRenderLines(lang, lines) {
+  const kept = (lines || []).filter(x => x !== null && x !== undefined && x !== '');
+  if (lang === 'fa') return kept.map(x => '\u200F' + x).join('\n');
+  return kept.join('\n');
+}
+function chFmtChg(v) { return (v >= 0 ? '+' : '') + (Math.round(v * 100) / 100) + '%'; }
+
+/* OKX با تغییر ۲۴ ساعته (last + open24h) — okxPrice فقط last می‌دهد. */
+async function okxTicker(sym) {
+  const inst = String(sym || '').replace(/USDT$/, '') + '-USDT';
+  if (!/^[A-Z0-9]+-USDT$/.test(inst)) return null;
+  try {
+    const r = await fetch('https://www.okx.com/api/v5/market/ticker?instId=' + inst, { signal: AbortSignal.timeout(8000) });
+    if (!r.ok) return null;
+    const j = await r.json();
+    const d0 = j && j.data && j.data[0];
+    const last = d0 && +d0.last;
+    if (!isFinite(last) || last <= 0) return null;
+    const open24 = d0 && +d0.open24h;
+    return { price: last, changePct: (isFinite(open24) && open24 > 0) ? ((last - open24) / open24) * 100 : null };
+  } catch (e) { return null; }
+}
+async function nerkhsanjLive() {
+  try {
+    const r = await fetch('https://nerkh.jahankhahan.shop/data/live.json', { signal: AbortSignal.timeout(8000) });
+    if (!r.ok) return null;
+    const j = await r.json();
+    if (!j || !j.rates) return null;
+    return j;
+  } catch (e) { return null; }
+}
+async function fearGreed() {
+  try {
+    const r = await fetch('https://api.alternative.me/fng/?limit=1', { signal: AbortSignal.timeout(8000) });
+    if (!r.ok) return null;
+    const j = await r.json();
+    const d = j && j.data && j.data[0];
+    if (!d || !isFinite(+d.value)) return null;
+    return { value: +d.value, label: String(d.value_classification || '') };
+  } catch (e) { return null; }
+}
+/* رویداد اقتصادی — همان پارس econ.js: فید تازه date را ISO با افست می‌دهد
+   ("2026-11-08T17:30:00-05:00") و time ندارد؛ قالب قدیمیِ "MM-DD-YYYY" +
+   "8:30am" فقط به‌عنوان جانشین مانده. */
+function ffEventTime(dateStr, timeStr) {
+  if (dateStr && String(dateStr).includes('T')) {
+    const ms = Date.parse(String(dateStr));
+    return Number.isFinite(ms) ? ms : null;
+  }
+  if (!dateStr || !timeStr || /all day/i.test(timeStr)) return null;
+  const dm = /^(\d{1,2})-(\d{1,2})-(\d{4})$/.exec(String(dateStr).trim());
+  const tm = /^(\d{1,2}):(\d{2})\s*(am|pm)$/i.exec(String(timeStr).trim());
+  if (!dm || !tm) return null;
+  let h = +tm[1] % 12;
+  if (/pm/i.test(tm[3])) h += 12;
+  const naiveUtc = Date.UTC(+dm[3], +dm[1] - 1, +dm[2], h, +tm[2]);
+  const dtf = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const parts = Object.fromEntries(dtf.formatToParts(new Date(naiveUtc)).map(p => [p.type, p.value]));
+  const asUtc = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour % 24, +parts.minute, +parts.second);
+  const off = Math.round((asUtc - naiveUtc) / 60000);
+  return naiveUtc - off * 60000;
+}
+async function ffNextHighImpact(nowMs) {
+  try {
+    const r = await fetch('https://nfs.faireconomy.media/ff_calendar_thisweek.json', { signal: AbortSignal.timeout(10000) });
+    if (!r.ok) return { ok: false, event: null };
+    const j = await r.json().catch(() => []);
+    if (!Array.isArray(j)) return { ok: false, event: null };
+    let best = null;
+    for (const e of j) {
+      if (String((e && e.impact) || '') !== 'High') continue;
+      const t = ffEventTime(e.date, e.time);
+      if (t === null || t < nowMs) continue;
+      if (!best || t < best.timeMs) best = { title: String(e.title || ''), timeMs: t };
+    }
+    return { ok: true, event: best };
+  } catch (e) { return { ok: false, event: null }; }
+}
+
+/* فهرست قیمت کانال — همان ۱۹ نماد + ترتیب + ایموجیِ channel.js. */
+const CH_PRICE_SYMBOLS = [
+  { kind: 'nerkh', key: 'tether', emoji: '💵', name: { en: 'Tether', fa: 'تتر' } },
+  { kind: 'nerkh', key: 'gold', emoji: '🥇', name: { en: 'Gold 18k', fa: 'طلا ۱۸ عیار' } },
+  { kind: 'okx', sym: 'BTCUSDT', emoji: '🟧', name: { en: 'Bitcoin', fa: 'بیت‌کوین' } },
+  { kind: 'okx', sym: 'PAXGUSDT', emoji: '🟨', name: { en: 'XAUUSD', fa: 'XAUUSD' } },
+  { kind: 'yahoo', sym: '^DJI', emoji: '🟦', name: { en: 'US30', fa: 'US30' } },
+  { kind: 'yahoo', sym: 'EURUSD=X', emoji: '💱', name: { en: 'EURUSD', fa: 'EURUSD' } },
+  { kind: 'yahoo', sym: '^NDX', emoji: '🟪', name: { en: 'NDX', fa: 'NDX' } },
+  { kind: 'yahoo', sym: 'CL=F', emoji: '🛢️', name: { en: 'USOIL', fa: 'USOIL' } },
+  { kind: 'okx', sym: 'ETHUSDT', emoji: '🔷', name: { en: 'Ethereum', fa: 'اتریوم' } },
+  { kind: 'nerkh', key: 'half', emoji: '🟠', name: { en: 'Half Coin', fa: 'نیم سکه' } },
+  { kind: 'nerkh', key: 'quarter', emoji: '🟡', name: { en: 'Quarter Coin', fa: 'ربع سکه' } },
+  { kind: 'nerkh', key: 'coin', emoji: '🟢', name: { en: 'Full Coin (New)', fa: 'سکه تمام جدید' } },
+  { kind: 'nerkh', key: 'bahar', emoji: '⚪', name: { en: 'Full Coin (Old)', fa: 'سکه تمام قدیم' } },
+  { kind: 'yahoo', sym: 'AAPL', emoji: '📱', name: { en: 'Apple', fa: 'اپل' } },
+  { kind: 'yahoo', sym: 'MSFT', emoji: '💻', name: { en: 'Microsoft', fa: 'مایکروسافت' } },
+  { kind: 'yahoo', sym: 'NVDA', emoji: '🎮', name: { en: 'NVIDIA', fa: 'انویدیا' } },
+  { kind: 'nerkh', key: 'silver', emoji: '🥈', name: { en: 'Silver', fa: 'نقره' } },
+  { kind: 'yahoo', sym: 'BZ=F', emoji: '⛽', name: { en: 'Brent', fa: 'نفت برنت' } },
+  { kind: 'yahoo', sym: 'HG=F', emoji: '🟤', name: { en: 'Copper', fa: 'مس' } }
+];
+function buildChannelPrices(lang, data, nowMs) {
+  const fa = lang === 'fa';
+  const head = fa ? '📊 قیمت بازارها — ' + chTimeTehran(nowMs) : '📊 Market prices — ' + chTimeTehran(nowMs);
+  const lines = [];
+  for (const s of CH_PRICE_SYMBOLS) {
+    let price = null, chg = null, toman = false;
+    if (s.kind === 'nerkh') {
+      const v = data.nerkh && data.nerkh.rates && data.nerkh.rates[s.key];
+      if (typeof v === 'number' && v > 0) { price = v; toman = true; }
+    } else if (s.kind === 'okx') {
+      const q = data.okx && data.okx.get(s.sym);
+      if (q) { price = q.price; chg = q.changePct; }
+    } else {
+      const q = data.yahoo && data.yahoo.get(s.sym);
+      if (q) { price = q.price; chg = q.changePct; }
+    }
+    if (price === null) continue;
+    const chgStr = (typeof chg === 'number') ? ' (' + chFmtChg(chg) + ')' : '';
+    const name = s.name[fa ? 'fa' : 'en'];
+    if (toman) lines.push(s.emoji + ' ' + name + ': ' + chFmtPrice(price) + (fa ? ' تومان' : ' Toman'));
+    else lines.push(s.emoji + ' ' + name + ': $' + chFmtPrice(price) + chgStr);
+  }
+  if (!lines.length) return null;
+  const foot = '📅 ' + chDateTehran(nowMs, lang) + ' — ' + chTimeTehran(nowMs);
+  return chRenderLines(lang, [head].concat(lines).concat([foot]));
+}
+
+/* خلاصهٔ ۱۵ نمادی — همان گروه‌ها و جانشین‌های digest-snapshot.js؛ جانشین
+   فقط هم‌ارز می‌گیرد (کریپتو←کریپتو با OKX، بقیه با Yahoo) تا واحدِ سلول
+   ($ یا تومان) قاطی نشود. */
+const CH_QUERY = {
+  BTC: { src: 'okx', key: 'BTCUSDT', name: 'BTC' }, ETH: { src: 'okx', key: 'ETHUSDT', name: 'ETH' },
+  SOL: { src: 'okx', key: 'SOLUSDT', name: 'SOL' }, BNB: { src: 'okx', key: 'BNBUSDT', name: 'BNB' },
+  XRP: { src: 'okx', key: 'XRPUSDT', name: 'XRP' }, DOGE: { src: 'okx', key: 'DOGEUSDT', name: 'DOGE' },
+  TRX: { src: 'okx', key: 'TRXUSDT', name: 'TRX' }, ADA: { src: 'okx', key: 'ADAUSDT', name: 'ADA' },
+  AAPL: { src: 'yahoo', key: 'AAPL', name: 'AAPL' }, MSFT: { src: 'yahoo', key: 'MSFT', name: 'MSFT' },
+  NVDA: { src: 'yahoo', key: 'NVDA', name: 'NVDA' }, TSLA: { src: 'yahoo', key: 'TSLA', name: 'TSLA' },
+  GOOGL: { src: 'yahoo', key: 'GOOGL', name: 'Google' }, AMZN: { src: 'yahoo', key: 'AMZN', name: 'Amazon' },
+  META: { src: 'yahoo', key: 'META', name: 'Meta' },
+  EURUSD: { src: 'yahoo', key: 'EURUSD=X', name: 'EURUSD' }, GBPUSD: { src: 'yahoo', key: 'GBPUSD=X', name: 'GBPUSD' },
+  USDJPY: { src: 'yahoo', key: 'USDJPY=X', name: 'USDJPY' }, AUDUSD: { src: 'yahoo', key: 'AUDUSD=X', name: 'AUDUSD' },
+  USDCHF: { src: 'yahoo', key: 'USDCHF=X', name: 'USDCHF' }, EURGBP: { src: 'yahoo', key: 'EURGBP=X', name: 'EURGBP' },
+  NZDUSD: { src: 'yahoo', key: 'NZDUSD=X', name: 'NZDUSD' },
+  XAUUSD: { src: 'okx', key: 'PAXGUSDT', name: 'XAUUSD' },
+  USOIL: { src: 'yahoo', key: 'CL=F', name: 'USOIL' }, 'BZ=F': { src: 'yahoo', key: 'BZ=F', name: 'Brent' },
+  US30: { src: 'yahoo', key: '^DJI', name: 'US30' }, '^GSPC': { src: 'yahoo', key: '^GSPC', name: 'S&P 500' },
+  '^NDX': { src: 'yahoo', key: '^NDX', name: 'NDX' }
+};
+const CH_DIGEST_GROUPS = [
+  { key: 'crypto', emoji: '🪙', label: { en: 'Crypto', fa: 'کریپتو' }, cells: [
+    { q: 'BTC', subs: ['ETH', 'SOL', 'XRP', 'DOGE'] },
+    { q: 'ETH', subs: ['BTC', 'SOL', 'TRX', 'XRP'] },
+    { q: 'SOL', subs: ['XRP', 'ADA', 'TRX'] },
+    { q: 'BNB', subs: ['XRP', 'ADA', 'SOL'] } ] },
+  { key: 'stocks', emoji: '📈', label: { en: 'Stocks', fa: 'سهام' }, cells: [
+    { q: 'AAPL', subs: ['MSFT', 'GOOGL', 'AMZN'] },
+    { q: 'MSFT', subs: ['GOOGL', 'AMZN', 'META'] },
+    { q: 'NVDA', subs: ['META', 'AMZN', 'GOOGL'] },
+    { q: 'TSLA', subs: ['META', 'GOOGL', 'AMZN'] } ] },
+  { key: 'forex', emoji: '💱', label: { en: 'Forex', fa: 'فارکس' }, cells: [
+    { q: 'EURUSD', subs: ['GBPUSD', 'USDCHF', 'EURGBP'] },
+    { q: 'GBPUSD', subs: ['USDCHF', 'EURGBP', 'NZDUSD'] },
+    { q: 'USDJPY', subs: ['USDCHF', 'EURGBP', 'NZDUSD'] },
+    { q: 'AUDUSD', subs: ['NZDUSD', 'USDCHF', 'EURGBP'] } ] },
+  { key: 'mixed', emoji: '🥇', label: { en: 'Gold, Oil & Dow', fa: 'طلا، نفت و داو' }, cells: [
+    { q: 'XAUUSD', subs: [] },
+    { q: 'USOIL', subs: ['BZ=F'] },
+    { q: 'US30', subs: ['^GSPC', '^NDX'] } ] }
+];
+function chTryCell(cands, data, used) {
+  for (const q of cands) {
+    const r = CH_QUERY[q];
+    if (!r) continue;
+    const key = r.src + ':' + r.key;
+    if (used.has(key)) continue;
+    const quote = r.src === 'okx' ? (data.okx && data.okx.get(r.key)) : (data.yahoo && data.yahoo.get(r.key));
+    if (!quote || typeof quote.price !== 'number' || !(quote.price > 0)) continue;
+    used.add(key);
+    const chg = (typeof quote.changePct === 'number') ? ' (' + chFmtChg(quote.changePct) + ')' : '';
+    return { text: r.name + ' $' + chFmtPrice(quote.price) + chg, changePct: quote.changePct, name: r.name };
+  }
+  return null;
+}
+function chFormatMoodLine(moods, lang) {
+  if (!moods || !moods.length) return null;
+  const fa = lang === 'fa';
+  return ['📊 ' + (fa ? 'حال بازار:' : 'Market mood:')].concat(
+    moods.map(m => m.label + ' ' + m.green + '/' + m.total + (fa ? ' سبز' : ' green')));
+}
+function buildChannelDigest(lang, data, nowMs) {
+  const fa = lang === 'fa';
+  const header = fa ? '📊 خلاصهٔ امروز — ' + chDateTehran(nowMs, lang) : "📊 Today's digest — " + chDateTehran(nowMs, lang);
+  const lines = [header];
+  const moods = [];
+  const all = [];
+  const used = new Set();
+  for (const g of CH_DIGEST_GROUPS) {
+    const cells = [];
+    for (const cell of g.cells) {
+      const found = chTryCell([cell.q].concat(cell.subs), data, used);
+      if (found) { cells.push(found); if (typeof found.changePct === 'number') all.push(found); }
+    }
+    if (!cells.length) continue;
+    // چیدمان تازه (دستور مالک ۲۰۲۶-۱۱-۱۰): هر نماد یک خط جدا — مثل خلاصهٔ PC.
+    lines.push(g.emoji + ' ' + g.label[fa ? 'fa' : 'en']);
+    for (const c of cells) lines.push(c.text);
+    const withChg = cells.filter(c => typeof c.changePct === 'number');
+    if (withChg.length) moods.push({ label: g.label[fa ? 'fa' : 'en'], green: withChg.filter(c => c.changePct > 0).length, total: withChg.length });
+  }
+  if (lines.length < 2) return null; // هیچ گروهی نیامد — پست خالی نمی‌فرستیم
+  if (all.length >= 2) {
+    const best = all.reduce((a, b) => (b.changePct > a.changePct ? b : a));
+    const worst = all.reduce((a, b) => (b.changePct < a.changePct ? b : a));
+    if (best !== worst) {
+      lines.push('🏆 ' + (fa ? 'بیشترین رشد: ' : 'Top gainer: ') + best.name + ' ' + chFmtChg(best.changePct)
+        + (fa ? ' • بیشترین افت: ' : ' • Top loser: ') + worst.name + ' ' + chFmtChg(worst.changePct));
+    }
+  }
+  if (data.fg) {
+    lines.push('😨 ' + (fa
+      ? 'ترس و طمع کریپتو: ' + data.fg.value + ' (' + data.fg.label + ')'
+      : 'Crypto Fear & Greed: ' + data.fg.value + ' (' + data.fg.label + ')'));
+  }
+  const moodLines = chFormatMoodLine(moods, lang);
+  if (moodLines) lines.push(...moodLines);
+  if (data.event) {
+    const t = chTimeTehran(data.event.timeMs);
+    lines.push(fa
+      ? 'مهم‌ترین رویداد امروز: ' + chEsc(data.event.title) + ' — ساعت ' + t + ' به وقت تو'
+      : 'Top event today: ' + chEsc(data.event.title) + ' — ' + t + ' your time');
+  } else if (data.eventOk) {
+    lines.push(fa ? 'امروز رویداد با تأثیر زیاد نیست.' : 'No high-impact events today.');
+  }
+  return chRenderLines(lang, lines);
+}
+
+/* یک پاسِ موازی و محدود برای هر دو پست — بدون تلاشِ ۵ دقیقه‌ایِ PC؛
+   اگر اسلاتی ناموفق ماند، تیکِ بعدِ Cron دوباره امتحانش می‌کند. */
+async function fetchChannelData(nowMs) {
+  const okxSyms = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT', 'DOGEUSDT', 'ADAUSDT', 'TRXUSDT', 'PAXGUSDT'];
+  const yahooSyms = ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'GOOGL', 'AMZN', 'META', 'EURUSD=X', 'GBPUSD=X', 'USDJPY=X', 'AUDUSD=X', 'USDCHF=X', 'EURGBP=X', 'NZDUSD=X', 'CL=F', 'BZ=F', 'HG=F', '^DJI', '^NDX', '^GSPC'];
+  const [nerkh, okxList, yahooList, fg, ev] = await Promise.all([
+    nerkhsanjLive().catch(() => null),
+    Promise.all(okxSyms.map(async (s) => { const q = await okxTicker(s).catch(() => null); return q ? [s, q] : null; })),
+    getQuotes(yahooSyms).catch(() => []),
+    fearGreed().catch(() => null),
+    ffNextHighImpact(nowMs).catch(() => ({ ok: false, event: null }))
+  ]);
+  const okx = new Map(); for (const x of okxList) if (x) okx.set(x[0], x[1]);
+  const yahoo = new Map(); for (const q of (yahooList || [])) if (q && q.symbol) yahoo.set(q.symbol, q);
+  return { nerkh, okx, yahoo, fg, event: ev && ev.event, eventOk: !!(ev && ev.ok) };
+}
+
+/* ---- v1.14.0 — اخبار کانال (همان منطق news.js ربات، برای ورکر) ----
+   ۱۰ خبر مهم، سهم‌بندی نوبتی بین بازارها؛ در کانال فارسی بورس و فرابورس
+   هم هست. هر خبر: تاثیر (تخمینی، از کلیدواژهٔ تیتر) + نمادِ مربوط. اگر
+   خوراکی از IP ورکر نیامد، آن بازار کمتر می‌گیرد و بقیه جایش را پر می‌کنند. */
+const CH_NEWS_TIMES = ['18:45'];
+const CH_NEWS_ORDER = {
+  en: ['crypto', 'stocks', 'etf', 'commodity', 'forex'],
+  fa: ['crypto', 'iran', 'stocks', 'commodity', 'etf', 'forex']
+};
+const CH_NEWS_META = {
+  crypto: { emoji: '🪙', label: { en: 'Crypto', fa: 'کریپتو' } },
+  iran: { emoji: '🇮🇷', label: { en: 'Iran Stocks', fa: 'بورس و فرابورس' } },
+  stocks: { emoji: '📈', label: { en: 'Stocks', fa: 'سهام' } },
+  etf: { emoji: '🧺', label: { en: 'ETFs', fa: 'صندوق‌ها (ETF)' } },
+  commodity: { emoji: '🥇', label: { en: 'Commodities', fa: 'کالا' } },
+  forex: { emoji: '💱', label: { en: 'Forex', fa: 'فارکس' } }
+};
+const CH_NEWS_SOURCES = {
+  'CoinDesk': { en: 'CoinDesk', fa: 'کوین‌دسک' },
+  'Cointelegraph': { en: 'Cointelegraph', fa: 'کوین‌تلگراف' },
+  'CNBC': { en: 'CNBC', fa: 'سی‌ان‌بی‌سی' },
+  'BBC': { en: 'BBC', fa: 'بی‌بی‌سی' },
+  'Google News': { en: 'Google News', fa: 'گوگل نیوز' },
+  'EIA': { en: 'EIA', fa: 'EIA' },
+  'Nabze Bourse': { en: 'Nabze Bourse', fa: 'نبض بورس' },
+  'IBENA': { en: 'IBENA', fa: 'ایبنا' },
+  'Fardaye Eghtesad': { en: 'Fardaye Eghtesad', fa: 'فردای اقتصاد' }
+};
+function chGnewsUrl(q, lang) {
+  const fa = lang === 'fa';
+  return 'https://news.google.com/rss/search?q=' + encodeURIComponent(q) + '&hl=' + (fa ? 'fa' : 'en-US') + '&gl=' + (fa ? 'IR' : 'US') + '&ceid=' + (fa ? 'IR:fa' : 'US:en');
+}
+const CH_NEWS_FEEDS = {
+  en: [
+    { market: 'crypto', url: 'https://www.coindesk.com/arc/outboundfeeds/rss/', source: 'CoinDesk' },
+    { market: 'crypto', url: 'https://cointelegraph.com/rss', source: 'Cointelegraph' },
+    { market: 'stocks', url: 'https://www.cnbc.com/id/100003114/device/rss/rss.html', source: 'CNBC' },
+    { market: 'stocks', url: 'https://feeds.bbci.co.uk/news/business/rss.xml', source: 'BBC' },
+    { market: 'etf', url: chGnewsUrl('ETF', 'en'), source: 'Google News' },
+    { market: 'commodity', url: 'https://www.eia.gov/rss/todayinenergy.xml', source: 'EIA' },
+    { market: 'commodity', url: chGnewsUrl('oil gold prices', 'en'), source: 'Google News' },
+    { market: 'forex', url: chGnewsUrl('forex market', 'en'), source: 'Google News' }
+  ],
+  fa: [
+    { market: 'crypto', url: chGnewsUrl('ارز دیجیتال بیت کوین', 'fa'), source: 'Google News' },
+    { market: 'stocks', url: chGnewsUrl('بورس آمریکا', 'fa'), source: 'Google News' },
+    { market: 'etf', url: chGnewsUrl('ETF صندوق', 'fa'), source: 'Google News' },
+    { market: 'commodity', url: chGnewsUrl('قیمت نفت و طلا', 'fa'), source: 'Google News' },
+    { market: 'forex', url: chGnewsUrl('بازار ارز', 'fa'), source: 'Google News' },
+    { market: null, url: 'https://nabzebourse.com/fa/rss/allnews', source: 'Nabze Bourse' },
+    { market: null, url: 'https://www.ibena.ir/rss', source: 'IBENA' },
+    { market: null, url: 'https://www.fardayeeghtesad.com/rss', source: 'Fardaye Eghtesad' }
+  ]
+};
+const CH_MARKET_KEYWORDS = [
+  { market: 'iran', keys: ['فرابورس', 'بورس تهران', 'شاخص کل', 'بازار سرمایه', 'عرضه اولیه', 'بورس'] },
+  { market: 'etf', keys: ['etf', 'exchange-traded', 'صندوق', 'ای‌تی‌اف'] },
+  { market: 'crypto', keys: ['bitcoin', 'btc', 'ethereum', 'eth', 'crypto', 'solana', 'xrp', 'dogecoin', 'doge', 'cardano', 'blockchain', 'بیت‌کوین', 'بیتکوین', 'اتریوم', 'ارز دیجیتال', 'کریپتو', 'رمزارز', 'سولانا', 'بلاکچین'] },
+  { market: 'commodity', keys: ['gold', 'silver', 'oil', 'brent', 'copper', 'platinum', 'palladium', 'opec', 'طلا', 'سکه', 'نفت', 'نقره', 'مس', 'پلاتین', 'برنت', 'اوپک', 'انس'] },
+  { market: 'forex', keys: ['forex', 'dollar', 'euro', 'eur/usd', 'gbp', 'yen', 'currency', 'exchange rate', 'دلار', 'یورو', 'ارز', 'تتر', 'نرخ ارز', 'ین'] },
+  { market: 'stocks', keys: ['stock', 'shares', 'earnings', 'nasdaq', 's&p', 'dow', 'apple', 'microsoft', 'nvidia', 'tesla', 'ipo', 'بورس', 'سهام', 'شاخص', 'نماد', 'درآمد', 'اپل', 'مایکروسافت', 'انویدیا', 'تسلا'] }
+];
+function chClassifyNewsMarket(title, fallback) {
+  const t = ' ' + String(title || '').toLowerCase() + ' ';
+  for (const e of CH_MARKET_KEYWORDS) {
+    for (const k of e.keys) if (t.includes(k.toLowerCase())) return e.market;
+  }
+  return fallback || 'stocks';
+}
+function chStripCdata(s) { return String(s || '').replace(/^<!\[CDATA\[|\]\]>$/g, '').trim(); }
+function chStripSource(title) { return String(title || '').replace(/\s+-\s+[^-]+$/, '').trim(); }
+function chParseRss(xml) {
+  const items = [];
+  if (!xml || typeof xml !== 'string') return items;
+  const blocks = xml.match(/<item>[\s\S]*?<\/item>/g) || [];
+  for (const b of blocks) {
+    const t = b.match(/<title>([\s\S]*?)<\/title>/);
+    const l = b.match(/<link>([\s\S]*?)<\/link>/);
+    const d = b.match(/<pubDate>([\s\S]*?)<\/pubDate>/);
+    const title = chStripSource(chStripCdata(t && t[1]));
+    if (!title) continue;
+    const when = d ? new Date(chStripCdata(d[1])) : null;
+    items.push({ title, link: chStripCdata(l && l[1]), time: (when && !Number.isNaN(when.getTime())) ? when.getTime() : null });
+  }
+  return items;
+}
+const CH_SYMBOL_TAGS = [
+  { tag: 'BTC', keys: ['bitcoin', 'btc', 'بیت‌کوین', 'بیتکوین', 'بیت کوین'] },
+  { tag: 'ETH', keys: ['ethereum', 'eth', 'اتریوم', 'اتر'] },
+  { tag: 'SOL', keys: ['solana', 'sol', 'سولانا'] },
+  { tag: 'XRP', keys: ['xrp', 'ripple', 'ریپل'] },
+  { tag: 'DOGE', keys: ['dogecoin', 'doge', 'دوج‌کوین', 'دوجکوین'] },
+  { tag: 'AAPL', keys: ['apple', 'aapl', 'اپل'] },
+  { tag: 'MSFT', keys: ['microsoft', 'msft', 'مایکروسافت'] },
+  { tag: 'NVDA', keys: ['nvidia', 'nvda', 'انویدیا'] },
+  { tag: 'TSLA', keys: ['tesla', 'tsla', 'تسلا'] },
+  { tag: 'USOIL', keys: ['طلای سیاه', 'oil', 'نفت', 'brent', 'برنت'] },
+  { tag: 'XAUUSD', keys: ['gold', 'طلا', 'انس'] },
+  { tag: 'EURUSD', keys: ['euro', 'eur/usd', 'یورو'] },
+  { tag: 'US30', keys: ['dow jones', 'dow', 'داو'] }
+];
+function chDetectSymbolTag(title) {
+  const t = ' ' + String(title || '').toLowerCase() + ' ';
+  for (const e of CH_SYMBOL_TAGS) {
+    for (const k of e.keys) if (t.includes(k.toLowerCase())) return e.tag;
+  }
+  return null;
+}
+const CH_IMPACT_HIGH = ['fed', 'federal reserve', 'interest rate', 'rate cut', 'rate hike', 'cpi', 'inflation', 'sec', 'etf', 'bankruptcy', 'bankrupt', 'hack', 'hacked', 'war', 'sanction', 'ban', 'earnings', 'halving', 'lawsuit', 'crash', 'collapse', 'recession', 'نرخ بهره', 'فدرال رزرو', 'تورم', 'ورشکستگی', 'هک', 'جنگ', 'تحریم', 'ممنوع', 'درآمد', 'هاوینگ', 'شکایت', 'سقوط', 'رکود'];
+const CH_IMPACT_MED = ['partnership', 'listing', 'upgrade', 'analyst', 'forecast', 'launch', 'adoption', 'merger', 'acquisition', 'ceo', 'update', 'همکاری', 'لیست', 'ارتقا', 'تحلیلگر', 'پیش‌بینی', 'راه‌اندازی', 'ادغام', 'مدیرعامل'];
+function chImpactOf(title) {
+  const t = String(title || '').toLowerCase();
+  for (const k of CH_IMPACT_HIGH) if (t.includes(k.toLowerCase())) return 'high';
+  for (const k of CH_IMPACT_MED) if (t.includes(k.toLowerCase())) return 'medium';
+  return 'low';
+}
+function chImpactLabel(level, lang) {
+  const fa = lang === 'fa';
+  if (level === 'high') return fa ? '🔴 تاثیر بالا' : '🔴 High impact';
+  if (level === 'medium') return fa ? '🟡 تاثیر متوسط' : '🟡 Medium impact';
+  return fa ? '⚪ تاثیر کم' : '⚪ Low impact';
+}
+async function fetchChannelNews(lang) {
+  const fa = lang === 'fa';
+  const order = CH_NEWS_ORDER[fa ? 'fa' : 'en'];
+  const feeds = CH_NEWS_FEEDS[fa ? 'fa' : 'en'];
+  const lists = await Promise.all(feeds.map(async (f) => {
+    try {
+      const r = await fetch(f.url, { headers: { 'User-Agent': UA, Accept: 'application/rss+xml, application/xml, text/xml' }, signal: AbortSignal.timeout(8000) });
+      if (!r.ok) return [];
+      return chParseRss(await r.text()).map(it => ({ ...it, market: f.market, source: f.source }));
+    } catch (e) { return []; }
+  }));
+  const seen = new Set();
+  const byMarket = {};
+  for (const m of order) byMarket[m] = [];
+  const key = t => String(t || '').toLowerCase().replace(/[^a-z0-9؀-ۿ]+/g, ' ').trim();
+  for (const list of lists) {
+    for (const it of list) {
+      const k = key(it.title);
+      if (!k || seen.has(k)) continue;
+      seen.add(k);
+      const m = it.market || chClassifyNewsMarket(it.title, 'stocks');
+      if (!byMarket[m]) continue;
+      byMarket[m].push({ title: it.title, link: it.link || '', time: it.time || null, source: it.source, market: m });
+    }
+  }
+  for (const m of order) byMarket[m].sort((a, b) => (b.time || 0) - (a.time || 0));
+  const picked = [];
+  let guard = 0;
+  while (picked.length < 10 && guard++ < 30) {
+    let took = false;
+    for (const m of order) {
+      if (picked.length >= 10) break;
+      const it = byMarket[m].shift();
+      if (it) { picked.push(it); took = true; }
+    }
+    if (!took) break;
+  }
+  const groups = [];
+  for (const m of order) {
+    const items = picked.filter(p => p.market === m);
+    if (items.length) groups.push({ key: m, emoji: CH_NEWS_META[m].emoji, label: CH_NEWS_META[m].label, items });
+  }
+  return { groups, total: picked.length };
+}
+function buildChannelNews(lang, res, nowMs) {
+  const fa = lang === 'fa';
+  if (!res || !res.total) return null;
+  const header = fa
+    ? '📰 اخبار بازار جهانی — ' + chDateTehran(nowMs, lang)
+    : '📰 World Market News — ' + chDateTehran(nowMs, lang);
+  const lines = [header];
+  let n = 0;
+  for (const g of res.groups) {
+    lines.push(g.emoji + ' ' + g.label[fa ? 'fa' : 'en']);
+    for (const it of g.items) {
+      n++;
+      const title = it.link
+        ? '<a href="' + chEsc(it.link) + '"><b>' + chEsc(it.title) + '</b></a>'
+        : '<b>' + chEsc(it.title) + '</b>';
+      lines.push(n + '. ' + title);
+      const sym = chDetectSymbolTag(it.title);
+      const meta = [];
+      const tm = chTimeTehran(it.time);
+      if (tm) meta.push('🕐 ' + tm);
+      const src = CH_NEWS_SOURCES[it.source];
+      if (src) meta.push(src[fa ? 'fa' : 'en']);
+      if (sym) meta.push('[' + sym + ']');
+      meta.push(chImpactLabel(chImpactOf(it.title), lang));
+      lines.push(meta.join(' • '));
+    }
+  }
+  lines.push(fa
+    ? 'تاثیر از روی کلیدواژهٔ تیتر تخمین زده شده؛ قطعی نیست.'
+    : 'Impact is estimated from headline keywords, not measured.');
+  return chRenderLines(lang, lines);
+}
+
+/* ضربان PC: {ts, channels:[{chatId,lang}], digestTimes, priceHours} — با
+   HMAC توکن روی 'pc-heartbeat:' + ts. */
+async function handlePcHeartbeat(req) {
+  const kv = alertKV();
+  const token = alertEnv('TELEGRAM_BOT_TOKEN');
+  if (!kv || !token) return json({ ok: false, error: 'no_kv' }, 503);
+  let body = null;
+  try { body = await req.json(); } catch (e) { return json({ ok: false, error: 'bad' }, 400); }
+  const ts = +((body && body.ts) || 0);
+  const sig = String((body && body.sig) || '');
+  if (!ts || Math.abs(Date.now() - ts) > 300000) return json({ ok: false, error: 'bad' }, 400);
+  const expected = toHex(await hmacBytes(new TextEncoder().encode(token), 'pc-heartbeat:' + ts));
+  if (!sig || expected !== sig.toLowerCase()) return json({ ok: false, error: 'bad_auth' }, 401);
+  const channels = Array.isArray(body.channels)
+    ? body.channels.filter(c => c && c.chatId && (c.lang === 'en' || c.lang === 'fa')).map(c => ({ chatId: String(c.chatId), lang: c.lang })).slice(0, 4)
+    : [];
+  if (!channels.length) return json({ ok: false, error: 'no_channels' }, 400);
+  const digestTimes = Array.isArray(body.digestTimes)
+    ? body.digestTimes.filter(t => /^\d{2}:\d{2}$/.test(String(t))).slice(0, 8) : CH_DIGEST_TIMES;
+  const priceHours = Array.isArray(body.priceHours)
+    ? body.priceHours.filter(h => Number.isInteger(h) && h >= 0 && h <= 23).slice(0, 12) : CH_PRICE_HOURS;
+  const newsTimes = Array.isArray(body.newsTimes)
+    ? body.newsTimes.filter(t => /^\d{2}:\d{2}$/.test(String(t))).slice(0, 8) : CH_NEWS_TIMES;
+  await kv.put('pc-heartbeat', JSON.stringify({ ts, channels, digestTimes: digestTimes.length ? digestTimes : CH_DIGEST_TIMES, priceHours: priceHours.length ? priceHours : CH_PRICE_HOURS, newsTimes: newsTimes.length ? newsTimes : CH_NEWS_TIMES }));
+  return json({ ok: true });
+}
+/* علامت اسلاتِ PC — کلیدِ channel.js ('digest:YYYY-MM-DD:HH:MM' یا
+   'prices:YYYY-MM-DD:HH')؛ HMAC روی 'channel-posted:' + key + ':' + ts. */
+async function handleChannelPosted(req) {
+  const kv = alertKV();
+  const token = alertEnv('TELEGRAM_BOT_TOKEN');
+  if (!kv || !token) return json({ ok: false, error: 'no_kv' }, 503);
+  let body = null;
+  try { body = await req.json(); } catch (e) { return json({ ok: false, error: 'bad' }, 400); }
+  const key = String((body && body.key) || '');
+  const ts = +((body && body.ts) || 0);
+  const sig = String((body && body.sig) || '');
+  if (!/^(digest|prices|news):\d{4}-\d{2}-\d{2}:(\d{2}:\d{2}|\d{2})$/.test(key) || !ts || Math.abs(Date.now() - ts) > 300000) return json({ ok: false, error: 'bad' }, 400);
+  const expected = toHex(await hmacBytes(new TextEncoder().encode(token), 'channel-posted:' + key + ':' + ts));
+  if (!sig || expected !== sig.toLowerCase()) return json({ ok: false, error: 'bad_auth' }, 401);
+  await kv.put('ch:' + key, '1');
+  return json({ ok: true });
+}
+
+/* Cron هر دقیقه: اگر ضربان تازه است PC زنده است و ورکر ساکت می‌ماند؛ اگر
+   قدیمی است، تازه‌ترین اسلاتِ رسیده (با ۵ دقیقه مهلت) را می‌فرستد. */
+async function runChannelCron(nowMs) {
+  const kv = alertKV();
+  const token = alertEnv('TELEGRAM_BOT_TOKEN');
+  if (!kv || !token) return { ok: false, error: 'no_kv_or_token' };
+  let hb = null;
+  try { hb = JSON.parse(await kv.get('pc-heartbeat') || 'null'); } catch (e) { return { ok: false, error: 'bad_heartbeat' }; }
+  if (!hb || !Array.isArray(hb.channels) || !hb.channels.length) return { ok: false, error: 'no_heartbeat' };
+  const now = nowMs || Date.now();
+  if (isFinite(+hb.ts) && now - hb.ts < CH_HEARTBEAT_FRESH_MS) return { ok: true, skipped: 'pc_alive' };
+  const channels = hb.channels.filter(c => c && c.chatId && (c.lang === 'en' || c.lang === 'fa')).slice(0, 4);
+  if (!channels.length) return { ok: false, error: 'no_channels' };
+  const digestTimes = (Array.isArray(hb.digestTimes) && hb.digestTimes.length ? hb.digestTimes : CH_DIGEST_TIMES).filter(t => /^\d{2}:\d{2}$/.test(String(t)));
+  const priceHours = (Array.isArray(hb.priceHours) && hb.priceHours.length ? hb.priceHours : CH_PRICE_HOURS).filter(h => Number.isInteger(h) && h >= 0 && h <= 23);
+  const newsTimes = (Array.isArray(hb.newsTimes) && hb.newsTimes.length ? hb.newsTimes : CH_NEWS_TIMES).filter(t => /^\d{2}:\d{2}$/.test(String(t)));
+  const tp = tehranParts(now);
+  const out = { ok: true, digest: null, prices: null, news: null };
+  let dataPromise = null;
+  const getData = () => (dataPromise || (dataPromise = fetchChannelData(now)));
+  const dueDigest = [...digestTimes].sort().filter(t => tp.hm >= t).pop();
+  if (dueDigest) {
+    const key = 'ch:digest:' + tp.day + ':' + dueDigest;
+    const marked = await kv.get(key).catch(() => null);
+    if (!marked && now >= tehranWallToMs(tp.day, dueDigest) + CH_GRACE_MS) {
+      const data = await getData();
+      let sent = 0;
+      for (const c of channels) {
+        const text = buildChannelDigest(c.lang, data, now);
+        if (!text) continue;
+        if (await tgSend(token, c.chatId, text)) sent++;
+      }
+      if (sent > 0) { await kv.put(key, '1').catch(() => {}); out.digest = sent; }
+    }
+  }
+  const duePrice = [...priceHours].sort((a, b) => a - b).filter(h => tp.hour >= h).pop();
+  if (duePrice !== undefined) {
+    const hh = String(duePrice).padStart(2, '0');
+    const key = 'ch:prices:' + tp.day + ':' + hh;
+    const marked = await kv.get(key).catch(() => null);
+    if (!marked && now >= tehranWallToMs(tp.day, hh + ':00') + CH_GRACE_MS) {
+      const data = await getData();
+      let sent = 0;
+      for (const c of channels) {
+        const text = buildChannelPrices(c.lang, data, now);
+        if (!text) continue;
+        if (await tgSend(token, c.chatId, text)) sent++;
+      }
+      if (sent > 0) { await kv.put(key, '1').catch(() => {}); out.prices = sent; }
+    }
+  }
+  const dueNews = [...newsTimes].sort().filter(t => tp.hm >= t).pop();
+  if (dueNews) {
+    const key = 'ch:news:' + tp.day + ':' + dueNews;
+    const marked = await kv.get(key).catch(() => null);
+    if (!marked && now >= tehranWallToMs(tp.day, dueNews) + CH_GRACE_MS) {
+      let sent = 0;
+      for (const c of channels) {
+        const res = await fetchChannelNews(c.lang).catch(() => null);
+        const text = res ? buildChannelNews(c.lang, res, now) : null;
+        if (!text) continue;
+        if (await tgSend(token, c.chatId, text)) sent++;
+      }
+      if (sent > 0) { await kv.put(key, '1').catch(() => {}); out.news = sent; }
+    }
+  }
+  return out;
+}
+
+/* GET /status — وضعیت جانشینِ کانال برای پنل مدیر: ضربان PC چند دقیقه پیش
+   بوده و آخرین پست‌های کانال (خلاصه/قیمت/اخبار) کِی علامت خورده‌اند. بدون
+   احراز — فقط زمان‌ها و وضعیت‌هاست، هیچ دادهٔ حساسی ندارد. */
+async function handleStatus() {
+  const kv = alertKV();
+  if (!kv) return json({ ok: false, error: 'no_kv' }, 503);
+  let hb = null;
+  try { hb = JSON.parse(await kv.get('pc-heartbeat') || 'null'); } catch (e) { /* خالی */ }
+  let last = {};
+  try {
+    const page = await kv.list({ prefix: 'ch:', limit: 100 });
+    const keys = (page.keys || []).map(k => k.name).sort().reverse();
+    for (const k of keys) {
+      const kind = k.split(':')[1];
+      if (kind && !last[kind]) last[kind] = k.slice(3);
+    }
+  } catch (e) { /* خالی */ }
+  return json({
+    ok: true,
+    heartbeatAgeMin: hb && isFinite(+hb.ts) ? Math.max(0, Math.round((Date.now() - hb.ts) / 60000)) : null,
+    channels: hb && Array.isArray(hb.channels) ? hb.channels : [],
+    digestTimes: hb && hb.digestTimes ? hb.digestTimes : CH_DIGEST_TIMES,
+    priceHours: hb && hb.priceHours ? hb.priceHours : CH_PRICE_HOURS,
+    newsTimes: hb && hb.newsTimes ? hb.newsTimes : CH_NEWS_TIMES,
+    lastPosted: last
+  });
+}
+
 /* ---- روت اصلی ---- */
 async function handle(req) {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders() });
@@ -720,7 +1380,19 @@ async function handle(req) {
   const kind = url.pathname.replace(/^\/+/, '').split('/')[0];
   const target = url.searchParams.get('u') || '';
 
-  /* v1.11.0 — سرویس آلرت: اولِ همه، چون POST است و بدنهٔ JSON دارد. */
+  /* v1.14.0 — وضعیت جانشینِ کانال (بدون احراز؛ فقط زمان‌ها). */
+  if (kind === 'status') {
+    if (req.method !== 'GET') return json({ ok: false, error: 'bad' }, 405);
+    return handleStatus();
+  }
+  if (kind === 'pc-heartbeat') {
+    if (req.method !== 'POST') return json({ ok: false, error: 'bad' }, 405);
+    return handlePcHeartbeat(req);
+  }
+  if (kind === 'channel-posted') {
+    if (req.method !== 'POST') return json({ ok: false, error: 'bad' }, 405);
+    return handleChannelPosted(req);
+  }
   if (kind === 'alert-list-bot') {
     if (req.method !== 'POST') return json({ ok: false, error: 'bad' }, 405);
     return handleAlertListBot(req);
@@ -821,13 +1493,21 @@ async function handle(req) {
       return json({ error: 'upstream failed' }, 502);
     }
   }
-  return json({ error: 'unknown route', routes: ['yahoo-chart', 'yahoo-quote', 'yahoo-multi', 'rss', 'nerkhsanj', 'binance', 'coingecko', 'iran', 'okx', 'mofid', 'alert-add', 'alert-del', 'alert-list', 'alert-list-bot'] }, 404);
+  return json({ error: 'unknown route', routes: ['yahoo-chart', 'yahoo-quote', 'yahoo-multi', 'rss', 'nerkhsanj', 'binance', 'coingecko', 'iran', 'okx', 'mofid', 'alert-add', 'alert-del', 'alert-list', 'alert-list-bot', 'pc-heartbeat', 'channel-posted'] }, 404);
 }
 
 addEventListener('fetch', function (event) {
   event.respondWith(handle(event.request));
 });
-/* v1.11.0 — Cron شلیک آلرت (هر ۱ دقیقه، از داشبورد: Triggers → Cron `* * * * *`). */
+/* v1.11.0 — Cron شلیک آلرت (هر ۱ دقیقه، از داشبورد: Triggers → Cron `* * * * *`).
+   v1.13.0 — همان تیک، پست کانالِ جانشین را هم می‌چکد؛ نتیجهٔ برگشتی همان
+   نتیجهٔ آلرت است تا تست‌ها و رفتارِ قبلی عوض نشوند. */
 addEventListener('scheduled', function (event) {
-  event.waitUntil(runAlertCron());
+  event.waitUntil((async () => {
+    const [al] = await Promise.all([
+      runAlertCron(),
+      runChannelCron().catch(e => ({ ok: false, error: String(e && e.message) }))
+    ]);
+    return al;
+  })());
 });
