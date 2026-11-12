@@ -174,7 +174,7 @@
       /* v1.2.1 — XAU/USD: یاهو XAUUSD=X ندارد (و XAU-USD دادهٔ واقعی ندارد)؛
          PAX Gold روی Binance دقیقاً طلای اونس بر حسب دلار است (1 PAXG = 1 اونس) و
          هم کندل زنده می‌دهد هم دفتر سفارش — پس XAU/USD با همین نماد می‌آید. */
-      { label: 'XAU/USD', provider: 'binance', symbol: 'PAXGUSDT', display: 'XAU/USD', kw: 'طلا انس دلار پکس گلد' },
+      { label: 'XAU/USD', provider: 'binance', symbol: 'PAXGUSDT', display: 'XAU/USD (PAXG)', kw: 'طلا انس دلار پکس گلد' },
       { label: 'Gold', provider: 'yahoo', symbol: 'GC=F', display: 'Gold (GC=F)', kw: 'طلا انس' },
       { label: 'Silver', provider: 'yahoo', symbol: 'SI=F', display: 'Silver (SI=F)', kw: 'نقره' },
       { label: 'Oil (WTI)', provider: 'yahoo', symbol: 'CL=F', display: 'Oil (CL=F)', kw: 'نفت' },
