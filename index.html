@@ -107,9 +107,14 @@
   .live-dot { font-size: 11px; font-weight: 700; }
   .live-ws { color: var(--up); }
   .live-poll { color: #ffb347; }
-  #tab-chart:fullscreen, #tab-chart.fs { background: var(--bg); padding: 12px; overflow-y: auto; }
-  #tab-chart:fullscreen #nv, #tab-chart.fs #nv { height: calc(100dvh - 200px) !important; }
-  #tab-chart:fullscreen #cc, #tab-chart.fs #cc { height: 100% !important; }
+  /* v1.15.4 — تمام‌صفحه: ریشهٔ باگ این بود که .fs فقط رنگ/پدینگ می‌داد و هیچ‌وقت
+     position:fixed نداشت (و مسیر تلگرام اصلاً کلاس نمی‌گذاشت)؛ پس چارت بزرگ نمی‌شد.
+     حالا تمام‌صفحه همیشه یک لایهٔ ثابتِ تمام‌قد است (با بالا/پایینِ امنِ تلگرام و گوشی). */
+  :root { --fs-top: calc(var(--tg-safe-area-inset-top, env(safe-area-inset-top, 0px)) + var(--tg-content-safe-area-inset-top, 0px)); --fs-bot: var(--tg-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)); }
+  body.fs-lock { overflow: hidden; }
+  #tab-chart.fs { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 60; box-sizing: border-box; background: var(--bg); padding: calc(var(--fs-top) + 8px) 10px calc(var(--fs-bot) + 8px); overflow-y: auto; overscroll-behavior: contain; }
+  #tab-chart.fs #nv { height: max(260px, calc(100dvh - var(--fs-top) - var(--fs-bot) - 200px)) !important; }
+  #tab-chart.fs #cc { height: 100% !important; }
   /* v1.3.0 — جعبهٔ OHLC کراس‌هیر + پنل‌های RSI/MACD */
   .xh-box { position: absolute; top: 44px; right: 8px; z-index: 4; background: rgba(13,19,32,.92); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; font-size: 11px; line-height: 1.7; color: var(--txt); pointer-events: none; text-align: left; max-width: calc(100% - 20px); }
   .xh-box b { color: var(--txt); }
@@ -471,8 +476,9 @@
   body.focus-mode .chart-status,
   body.focus-mode .tool-note-bar { display: none !important; }
   body.focus-mode #lastPxTag .ax-plus { display: none !important; }
-  body.focus-mode #tab-chart #nv { height: calc(100dvh - 16px) !important; }
-  #focusExitBtn { position: absolute; top: 8px; inset-inline-end: 8px; z-index: 9; background: rgba(13,19,32,.92); border: 1px solid var(--line); color: var(--txt); border-radius: 999px; padding: 7px 12px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; }
+  body.focus-mode #tab-chart.fs { overflow: hidden; padding-top: calc(var(--fs-top) + 4px); padding-bottom: calc(var(--fs-bot) + 4px); }
+  body.focus-mode #tab-chart.fs #nv { height: calc(100dvh - var(--fs-top) - var(--fs-bot) - 8px) !important; }
+  #focusExitBtn { position: fixed; top: calc(var(--fs-top) + 10px); inset-inline-end: 10px; z-index: 65; background: rgba(13,19,32,.92); border: 1px solid var(--line); color: var(--txt); border-radius: 999px; padding: 7px 12px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; }
   #focusExitBtn:active { border-color: var(--acc); }
   /* v1.14.8 — ردیف بزرگ‌نمایی در پنل تنظیمات (جایگزین دکمه‌های −/+ نوار پایین). */
   .set-zoom-row { display: flex; gap: 6px; }

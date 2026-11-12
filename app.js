@@ -1372,7 +1372,7 @@
      (۲) requestFullscreen استاندارد روی کانتینر چارت (اگر تا ۷۰۰ms واقعاً
      وارد تمام‌صفحه نشد، به (۳) می‌رویم)، (۳) حالت درون‌برنامه‌ای (.fs).
      fsMode وضعیت واقعی را نگه می‌دارد تا زدن دوبارهٔ دکمه همیشه خارج شود. */
-  var fsMode = 'none'; /* 'none' | 'tg' | 'native' | 'css' */
+  var fsMode = 'none'; /* 'none' | 'css' | 'tg' (css + تمام‌صفحهٔ تلگرام) */
   var fsNativeTimer = null;
   var focusOn = false;
   /* v1.14.8 — آیکن‌های تمام‌صفحه این‌جا هستند (نه در renderChartShell): applyFsUI
@@ -1395,47 +1395,39 @@
     if (fsMode !== 'none') { exitFs(); return; }
     enterFs();
   }
+  function redrawChartSoon() {
+    var f = function () { try { if ($('cc')) { window.draw(); window.head(); } } catch (e) {} };
+    setTimeout(f, 80); setTimeout(f, 350);
+  }
+  function setFsClass(on) {
+    var tc = $('tab-chart');
+    if (tc) tc.classList.toggle('fs', !!on);
+    try { document.body.classList.toggle('fs-lock', !!on); } catch (e) {}
+  }
+  /* v1.15.4 — تمام‌صفحه (باگ: چارت بزرگ نمی‌شد و تمرکز کار نمی‌کرد):
+     نسخهٔ قبلی در تلگرام فقط Telegram.WebApp.requestFullscreen را صدا می‌زد (که فقط
+     هدرِ خودِ تلگرام را برمی‌دارد) و کلاس .fs هم position:fixed نداشت؛ مسیر native هم
+     در WebViewِ تلگرام نامطمئن بود. حالا لایهٔ CSS (.fs = ثابت و تمام‌قد) همیشه اعمال
+     می‌شود — پس همه‌جا کار می‌کند — و اگر تلگرام ≥۸٫۰ بود، بهترین‌تلاش
+     requestFullscreen هم زده می‌شود تا هدر تلگرام هم برود. */
   function enterFs() {
-    var wrap = $('tab-chart');
-    if (!wrap) return;
+    if (!$('tab-chart')) return;
+    fsMode = 'css';
     if (fsSupportedTg()) {
-      try { tg.requestFullscreen(); fsMode = 'tg'; applyFsUI(true); return; } catch (e) {}
+      try { tg.requestFullscreen(); fsMode = 'tg'; } catch (e) { fsMode = 'css'; }
     }
-    if (wrap.requestFullscreen) {
-      try {
-        var p = wrap.requestFullscreen();
-        fsMode = 'native';
-        applyFsUI(true);
-        if (p && p.catch) p.catch(function () { if (fsMode === 'native') { fsMode = 'none'; cssFs(true); } });
-        if (fsNativeTimer) { try { clearTimeout(fsNativeTimer); } catch (e2) {} }
-        fsNativeTimer = setTimeout(function () { if (fsMode === 'native' && !document.fullscreenElement) { fsMode = 'none'; cssFs(true); } }, 700);
-        return;
-      } catch (e) {}
-    }
-    cssFs(true);
+    setFsClass(true);
+    applyFsUI(true);
+    redrawChartSoon();
   }
   function exitFs() {
     if (fsMode === 'tg') {
-      try { if (tg && typeof tg.exitFullscreen === 'function') tg.exitFullscreen(); } catch (e) {}
-      fsMode = 'none'; applyFsUI(false); cssFs(false);
-      return;
+      try { if (tg && tg.isFullscreen && typeof tg.exitFullscreen === 'function') tg.exitFullscreen(); } catch (e) {}
     }
-    if (fsMode === 'native') {
-      try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {}
-      fsMode = 'none'; applyFsUI(false); cssFs(false);
-      return;
-    }
-    if (fsMode === 'css') { fsMode = 'none'; applyFsUI(false); cssFs(false); return; }
+    fsMode = 'none';
+    setFsClass(false);
     applyFsUI(false);
-  }
-  function cssFs(on) {
-    var tc = $('tab-chart');
-    if (!tc) return;
-    tc.classList.toggle('fs', !!on);
-    if (on && fsMode === 'none') fsMode = 'css';
-    if (!on && fsMode === 'css') fsMode = 'none';
-    applyFsUI(!!on);
-    setTimeout(function () { try { window.draw(); window.head(); } catch (e) {} }, 120);
+    redrawChartSoon();
   }
   /* v1.14.8 — حالت تمرکز (فقط داخل تمام‌صفحه): فقط خودِ چارت دیده می‌شود.
      خروج از تمام‌صفحه تمرکز را هم خاموش می‌کند. */
@@ -1719,24 +1711,24 @@
       var sc = $('setClose');
       if (sc && setP) sc.addEventListener('click', function () { setP.classList.remove('open'); if (sb) sb.classList.remove('on'); });
     })();
-    document.addEventListener('fullscreenchange', function () {
-      var on = !!document.fullscreenElement;
-      if (fsNativeTimer) { try { clearTimeout(fsNativeTimer); } catch (e) {} fsNativeTimer = null; }
-      if (on) { fsMode = 'native'; applyFsUI(true); }
-      else if (fsMode === 'native') { fsMode = 'none'; applyFsUI(false); cssFs(false); }
-      setTimeout(function () { try { window.draw(); window.head(); } catch (e) {} }, 120);
-    });
-    /* v1.14.8 — رویداد تمام‌صفحهٔ تلگرام (خروج با ژست سیستمی/دکمهٔ تلگرام هم باید آیکن را برگرداند). */
+    /* v1.15.4 — رویدادهای تلگرام: خروج با ژست/دکمهٔ سیستمی تلگرام هم باید تمام‌صفحه را ببندد؛
+       اگر درخواست تمام‌صفحهٔ تلگرام شکست خورد (fullscreenFailed) لایهٔ CSS می‌ماند.
+       تغییر اندازهٔ صفحه/جهت گوشی هم چارت را دوباره می‌کشد. */
     if (!window.__tgFsBound) {
       window.__tgFsBound = true;
       try {
-        if (tg && typeof tg.onEvent === 'function') tg.onEvent('fullscreenChanged', function () {
-          var on = false;
-          try { on = !!(tg && tg.isFullscreen); } catch (e) {}
-          if (on) { if (fsMode === 'tg') applyFsUI(true); }
-          else if (fsMode === 'tg') { fsMode = 'none'; applyFsUI(false); cssFs(false); }
-        });
+        if (tg && typeof tg.onEvent === 'function') {
+          tg.onEvent('fullscreenChanged', function () {
+            var on = false;
+            try { on = !!(tg && tg.isFullscreen); } catch (e) {}
+            if (!on && fsMode === 'tg') exitFs();
+            else redrawChartSoon();
+          });
+          tg.onEvent('fullscreenFailed', function () { if (fsMode === 'tg') fsMode = 'css'; });
+          tg.onEvent('viewportChanged', function () { redrawChartSoon(); });
+        }
       } catch (e) {}
+      try { window.addEventListener('resize', function () { redrawChartSoon(); }); } catch (e) {}
     }
     // ژست‌های TradingView (پورت js/06 اپ): اسکرول روی محور قیمت = زوم عمودی؛
     // کشیدن روی محور قیمت = کش‌آمدن مقیاس؛ کشیدن عمودی روی چارت = اسکرول صفحه
