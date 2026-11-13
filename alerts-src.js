@@ -18,7 +18,7 @@
   var SYNC_LS = 'onella_sync_url';
   /* آدرس عمومی HTTPS سرور اپ اصلی (بدون / آخر) — مثلاً 'https://onella.example.com'. خالی = همگام‌سازی خاموش. */
   var ONELLA_SYNC_URL = '';
-  var MAX = 50, SYNC_EVERY = 60000;
+  var MAX = 50, SYNC_EVERY = 15000;
   var USER_ID = null;
   try {
     var _u = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user;
@@ -222,7 +222,7 @@
   function startPoll() {
     if (pollTimer) return;
     var hid = function () { try { return !!document.hidden; } catch (_) { return false; } };
-    pollTimer = setInterval(function () { if (!hid()) sync(false); }, SYNC_EVERY);
+    pollTimer = setInterval(function () { if (!hid()) sync(false); }, SYNC_EVERY);   /* v1.16.6: ۱۵ ثانیه (فقط خواندن؛ نوشتن KV فقط با تغییر) */
     try { document.addEventListener('visibilitychange', function () { if (!hid()) sync(false); }); } catch (_) {}
   }
   startPoll();
