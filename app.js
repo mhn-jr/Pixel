@@ -2605,7 +2605,7 @@
     var box = $('alSync'), A = window.OnellaAlerts;
     if (!box || !A) return;
     var st = A.syncState(), tx;
-    if (!st.url) tx = T('همگام‌سازی با اپ اصلی: آدرس سرور تنظیم نشده (ONELLA_SYNC_URL در alerts-src.js).', 'Main-app sync: server URL not set (ONELLA_SYNC_URL in alerts-src.js).');
+    if (!st.url) tx = T('هنوز به اپ اصلی وصل نشده‌ای: در اپ اصلی «اعمال در مینی‌اپ» را روشن کن و مینی‌اپ را یک‌بار از دکمهٔ منوی ربات (یا دستور /mini) باز کن؛ خودکار وصل می‌شود.', 'Not connected to the main app yet: turn on “Apply in mini app” there, then open the mini app once from the bot menu button (or /mini) — it connects automatically.');
     else if (!st.tg) tx = T('همگام‌سازی فقط داخل تلگرام کار می‌کند.', 'Sync works only inside Telegram.');
     else if (st.st === 'ok') { var tm = ''; try { tm = window.OnellaDate ? window.OnellaDate.fmt(st.at, 'hm') : new Date(st.at).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }); } catch (e) {} tx = T('✓ همگام با اپ اصلی • ', '✓ Synced with main app • ') + tm; }
     else if (st.st === 'disabled') tx = T('در اپ اصلی: Alert ← Notifications ← «اعمال در مینی‌اپ تلگرام» را روشن کن (و تلگرام وصل باشد).', 'In the main app turn on Alert → Notifications → “Apply in Telegram mini app” (Telegram must be connected).');

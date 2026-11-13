@@ -164,10 +164,11 @@
   /* ---------- همگام‌سازی با سرور اپ اصلی ---------- */
   var SY = { st: 'off', at: 0, msg: '' };   // off | idle | ok | disabled | auth | net | server
   var syncDirty = false, syncT = null, syncing = false, pollTimer = null;
+  var AUTO_URL = '';   // v1.16.4: اگر مینی‌اپ از خود سرور اصلی باز شده باشد (همان origin)، بدون هیچ تنظیمی همان سرور است
   function syncUrl() {
-    try { var q = new URLSearchParams(location.search).get('api'); if (q && /^https:\/\/[^\s]+$/.test(q)) localStorage.setItem(SYNC_LS, q.replace(/\/+$/, '')); } catch (_) {}
+    try { var q = new URLSearchParams(location.search).get('api'); if (q && /^https:\/\/[^\s]+$/.test(q)) { var qq = q.replace(/\/+$/, ''); localStorage.setItem(SYNC_LS, qq); if (tgCS) csSetItem(SYNC_LS, qq); } } catch (_) {}
     var v = ''; try { v = localStorage.getItem(SYNC_LS) || ''; } catch (_) {}
-    return String(v || window.ONELLA_SYNC_URL || ONELLA_SYNC_URL || '').replace(/\/+$/, '');
+    return String(AUTO_URL || v || window.ONELLA_SYNC_URL || ONELLA_SYNC_URL || '').replace(/\/+$/, '');
   }
   function initData() { try { return (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || ''; } catch (_) { return ''; } }
   function syncOn() { return !!(syncUrl() && initData()); }
@@ -220,6 +221,16 @@
     try { document.addEventListener('visibilitychange', function () { if (!hid()) sync(false); }); } catch (_) {}
   }
   startPoll();
+  /* v1.16.3 — آدرس سرور خودکار: از ?api= دکمهٔ ربات (ذخیره در localStorage + CloudStorage). اگر localStorage خالی شد از CloudStorage برمی‌گردد. */
+  syncUrl();
+  try {
+    if (location.protocol === 'https:' && typeof fetch === 'function') {
+      fetch(location.origin + '/api/alerts/status', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+        if (j && j.ok && j.telegram) { AUTO_URL = location.origin; emit(); sync(true); }
+      }).catch(function () {});
+    }
+  } catch (_) {}
+  if (tgCS) { try { if (!localStorage.getItem(SYNC_LS)) csGetItem(SYNC_LS).then(function (v) { if (v && /^https:\/\//.test(v)) { try { localStorage.setItem(SYNC_LS, v); } catch (_) {} sync(true); } }); } catch (_) {} }
 
   /* ---------- API ---------- */
   var seq = 0;
@@ -323,6 +334,14 @@
     onChange: function (f) { if (typeof f === 'function') listeners.push(f); },
     sync: function () { return sync(true); },
     syncState: function () { return { url: !!syncUrl(), tg: !!initData(), st: SY.st, at: SY.at, msg: SY.msg }; },
+    /* v1.16.3 — آدرس سرور اپ اصلی را از داخل مینی‌اپ بگذار/پاک کن (در localStorage) و فوراً همگام کن. */
+    setSyncUrl: function (v) {
+      v = String(v || '').trim().replace(/\/+$/, '');
+      if (v && !/^https:\/\/[^\s\/]+(\/[^\s]*)?$/.test(v)) return false;
+      try { if (v) localStorage.setItem(SYNC_LS, v); else localStorage.removeItem(SYNC_LS); } catch (_) { return false; }
+      SY.st = 'idle'; emit(); return sync(true).then(function () { return true; });
+    },
+    syncUrlValue: function () { return syncUrl(); },
     syncable: function (sym, provider, mode) { return !!toMain(sym, provider, mode); },
     syncOk: function () { return syncOn() && SY.st === 'ok'; },
     reload: function () { loadStarted = false; return loadAll(); },
