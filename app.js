@@ -2205,7 +2205,11 @@
     var fired = [];
     try { if (window.OnellaAlerts) fired = window.OnellaAlerts.check(q.symbol, price, Date.now()) || []; } catch (e) {}
     if (!fired.length) return;
-    fired.forEach(showAlertFired);
+    fired.forEach(function (fa) {
+      if (fa.quiet) return; /* خارج از برنامهٔ زمانی اعلان: بی‌صدا */
+      if (!fa.n || fa.n.toast !== false) showAlertFired(fa);
+      if (fa.n && fa.n.sound) { try { var ac = new (window.AudioContext || window.webkitAudioContext)(), o = ac.createOscillator(), g = ac.createGain(); o.connect(g); g.connect(ac.destination); o.frequency.value = 880; g.gain.value = 0.15; o.start(); setTimeout(function () { try { o.stop(); ac.close(); } catch (e) {} }, 350); } catch (e) {} }
+    });
     refreshAlertBadge();
     try { window.draw(); } catch (e) {}
   }
@@ -2299,46 +2303,73 @@
     alertLiveTimer = setInterval(refreshAlertLivePrices, 30000);
   }
   function stopAlertLivePrices() { if (alertLiveTimer) { try { clearInterval(alertLiveTimer); } catch (e) {} alertLiveTimer = null; } }
+  var alEditId = null, alTgCtx = { okSync: false, canTg: false, shared: false };
   function ensureAlertUI() {
     if ($('alertModal')) return;
-    var bd = document.body;
+    var bd = document.body, C = window.OnellaAlertsCore, fa = lang !== 'en';
     var banner = document.createElement('div');
     banner.id = 'alertBanner'; banner.className = 'al-banner'; banner.style.display = 'none';
     bd.appendChild(banner);
     var modal = document.createElement('div');
     modal.id = 'alertModal'; modal.className = 'al-modal'; modal.style.display = 'none';
+    function opt(v, t) { return '<option value="' + v + '">' + esc(t) + '</option>'; }
+    var ops = C ? Object.keys(C.OPS).map(function (k) { return opt(k, C.OPS[k][fa ? 0 : 1]); }).join('') : opt('cross', 'Crossing');
+    var trs = C ? Object.keys(C.TRIGGERS).map(function (k) { return opt(k, C.TRIGGERS[k][fa ? 0 : 1]); }).join('') : opt('once', 'Once only');
+    var ivs = opt('chart', T('هم‌بازهٔ چارت', 'Same as chart')) + ['1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w'].map(function (k) { return opt(k, k.toUpperCase()); }).join('');
+    var dn = fa ? ['ی', 'د', 'س', 'چ', 'پ', 'ج', 'ش'] : ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+    var days = dn.map(function (d, i) { return '<label class="al-ck" style="display:inline-flex;margin:0 6px 6px 0"><input type="checkbox" class="alDay" value="' + i + '" checked><span>' + esc(d) + '</span></label>'; }).join('');
     modal.innerHTML = '<div class="al-card">'
       + '<div class="al-top"><b id="alTitle"></b><button class="tbtn" id="alClose" type="button">✕</button></div>'
       + '<div class="al-now" id="alNow"></div>'
-      + '<label class="al-lb">' + esc(T('شرط', 'Condition')) + '<select id="alCond" class="al-in">'
-      + '<option value="cross">' + esc(T('عبور (هر جهت)', 'Crossing')) + '</option>'
-      + '<option value="crossUp">' + esc(T('عبور به بالا', 'Crossing up')) + '</option>'
-      + '<option value="crossDown">' + esc(T('عبور به پایین', 'Crossing down')) + '</option>'
-      + '<option value="above">' + esc(T('بالاتر از', 'Greater than')) + '</option>'
-      + '<option value="below">' + esc(T('پایین‌تر از', 'Less than')) + '</option></select></label>'
-      + '<label class="al-lb">' + esc(T('قیمت', 'Price')) + '<input id="alPrice" class="al-in" inputmode="decimal" autocomplete="off"></label>'
-      + '<label class="al-lb">' + esc(T('تکرار', 'Trigger')) + '<select id="alRepeat" class="al-in">'
-      + '<option value="once">' + esc(T('فقط یک بار', 'Once only')) + '</option>'
-      + '<option value="every">' + esc(T('هر بار', 'Every time')) + '</option></select></label>'
+      + '<label class="al-lb">' + esc(T('شرط', 'Condition')) + '<select id="alOp" class="al-in">' + ops + '</select></label>'
+      + '<label class="al-lb"><span id="alVLbl">' + esc(T('قیمت', 'Price')) + '</span><input id="alV" class="al-in" inputmode="decimal" autocomplete="off" dir="ltr"></label>'
+      + '<label class="al-lb" id="alV2w" style="display:none">' + esc(T('کران بالا', 'Upper bound')) + '<input id="alV2" class="al-in" inputmode="decimal" autocomplete="off" dir="ltr"></label>'
+      + '<label class="al-lb">' + esc(T('بازه', 'Interval')) + '<select id="alIv" class="al-in">' + ivs + '</select></label>'
+      + '<label class="al-lb">' + esc(T('ماشه', 'Trigger')) + '<select id="alTr" class="al-in">' + trs + '</select></label>'
       + '<label class="al-lb">' + esc(T('انقضا', 'Expiration')) + '<select id="alExp" class="al-in">'
-      + '<option value="2592000000">' + esc(T('۱ ماه', '1 month')) + '</option>'
-      + '<option value="604800000">' + esc(T('۱ هفته', '1 week')) + '</option>'
-      + '<option value="86400000">' + esc(T('۱ روز', '1 day')) + '</option>'
-      + '<option value="">' + esc(T('بدون انقضا', 'No expiration')) + '</option></select></label>'
-      + '<label class="al-lb">' + esc(T('پیام', 'Message')) + '<input id="alMsg" class="al-in" autocomplete="off" maxlength="120"></label>'
+      + opt('30', T('۱ ماه', '1 month')) + opt('7', T('۱ هفته', '1 week')) + opt('1', T('۱ روز', '1 day')) + opt('90', T('۳ ماه', '3 months')) + opt('0', T('بدون انقضا', 'No expiration')) + '<option value="keep" id="alExpKeep" hidden></option></select></label>'
+      + '<label class="al-lb">' + esc(T('پیام', 'Message')) + '<textarea id="alMsg" class="al-in" rows="2" maxlength="300" autocomplete="off"></textarea></label>'
+      + '<div class="al-note">{{ticker}} {{price}} {{interval}} {{condition}} {{time}}</div>'
+      + '<div class="al-list-h">' + esc(T('اعلان‌ها', 'Notifications')) + '</div>'
+      + '<label class="al-ck"><input type="checkbox" id="alNToast" checked><span>' + esc(T('بنر درون‌برنامه', 'In-app banner')) + '</span></label>'
+      + '<label class="al-ck"><input type="checkbox" id="alNSound"><span>' + esc(T('صدا', 'Sound')) + '</span></label>'
       + '<label class="al-ck"><input type="checkbox" id="alTelegram"><span>' + esc(T('📲 پیام تلگرام هنگام فعال‌شدن', '📲 Telegram message when it triggers')) + '</span></label>'
       + '<div class="al-tgnote" id="alTgNote"></div>'
-      + '<div class="al-note">' + esc(T('اعلان درون‌برنامه (بنر + نشان) فقط وقتی مینی‌اپ باز است می‌رسد. با «پیام تلگرام» وقتی قیمت برسد در چت پیام می‌دهد — حتی اگر کامپیوتر خاموش باشد.', 'In-app notification (banner + badge) only arrives while the Mini App is open. With “Telegram message”, you get a chat message when the price gets there — even if the PC is off.')) + '</div>'
+      + '<label class="al-ck"><input type="checkbox" id="alNHook"><span>Webhook</span></label>'
+      + '<input id="alHookUrl" class="al-in" dir="ltr" placeholder="https://…" style="display:none;margin-bottom:8px" autocomplete="off">'
+      + '<div class="al-tgnote" id="alHookNote"></div>'
+      + '<label class="al-lb">' + esc(T('برنامهٔ زمانی اعلان', 'Notification schedule')) + '<select id="alSch" class="al-in">' + opt('all', T('همیشه', 'Always')) + opt('custom', T('ساعت و روزهای مشخص', 'Custom hours & days')) + '</select></label>'
+      + '<div id="alSchBox" style="display:none"><div style="display:flex;gap:8px"><label class="al-lb" style="flex:1">' + esc(T('از', 'From')) + '<input id="alSchFrom" type="time" class="al-in" value="09:00"></label><label class="al-lb" style="flex:1">' + esc(T('تا', 'To')) + '<input id="alSchTo" type="time" class="al-in" value="22:00"></label></div><div>' + days + '</div><div class="al-note">' + esc(T('ساعت‌ها به وقت گوشی توست؛ خارج از برنامه اعلان بی‌صدا می‌ماند.', 'Hours are in your phone time; outside the schedule the alert stays silent.')) + '</div></div>'
+      + '<div class="al-note">' + esc(T('اعلان درون‌برنامه فقط وقتی مینی‌اپ باز است می‌رسد؛ با «پیام تلگرام» وقتی مینی‌اپ بسته است هم می‌رسد.', 'In-app notifications only arrive while the Mini App is open; with “Telegram message” you also get them when it is closed.')) + '</div>'
       + '<div class="al-err" id="alErr" style="display:none"></div>'
       + '<div class="al-actions"><button class="tbtn on" id="alCreate" type="button">' + esc(T('ایجاد هشدار', 'Create alert')) + '</button><button class="tbtn" id="alCancel" type="button">' + esc(T('انصراف', 'Cancel')) + '</button></div>'
       + '<div class="al-list-h">' + esc(T('هشدارهای من', 'My alerts')) + '</div>'
+      + '<div class="al-note" id="alSync"></div>'
       + '<div id="alList"></div></div>';
     bd.appendChild(modal);
     $('alClose').addEventListener('click', function () { modal.style.display = 'none'; stopAlertLivePrices(); });
     $('alCancel').addEventListener('click', function () { modal.style.display = 'none'; stopAlertLivePrices(); });
     modal.addEventListener('click', function (e) { if (e.target === modal) { modal.style.display = 'none'; stopAlertLivePrices(); } });
     $('alCreate').addEventListener('click', function () { createAlertFromModal(); });
+    $('alOp').addEventListener('change', function () { alOpChanged(true); });
+    $('alNHook').addEventListener('change', function () { $('alHookUrl').style.display = this.checked ? '' : 'none'; });
+    $('alSch').addEventListener('change', function () { $('alSchBox').style.display = this.value === 'custom' ? '' : 'none'; });
   }
+  function alNeed() { var C = window.OnellaAlertsCore, o = C && C.OPS[$('alOp').value]; return o ? o[2] : 1; }
+  function alOpChanged(autofill) {
+    var need = alNeed(), now = curAlertPrice();
+    $('alV2w').style.display = need === 2 ? '' : 'none';
+    $('alVLbl').textContent = need === 2 ? T('کران پایین', 'Lower bound') : need === 'p' ? T('درصد (نسبت به قیمت فعلی)', 'Percent (vs current price)') : T('قیمت', 'Price');
+    if (autofill && need === 2 && now > 0 && !$('alV2').value) { $('alV').value = String(+(now * 0.99).toPrecision(8)); $('alV2').value = String(+(now * 1.01).toPrecision(8)); }
+    if (autofill && need === 'p' && $('alV').value === '' ) $('alV').value = '1';
+    /* بدون همگام‌سازی، پیام تلگرام (مسیر ورکر) فقط شرط‌های ساده را می‌فهمد. */
+    var cb = $('alTelegram'), op = $('alOp').value, simple = ['cross', 'up', 'down', 'gt', 'lt'].indexOf(op) >= 0;
+    if (cb && !alTgCtx.shared && alTgCtx.canTg && !alTgCtx.okSync) {
+      if (!simple) { cb.checked = false; cb.disabled = true; $('alTgNote').textContent = T('این شرط بدون همگام‌سازی با سرور اپ اصلی پیام تلگرام ندارد (فقط داخل مینی‌اپ).', 'Without main-app server sync this condition has no Telegram message (in-app only).'); }
+      else { cb.disabled = false; $('alTgNote').textContent = T('فقط شرط‌های ساده (عبور/بالا/پایین/بزرگ‌تر/کوچک‌تر) از مسیر ورکر.', 'Simple conditions only (crossing/greater/less) via the worker.'); }
+    }
+  }
+  function alNum(id) { var el = $(id); return parseFloat(toLatinNum(el ? el.value : '').replace(/٫/g, '.')); }
   function toLatinNum(s) {
     return String(s == null ? '' : s).replace(/[۰-۹]/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'.indexOf(d); }).replace(/[٠-٩]/g, function (d) { return '٠١٢٣٤٥٦٧٨٩'.indexOf(d); }).replace(/[٬,]/g, '').trim();
   }
@@ -2439,39 +2470,51 @@
     try { if (state.tab === 'news') renderNews(); } catch (e) {}
     try { var am = $('alertModal'); if (am && am.style.display !== 'none') renderAlertList(); } catch (e) {}
   }
-  function openAlertModal(prefillPrice) {
+  function openAlertModal(prefillPrice, editId) {
     ensureAlertUI();
-    var q = state.quote;
+    var q = state.quote, A = window.OnellaAlerts;
     if (!q) return;
-    var m = $('alertModal');
-    $('alTitle').textContent = T('هشدار در ', 'Alert on ') + q.display;
+    var m = $('alertModal'), ex = editId ? A.rawGet(editId) : null;
+    alEditId = ex ? ex.id : null;
+    $('alTitle').textContent = ex ? T('ویرایش هشدار', 'Edit alert') + ' • ' + (ex.label || ex.sym) : T('هشدار در ', 'Alert on ') + q.display;
+    $('alCreate').textContent = ex ? T('ذخیره', 'Save') : T('ایجاد هشدار', 'Create alert');
     var now = curAlertPrice();
     $('alNow').textContent = (now != null ? T('قیمت فعلی: ', 'Current price: ') + fmt(now) : '');
     var p = (prefillPrice != null && isFinite(prefillPrice)) ? prefillPrice : now;
-    $('alPrice').value = (p != null) ? String(p) : '';
-    $('alCond').value = 'cross';
-    $('alRepeat').value = 'once';
-    $('alExp').value = '2592000000';
-    try { $('alMsg').value = window.OnellaAlerts ? window.OnellaAlerts.defaultMsg({ sym: q.symbol, label: q.display, cond: 'cross', price: (p != null ? p : 0) }, lang) : ''; } catch (e) { $('alMsg').value = ''; }
-    /* v1.10.0 — گزینهٔ «پیام تلگرام»: فقط وقتی sendData هست (مینی‌اپ از دکمهٔ
-       ربات باز شده) و نماد قابل‌نگهبانی ربات است (کریپتو/سهام؛ ایران فعلاً نه). */
-    var canTg = !!(tg && typeof tg.sendData === 'function');
-    var shareable = q.provider === 'binance' || q.provider === 'yahoo';
+    var C = window.OnellaAlertsCore, d = ex || { c: { op: 'cross', v: p != null ? p : '' }, iv: 'chart', tr: 'once', ex: Date.now() + 30 * 864e5, msg: '', n: { toast: true, sound: false, tg: false, hook: false }, sch: { m: 'all' }, hookUrl: '' };
+    $('alOp').value = d.c.op; $('alV').value = d.c.v != null ? String(d.c.v) : ''; $('alV2').value = d.c.v2 != null ? String(d.c.v2) : '';
+    $('alIv').value = d.iv || 'chart'; $('alTr').value = d.tr || 'once';
+    var ek = $('alExpKeep'); ek.hidden = true;
+    if (ex && ex.ex) { ek.hidden = false; ek.textContent = T('تا ', 'Until ') + new Date(ex.ex).toLocaleDateString(lang === 'en' ? 'en-US' : 'fa-IR-u-ca-gregory'); ek.value = 'keep'; $('alExp').value = 'keep'; }
+    else $('alExp').value = ex ? '0' : '30';
+    $('alMsg').value = d.msg || '';
+    $('alMsg').placeholder = C ? C.render(C.defaultMessage({ c: d.c, sym: q.display, iv: d.iv, tfl: '' }, lang === 'en' ? 'en' : 'fa'), { sym: q.display, c: d.c, iv: d.iv, tfl: '' }, p || d.c.v || 0, Date.now(), lang === 'en' ? 'en' : 'fa') : '';
+    $('alNToast').checked = !d.n || d.n.toast !== false; $('alNSound').checked = !!(d.n && d.n.sound);
+    var s = d.sch || { m: 'all' };
+    $('alSch').value = s.m === 'custom' ? 'custom' : 'all'; $('alSchBox').style.display = s.m === 'custom' ? '' : 'none';
+    if (s.m === 'custom') { $('alSchFrom').value = /^\d{1,2}:\d{2}$/.test(s.from) ? (s.from.length === 4 ? '0' + s.from : s.from) : '09:00'; $('alSchTo').value = /^\d{1,2}:\d{2}$/.test(s.to) ? (s.to.length === 4 ? '0' + s.to : s.to) : '22:00'; }
+    var dayEls = m.querySelectorAll('.alDay');
+    for (var di = 0; di < dayEls.length; di++) dayEls[di].checked = s.m !== 'custom' || !(s.days && s.days.length) || s.days.indexOf(+dayEls[di].value) >= 0;
+    /* تلگرام: از مسیر سرور (اگر همگام‌سازی برقرار است) یا مسیر قدیمی ورکر/sendData (فقط شرط‌های ساده) */
+    var provider = ex ? (ex.provider || (ex.kind === 'crypto' ? 'binance' : 'yahoo')) : q.provider;
+    var okSync = A.syncOk() && (ex ? !ex.local : A.syncable(q.symbol, q.provider, state.priceMode));
+    var canTg = okSync || (!!(tg && typeof tg.sendData === 'function') && (provider === 'binance' || provider === 'yahoo'));
     var cb = $('alTelegram'), nt = $('alTgNote');
-    if (cb) { cb.checked = canTg && shareable; cb.disabled = !(canTg && shareable); }
-    if (nt) {
-      nt.textContent = !canTg
-        ? T('برای پیام تلگرام، مینی‌اپ را از دکمهٔ ربات باز کن.', 'To get Telegram messages, open the Mini App from the bot button.')
-        : !shareable
-          ? T('پیام تلگرام فعلاً فقط برای کریپتو و سهام است؛ برای نمادهای ایران فقط داخل مینی‌اپ.', 'Telegram messages work for crypto and stocks for now; for Iran symbols, in-app only.')
-          : T('وقتی قیمت برسد، در تلگرام پیام می‌دهد — حتی اگر کامپیوتر خاموش باشد.', 'When the price gets there, you get a Telegram message — even if the PC is off.');
-    }
+    cb.checked = !!(ex && ((ex.n && ex.n.tg) || ex.shared)) || (!ex && canTg);
+    cb.disabled = !canTg || !!(ex && ex.shared);
+    nt.textContent = ex && ex.shared ? T('این هشدار از مسیر ورکر به تلگرام وصل است؛ از دکمهٔ 📵 در فهرست قطعش کن.', 'This alert is wired to Telegram via the worker; use 📵 in the list to disconnect.')
+      : !canTg ? T('پیام تلگرام: مینی‌اپ را از دکمهٔ ربات باز کن و (برای همگام‌سازی) سرور اپ اصلی را وصل کن؛ نمادهای ایران فقط داخل مینی‌اپ.', 'Telegram messages: open the mini app from the bot button and connect the main-app server; Iran symbols are in-app only.')
+      : okSync ? T('سرور اپ اصلی پیام را می‌فرستد — حتی وقتی مینی‌اپ بسته است.', 'The main-app server sends it — even when the mini app is closed.')
+      : T('فقط شرط‌های ساده (عبور/بالا/پایین/بزرگ‌تر/کوچک‌تر) از مسیر ورکر.', 'Simple conditions only (crossing/greater/less) via the worker.');
+    var hk = $('alNHook'), hu = $('alHookUrl');
+    hk.checked = !!(ex && ex.n && ex.n.hook) && okSync; hk.disabled = !okSync; hu.value = (ex && ex.hookUrl) || ''; hu.style.display = hk.checked ? '' : 'none';
+    $('alHookNote').textContent = okSync ? '' : T('Webhook فقط با همگام‌سازی سرور اپ اصلی کار می‌کند.', 'Webhook needs main-app server sync.');
+    alTgCtx = { okSync: okSync, canTg: canTg, shared: !!(ex && ex.shared) };
+    alOpChanged(!ex);
     $('alErr').style.display = 'none';
     renderAlertList();
-    startAlertLivePrices(); // v1.11.2 — قیمت لحظه‌ای زیر هشدارهای فعال
-    if (window.OnellaAlerts && window.OnellaAlerts.ready) {
-      window.OnellaAlerts.ready.then(function () { try { renderAlertList(); refreshAlertBadge(); } catch (e) {} }).catch(function () {});
-    }
+    startAlertLivePrices();
+    if (A.ready) { A.ready.then(function () { try { renderAlertList(); refreshAlertBadge(); } catch (e) {} }).catch(function () {}); }
     m.style.display = 'flex';
   }
   function renderAlertList() {
@@ -2490,7 +2533,7 @@
       try { return ' • ' + T('تا ', 'until ') + (window.OnellaDate ? window.OnellaDate.fmt(a.expiresAt, 'cd') : new Date(a.expiresAt).toLocaleDateString('fa-IR-u-ca-gregory')); } catch (e) { return ''; }
     }
     function row(a, kind) {
-      var sub = A.condLabel(a.cond, lang) + ' ' + fmt(a.price) + ' • ' + (a.repeat === 'every' ? T('هر بار', 'Every time') : T('فقط یک بار', 'Once only')) + expTxt(a);
+      var sub = A.describe(a, lang) + ' • ' + A.trLabel(a, lang) + expTxt(a);
       /* v1.11.2 — قیمت لحظه‌ای زیر هر هشدار فعال + فاصله تا هدف. */
       if (kind === 'active' && liveAlertPrices[a.sym]) {
         var lp = liveAlertPrices[a.sym].price;
@@ -2501,20 +2544,24 @@
       if (kind === 'fired' && a.firedAt) {
         try { fired = ' • ' + T('فعال شد ', 'Fired ') + (window.OnellaDate ? window.OnellaDate.fmt(a.firedAt, 'hm') : new Date(a.firedAt).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })); } catch (e) {}
       }
-      var tgBadge = a.shared ? ' <span class="al-tg">📲</span>' : '';
+      var tgBadge = (a.shared || (a.n && a.n.tg)) ? ' <span class="al-tg">📲</span>' : '';
       var btns = '';
       if (kind === 'active') {
         btns = '<button class="tbtn" data-act="off" data-id="' + a.id + '" type="button">' + esc(T('خاموش', 'Off')) + '</button>';
         /* v1.11.0 — دکمهٔ اشتراک بر اساس provider خودِ آلرت، نه نماد فعلی
            (در بخش «سایر نمادها» نماد فعلی فرق می‌کند). */
         var aShare = ((a.provider === 'binance' || a.provider === 'yahoo') || (!a.provider && canShare)) && !!(tg && typeof tg.sendData === 'function');
-        if (aShare) {
+        if (A.syncOk() && !a.local && !a.shared) {
+          btns += (a.n && a.n.tg)
+            ? '<button class="tbtn" data-act="tgoff" data-id="' + a.id + '" type="button">📵</button>'
+            : '<button class="tbtn" data-act="tgon" data-id="' + a.id + '" type="button">📲</button>';
+        } else if (aShare) {
           btns += a.shared
             ? '<button class="tbtn" data-act="unshare" data-id="' + a.id + '" type="button">📵</button>'
             : '<button class="tbtn" data-act="share" data-id="' + a.id + '" type="button">📲</button>';
         }
       } else btns = '<button class="tbtn" data-act="on" data-id="' + a.id + '" type="button">' + esc(T('دوباره فعال', 'Re-enable')) + '</button>';
-      btns += '<button class="tbtn" data-act="del" data-id="' + a.id + '" type="button">✕</button>';
+      btns += '<button class="tbtn" data-act="edit" data-id="' + a.id + '" type="button">✎</button><button class="tbtn" data-act="del" data-id="' + a.id + '" type="button">✕</button>';
       return '<div class="al-row"><div class="al-row-tx"><b>' + esc(a.msg || '') + tgBadge + '</b><span>' + esc(sub + fired) + '</span></div><div class="al-row-bt">' + btns + '</div></div>';
     }
     var act = cur.filter(function (a) { return a.active; });
@@ -2535,12 +2582,16 @@
       }
     }
     el.innerHTML = html;
+    paintAlertSync();
     el.querySelectorAll('[data-act]').forEach(function (b) {
       b.addEventListener('click', function () {
         var id = b.dataset.id, act2 = b.dataset.act;
+        if (act2 === 'edit') { openAlertModal(null, id); return; }
         if (act2 === 'del') A.remove(id);
         else if (act2 === 'off') A.setActive(id, false);
         else if (act2 === 'on') A.setActive(id, true);
+        else if (act2 === 'tgon') A.setTg(id, true);
+        else if (act2 === 'tgoff') A.setTg(id, false);
         else if (act2 === 'share' || act2 === 'unshare') {
           var sa = A.list().filter(function (x) { return x.id === id; })[0];
           if (sa) { if (act2 === 'share') shareAlertToBot(sa); else unshareAlertToBot(sa); }
@@ -2550,30 +2601,63 @@
       });
     });
   }
+  function paintAlertSync() {
+    var box = $('alSync'), A = window.OnellaAlerts;
+    if (!box || !A) return;
+    var st = A.syncState(), tx;
+    if (!st.url) tx = T('همگام‌سازی با اپ اصلی: آدرس سرور تنظیم نشده (ONELLA_SYNC_URL در alerts-src.js).', 'Main-app sync: server URL not set (ONELLA_SYNC_URL in alerts-src.js).');
+    else if (!st.tg) tx = T('همگام‌سازی فقط داخل تلگرام کار می‌کند.', 'Sync works only inside Telegram.');
+    else if (st.st === 'ok') { var tm = ''; try { tm = window.OnellaDate ? window.OnellaDate.fmt(st.at, 'hm') : new Date(st.at).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }); } catch (e) {} tx = T('✓ همگام با اپ اصلی • ', '✓ Synced with main app • ') + tm; }
+    else if (st.st === 'disabled') tx = T('در اپ اصلی: Alert ← Notifications ← «اعمال در مینی‌اپ تلگرام» را روشن کن (و تلگرام وصل باشد).', 'In the main app turn on Alert → Notifications → “Apply in Telegram mini app” (Telegram must be connected).');
+    else if (st.st === 'auth') tx = T('سرور هویت تلگرام را قبول نکرد — توکن ربات سرور باید همان ربات مینی‌اپ باشد.', 'Server rejected the Telegram identity — the server bot token must be this mini app’s bot.');
+    else if (st.st === 'net') tx = T('سرور اپ اصلی در دسترس نیست؛ هشدارها فعلاً فقط محلی‌اند.', 'Main-app server unreachable; alerts are local for now.');
+    else if (st.st === 'server') tx = T('خطای سرور: ', 'Server error: ') + esc(st.msg || '');
+    else tx = T('در حال اتصال…', 'Connecting…');
+    box.innerHTML = esc(tx) + (st.url && st.tg ? ' <button class="tbtn" id="alSyncNow" type="button">' + esc(T('همگام‌سازی الان', 'Sync now')) + '</button>' : '');
+    var b = $('alSyncNow');
+    if (b) b.addEventListener('click', function () { b.disabled = true; A.sync().then(function () { renderAlertList(); }); });
+  }
   function createAlertFromModal() {
-    var q = state.quote;
-    if (!q) return;
+    var q = state.quote, A = window.OnellaAlerts, C = window.OnellaAlertsCore;
+    if (!q || !A || !C) return;
     var err = $('alErr');
-    var price = parseFloat(toLatinNum($('alPrice').value));
-    if (!isFinite(price) || price <= 0) { err.textContent = T('قیمت معتبر وارد کن.', 'Enter a valid price.'); err.style.display = ''; return; }
-    var exp = $('alExp').value;
+    function bad(t) { err.textContent = t; err.style.display = ''; }
+    var ex = alEditId ? A.rawGet(alEditId) : null;
+    var op = $('alOp').value, need = C.OPS[op][2], v = alNum('alV'), v2 = alNum('alV2'), now = curAlertPrice();
+    if (!(v > 0)) return bad(T('مقدار معتبر وارد کن.', 'Enter a valid value.'));
+    var c = { op: op, v: v };
+    if (need === 2) { if (!(v2 > 0) || v2 === v) return bad(T('دو کران متفاوت لازم است.', 'Two different bounds are required.')); c.v2 = v2; }
+    if (need === 'p') {
+      if (v > 1000) return bad(T('درصد خیلی بزرگ است.', 'Percent is too large.'));
+      c.ref = (ex && ex.c.op === op && ex.c.ref > 0) ? ex.c.ref : now;
+      if (!(c.ref > 0)) return bad(T('قیمت فعلی در دسترس نیست؛ کمی بعد دوباره امتحان کن.', 'Current price unavailable; try again shortly.'));
+    }
+    var exv = $('alExp').value, exMs = exv === 'keep' ? (ex ? ex.ex : 0) : (+exv > 0 ? Date.now() + (+exv) * 864e5 : 0);
+    var sch = { m: 'all' };
+    if ($('alSch').value === 'custom') {
+      var ds = [], dEls = $('alertModal').querySelectorAll('.alDay');
+      for (var i = 0; i < dEls.length; i++) if (dEls[i].checked) ds.push(+dEls[i].value);
+      sch = { m: 'custom', from: $('alSchFrom').value || '09:00', to: $('alSchTo').value || '22:00', days: ds.length === 7 ? [] : ds, off: -new Date().getTimezoneOffset() };
+    }
+    var okSync = A.syncOk() && (ex ? !ex.local : A.syncable(q.symbol, q.provider, state.priceMode));
+    var wantTg = !!$('alTelegram').checked && !$('alTelegram').disabled, wantHook = !!$('alNHook').checked && !$('alNHook').disabled, hookUrl = $('alHookUrl').value.trim();
+    if (wantHook && !/^https:\/\/\S{4,300}$/.test(hookUrl)) return bad(T('آدرس Webhook باید https باشد.', 'Webhook URL must be https.'));
+    var legacyTg = wantTg && !okSync && ['cross', 'up', 'down', 'gt', 'lt'].indexOf(op) >= 0;   /* مسیر ورکر فقط شرط ساده */
+    var n = { app: true, toast: !!$('alNToast').checked, sound: !!$('alNSound').checked, tg: wantTg && okSync, hook: wantHook };
     var a = null;
-    try {
-      a = window.OnellaAlerts.add({
-        sym: q.symbol, label: q.display, mode: state.priceMode, provider: q.provider,
-        cond: $('alCond').value, price: price, repeat: $('alRepeat').value,
-        expiresAt: exp ? Date.now() + parseInt(exp, 10) : null,
-        msg: $('alMsg').value
-      });
-    } catch (e) {}
-    if (!a) { err.textContent = T('هشدار ساخته نشد — سقف ۵۰ هشدار فعال است.', 'Alert was not created — the 50 active-alert limit is reached.'); err.style.display = ''; return; }
-    var wantTg = false;
-    try { wantTg = !!($('alTelegram') && $('alTelegram').checked); } catch (e) {}
-    var be = null;
-    try { be = window.OnellaAlerts ? window.OnellaAlerts.backend() : null; } catch (e) {}
-    $('alertModal').style.display = 'none';
+    if (ex) {
+      if (ex.shared) n.tg = !!(ex.n && ex.n.tg);
+      var okU = false; try { okU = A.update(ex.id, { c: c, iv: $('alIv').value, tr: $('alTr').value, ex: exMs, msg: $('alMsg').value.trim(), n: n, sch: sch, hookUrl: wantHook ? hookUrl : '', lp: now }); } catch (e) {}
+      if (!okU) return bad(T('ذخیره نشد — مقادیر را بررسی کن.', 'Not saved — check the values.'));
+      a = A.find(ex.id);
+    } else {
+      try { a = A.add({ sym: q.symbol, label: q.display, mode: state.priceMode, provider: q.provider, c: c, iv: $('alIv').value, tr: $('alTr').value, ex: exMs, msg: $('alMsg').value.trim(), n: n, sch: sch, hookUrl: wantHook ? hookUrl : '', lp: now }); } catch (e) {}
+      if (!a) return bad(T('هشدار ساخته نشد — سقف ۵۰ هشدار فعال است یا مقدارها نامعتبرند.', 'Alert was not created — the 50 active-alert limit is reached or values are invalid.'));
+    }
+    var be = null; try { be = A.backend(); } catch (e) {}
+    $('alertModal').style.display = 'none'; stopAlertLivePrices(); alEditId = null;
     refreshAlertBadge(); startAlertPoll();
-    if (wantTg) shareAlertToBot(a);
+    if (legacyTg && !ex) shareAlertToBot(a);
     else if (be && be.cloud && be.cloudError) showAlertNote(T('هشدار در گوشی ذخیره شد ولی در فضای ابری تلگرام نرفت — دفعهٔ بعد دوباره چک کن.', 'Alert saved on this phone but not to Telegram cloud — please check next time.'));
     try { window.draw(); } catch (e) {}
   }
@@ -2607,7 +2691,11 @@
         });
         if (r && r.ok) {
           var j = null; try { j = await r.json(); } catch (e) { j = null; }
-          if (j && j.ok) { A.setShared(a.id, true, 'worker'); renderAlertList(); refreshAlertBadge(); return true; }
+          if (j && j.ok) {
+            A.setShared(a.id, true, 'worker'); renderAlertList(); refreshAlertBadge();
+            if (j.sent === false) showAlertNote(T('هشدار ثبت شد ولی پیام تلگرام ارسال نشد — یک بار ربات را /start کن و دوباره امتحان کن.', 'Alert saved but the Telegram message was not sent — send /start to the bot once and try again.'));
+            return true;
+          }
           if (j && j.error === 'unsupported') {
             showAlertNote(T('این نماد را فعلاً نمی‌توان نگهبانی کرد (فقط کریپتو و سهام) — هشدار داخل مینی‌اپ سر جایش هست.', 'This symbol cannot be watched yet (crypto and stocks only) — your in-app alert still works.'));
             return false;
@@ -3617,6 +3705,11 @@
     $('smInput').addEventListener('input', function () { sm.q = $('smInput').value; renderSmBody(); });
     window.addEventListener('beforeunload', function () { stopLive(); });
     /* v1.10.0 — وقتی کش آلرت (CloudStorage) خوانده شد، بج را تازه کن. */
+    if (window.OnellaAlerts && window.OnellaAlerts.onChange) {
+      window.OnellaAlerts.onChange(function () {
+        try { refreshAlertBadge(); var mm = $('alertModal'); if (mm && mm.style.display !== 'none') renderAlertList(); window.draw(); } catch (e) {}
+      });
+    }
     if (window.OnellaAlerts && window.OnellaAlerts.ready) {
       window.OnellaAlerts.ready.then(function () { try { refreshAlertBadge(); } catch (e) {} }).catch(function () {});
     }
