@@ -164,6 +164,7 @@
   /* ---------- همگام‌سازی با سرور اپ اصلی ---------- */
   var SY = { st: 'off', at: 0, msg: '' };   // off | idle | ok | disabled | auth | net | server
   var syncDirty = false, syncT = null, syncing = false, pollTimer = null;
+  var BRIDGE_URL = 'https://pixelminiapp.mahanjafari039.workers.dev';   // ورکر کلادفلر مینی‌اپ = پل به سرور اصلی (بدون آدرس/تونل)
   var AUTO_URL = '';   // v1.16.4: اگر مینی‌اپ از خود سرور اصلی باز شده باشد (همان origin)، بدون هیچ تنظیمی همان سرور است
   function syncUrl() {
     try { var q = new URLSearchParams(location.search).get('api'); if (q && /^https:\/\/[^\s]+$/.test(q)) { var qq = q.replace(/\/+$/, ''); localStorage.setItem(SYNC_LS, qq); if (tgCS) csSetItem(SYNC_LS, qq); } } catch (_) {}
@@ -171,7 +172,7 @@
     return String(AUTO_URL || v || window.ONELLA_SYNC_URL || ONELLA_SYNC_URL || '').replace(/\/+$/, '');
   }
   function initData() { try { return (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || ''; } catch (_) { return ''; } }
-  function syncOn() { return !!(syncUrl() && initData()); }
+  function syncOn() { return !!initData(); }   // آدرس مستقیم یا پل ورکر؛ فقط هویت تلگرام لازم است
   function setSy(st, msg) { var ch = SY.st !== st; SY.st = st; SY.msg = msg || ''; if (st === 'ok') SY.at = Date.now(); if (ch || st === 'ok') emit(); }
   function req(method, path, body) {
     var ctl = typeof AbortController === 'function' ? new AbortController() : null, t = ctl && setTimeout(function () { ctl.abort(); }, 12000);
@@ -196,11 +197,15 @@
   }
   function scheduleSync() { if (!syncOn()) return; syncDirty = true; clearTimeout(syncT); syncT = setTimeout(function () { sync(true); }, 700); }
   function sync(force) {
-    if (!syncOn()) { setSy('off'); return Promise.resolve(false); }
+    if (!syncOn() || typeof fetch !== 'function') { setSy('off'); return Promise.resolve(false); }
     if (syncing) { if (force) scheduleSync(); return Promise.resolve(false); }
     syncing = true;
-    var push = syncDirty || force;
-    var p = push ? req('PUT', '/sync', { items: store.filter(function (a) { return !a.local; }) }) : req('GET', '/list');
+    var push = syncDirty || force, direct = !!syncUrl(), mine = store.filter(function (a) { return !a.local; });
+    SY.mode = direct ? 'direct' : 'bridge';
+    var p = direct ? (push ? req('PUT', '/sync', { items: mine }) : req('GET', '/list'))
+      : fetch(BRIDGE_URL + '/mini-sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ initData: initData(), items: mine }) })
+        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { j.http = r.status; if (!r.ok) j.ok = false; return j; }); })
+        .catch(function () { return { ok: false, error: 'network', http: 0 }; });
     return p.then(function (r) {
       syncing = false;
       if (r.http === 403) { setSy('disabled'); return false; }
@@ -315,6 +320,7 @@
     var dirty = false;
     store.forEach(function (a) {
       if (a.del || a.st !== 'active' || msymOf(a) !== sym) return;
+      if (a.n && a.n.tg && !a.local && SY.st === 'ok' && SY.mode === 'bridge') return;   /* پل: هشدار تلگرام‌دار را سرور می‌سنجد و می‌فرستد (جلوگیری از پیام دوبل) */
       var prev = a.lp, hit = C.evalCond(a.c, prev, price);
       if (prev !== price) { a.lp = price; dirty = true; }
       if (!hit || !C.canFire(a, now, 0)) return;
@@ -333,7 +339,7 @@
     trLabel: function (a, lang) { var t = C.TRIGGERS[a.tr]; return t ? t[lang === 'en' ? 1 : 0] : ''; },
     onChange: function (f) { if (typeof f === 'function') listeners.push(f); },
     sync: function () { return sync(true); },
-    syncState: function () { return { url: !!syncUrl(), tg: !!initData(), st: SY.st, at: SY.at, msg: SY.msg }; },
+    syncState: function () { return { url: true, mode: SY.mode || (syncUrl() ? 'direct' : 'bridge'), tg: !!initData(), st: SY.st, at: SY.at, msg: SY.msg }; },
     /* v1.16.3 — آدرس سرور اپ اصلی را از داخل مینی‌اپ بگذار/پاک کن (در localStorage) و فوراً همگام کن. */
     setSyncUrl: function (v) {
       v = String(v || '').trim().replace(/\/+$/, '');
