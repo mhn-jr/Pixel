@@ -104,7 +104,7 @@
   var $ = function (id) { return document.getElementById(id); };
   window.$ = $;
 
-  /* ---- کاتولوگ — ۸ بازار، هر کدام ۱۵ نماد پیشنهادی (v1.1.0) ---- */
+  /* ---- کاتولوگ — ۹ بازار (v1.19.0: کریپتو/سهام/ETF/فارکس/بورس/فرابورس ۵۰، شاخص ۴۶، کالا ۳۱، ایران ۲۸ — جمع ۴۰۵) ---- */
   var MARKETS = {
     crypto: { label: 'Crypto', fa: 'کریپتو', quotes: [
       { label: 'BTC', provider: 'binance', symbol: 'BTCUSDT', display: 'BTC/USDT', kw: 'بیت کوین بیتکوین' },
@@ -121,7 +121,42 @@
       { label: 'LTC', provider: 'binance', symbol: 'LTCUSDT', display: 'LTC/USDT', kw: 'لایت کوین' },
       { label: 'BCH', provider: 'binance', symbol: 'BCHUSDT', display: 'BCH/USDT', kw: 'بیت کوین کش' },
       { label: 'NEAR', provider: 'binance', symbol: 'NEARUSDT', display: 'NEAR/USDT', kw: 'نیر' },
-      { label: 'TON', provider: 'binance', symbol: 'TONUSDT', display: 'TON/USDT', kw: 'تون کوین' } ] },
+      { label: 'TON', provider: 'binance', symbol: 'TONUSDT', display: 'TON/USDT', kw: 'تون کوین' },
+      { label: 'HYPE', provider: 'binance', symbol: 'HYPEUSDT', display: 'HYPE/USDT', kw: 'هایپرلیکوئید' },
+      { label: 'ZEC', provider: 'binance', symbol: 'ZECUSDT', display: 'ZEC/USDT', kw: 'زی کش' },
+      { label: 'XLM', provider: 'binance', symbol: 'XLMUSDT', display: 'XLM/USDT', kw: 'استلار' },
+      { label: 'UNI', provider: 'binance', symbol: 'UNIUSDT', display: 'UNI/USDT', kw: 'یونی سواپ' },
+      { label: 'SUI', provider: 'binance', symbol: 'SUIUSDT', display: 'SUI/USDT', kw: 'سویی' },
+      { label: 'HBAR', provider: 'binance', symbol: 'HBARUSDT', display: 'HBAR/USDT', kw: 'هدرا' },
+      { label: 'SHIB', provider: 'binance', symbol: 'SHIBUSDT', display: 'SHIB/USDT', kw: 'شیبا' },
+      { label: 'TAO', provider: 'binance', symbol: 'TAOUSDT', display: 'TAO/USDT', kw: 'بیت تنسور' },
+      { label: 'QNT', provider: 'binance', symbol: 'QNTUSDT', display: 'QNT/USDT', kw: 'کوانت' },
+      { label: 'PEPE', provider: 'binance', symbol: 'PEPEUSDT', display: 'PEPE/USDT', kw: 'پپه' },
+      { label: 'ENA', provider: 'binance', symbol: 'ENAUSDT', display: 'ENA/USDT', kw: 'اتنا' },
+      { label: 'AAVE', provider: 'binance', symbol: 'AAVEUSDT', display: 'AAVE/USDT', kw: 'آوه' },
+      { label: 'ASTER', provider: 'binance', symbol: 'ASTERUSDT', display: 'ASTER/USDT', kw: 'استر' },
+      { label: 'ONDO', provider: 'binance', symbol: 'ONDOUSDT', display: 'ONDO/USDT', kw: 'اوندو' },
+      { label: 'PUMP', provider: 'binance', symbol: 'PUMPUSDT', display: 'PUMP/USDT', kw: 'پامپ' },
+      { label: 'WLFI', provider: 'binance', symbol: 'WLFIUSDT', display: 'WLFI/USDT', kw: 'ورلد لیبرتی' },
+      { label: 'MORPHO', provider: 'binance', symbol: 'MORPHOUSDT', display: 'MORPHO/USDT', kw: 'مورفو' },
+      { label: 'ICP', provider: 'binance', symbol: 'ICPUSDT', display: 'ICP/USDT', kw: 'اینترنت کامپیوتر' },
+      { label: 'SKY', provider: 'binance', symbol: 'SKYUSDT', display: 'SKY/USDT', kw: 'اسکای' },
+      { label: 'JST', provider: 'binance', symbol: 'JSTUSDT', display: 'JST/USDT', kw: 'جاست' },
+      { label: 'WLD', provider: 'binance', symbol: 'WLDUSDT', display: 'WLD/USDT', kw: 'ورلد کوین' },
+      { label: 'ETC', provider: 'binance', symbol: 'ETCUSDT', display: 'ETC/USDT', kw: 'اتریوم کلاسیک' },
+      { label: 'ARB', provider: 'binance', symbol: 'ARBUSDT', display: 'ARB/USDT', kw: 'آربیتروم' },
+      { label: 'POL', provider: 'binance', symbol: 'POLUSDT', display: 'POL/USDT', kw: 'پالیگان' },
+      { label: 'JUP', provider: 'binance', symbol: 'JUPUSDT', display: 'JUP/USDT', kw: 'ژوپیتر' },
+      { label: 'RENDER', provider: 'binance', symbol: 'RENDERUSDT', display: 'RENDER/USDT', kw: 'رندر' },
+      { label: 'INJ', provider: 'binance', symbol: 'INJUSDT', display: 'INJ/USDT', kw: 'اینجکتیو' },
+      { label: 'NIGHT', provider: 'binance', symbol: 'NIGHTUSDT', display: 'NIGHT/USDT', kw: 'مید نایت' },
+      { label: 'ALGO', provider: 'binance', symbol: 'ALGOUSDT', display: 'ALGO/USDT', kw: 'الگوراند' },
+      { label: 'ATOM', provider: 'binance', symbol: 'ATOMUSDT', display: 'ATOM/USDT', kw: 'کازموس اتم' },
+      { label: 'NEXO', provider: 'binance', symbol: 'NEXOUSDT', display: 'NEXO/USDT', kw: 'نکسو' },
+      { label: 'ZRO', provider: 'binance', symbol: 'ZROUSDT', display: 'ZRO/USDT', kw: 'لیر زیرو' },
+      { label: 'FIL', provider: 'binance', symbol: 'FILUSDT', display: 'FIL/USDT', kw: 'فایل کوین' },
+      { label: 'CAKE', provider: 'binance', symbol: 'CAKEUSDT', display: 'CAKE/USDT', kw: 'پنکیک سواپ' },
+      { label: 'APT', provider: 'binance', symbol: 'APTUSDT', display: 'APT/USDT', kw: 'آپتوس' } ] },
     stocks: { label: 'Stocks', fa: 'سهام', quotes: [
       { label: 'AAPL', provider: 'yahoo', symbol: 'AAPL', display: 'AAPL', kw: 'اپل' },
       { label: 'MSFT', provider: 'yahoo', symbol: 'MSFT', display: 'MSFT', kw: 'مایکروسافت' },
@@ -137,7 +172,42 @@
       { label: 'MA', provider: 'yahoo', symbol: 'MA', display: 'MA', kw: 'مسترکارت' },
       { label: 'XOM', provider: 'yahoo', symbol: 'XOM', display: 'XOM', kw: 'اکسون' },
       { label: 'BAC', provider: 'yahoo', symbol: 'BAC', display: 'BAC', kw: 'بنک آمریکا' },
-      { label: 'UNH', provider: 'yahoo', symbol: 'UNH', display: 'UNH', kw: 'یونایتد' } ] },
+      { label: 'UNH', provider: 'yahoo', symbol: 'UNH', display: 'UNH', kw: 'یونایتد' },
+      { label: 'AVGO', provider: 'yahoo', symbol: 'AVGO', display: 'AVGO', kw: 'برودکام' },
+      { label: 'LLY', provider: 'yahoo', symbol: 'LLY', display: 'LLY', kw: 'ایلای لیلی' },
+      { label: 'COST', provider: 'yahoo', symbol: 'COST', display: 'COST', kw: 'کاستکو' },
+      { label: 'WMT', provider: 'yahoo', symbol: 'WMT', display: 'WMT', kw: 'والمارت' },
+      { label: 'HD', provider: 'yahoo', symbol: 'HD', display: 'HD', kw: 'هوم دیپو' },
+      { label: 'PG', provider: 'yahoo', symbol: 'PG', display: 'PG', kw: 'پروکتر' },
+      { label: 'JNJ', provider: 'yahoo', symbol: 'JNJ', display: 'JNJ', kw: 'جانسون' },
+      { label: 'ORCL', provider: 'yahoo', symbol: 'ORCL', display: 'ORCL', kw: 'اوراکل' },
+      { label: 'CRM', provider: 'yahoo', symbol: 'CRM', display: 'CRM', kw: 'سیلزفورس' },
+      { label: 'ABBV', provider: 'yahoo', symbol: 'ABBV', display: 'ABBV', kw: 'ابی وی' },
+      { label: 'MRK', provider: 'yahoo', symbol: 'MRK', display: 'MRK', kw: 'مرک' },
+      { label: 'KO', provider: 'yahoo', symbol: 'KO', display: 'KO', kw: 'کوکاکولا' },
+      { label: 'PEP', provider: 'yahoo', symbol: 'PEP', display: 'PEP', kw: 'پپسی' },
+      { label: 'MCD', provider: 'yahoo', symbol: 'MCD', display: 'MCD', kw: 'مک دونالد' },
+      { label: 'DIS', provider: 'yahoo', symbol: 'DIS', display: 'DIS', kw: 'دیزنی' },
+      { label: 'NKE', provider: 'yahoo', symbol: 'NKE', display: 'NKE', kw: 'نایکی' },
+      { label: 'SBUX', provider: 'yahoo', symbol: 'SBUX', display: 'SBUX', kw: 'استارباکس' },
+      { label: 'ADBE', provider: 'yahoo', symbol: 'ADBE', display: 'ADBE', kw: 'ادوبی' },
+      { label: 'QCOM', provider: 'yahoo', symbol: 'QCOM', display: 'QCOM', kw: 'کوالکام' },
+      { label: 'TXN', provider: 'yahoo', symbol: 'TXN', display: 'TXN', kw: 'تگزاس اینسترومنت' },
+      { label: 'AMGN', provider: 'yahoo', symbol: 'AMGN', display: 'AMGN', kw: 'امژن' },
+      { label: 'HON', provider: 'yahoo', symbol: 'HON', display: 'HON', kw: 'هانیول' },
+      { label: 'CAT', provider: 'yahoo', symbol: 'CAT', display: 'CAT', kw: 'کاترپیلار' },
+      { label: 'GS', provider: 'yahoo', symbol: 'GS', display: 'GS', kw: 'گلدمن ساکس' },
+      { label: 'MS', provider: 'yahoo', symbol: 'MS', display: 'MS', kw: 'مورگان استنلی' },
+      { label: 'AXP', provider: 'yahoo', symbol: 'AXP', display: 'AXP', kw: 'امریکن اکسپرس' },
+      { label: 'BLK', provider: 'yahoo', symbol: 'BLK', display: 'BLK', kw: 'بلک راک' },
+      { label: 'NOW', provider: 'yahoo', symbol: 'NOW', display: 'NOW', kw: 'سرویس نو' },
+      { label: 'INTU', provider: 'yahoo', symbol: 'INTU', display: 'INTU', kw: 'اینتیوت' },
+      { label: 'ISRG', provider: 'yahoo', symbol: 'ISRG', display: 'ISRG', kw: 'اینتویتیو' },
+      { label: 'MU', provider: 'yahoo', symbol: 'MU', display: 'MU', kw: 'مایکرون' },
+      { label: 'UBER', provider: 'yahoo', symbol: 'UBER', display: 'UBER', kw: 'اوبر' },
+      { label: 'SHOP', provider: 'yahoo', symbol: 'SHOP', display: 'SHOP', kw: 'شاپیفای' },
+      { label: 'COIN', provider: 'yahoo', symbol: 'COIN', display: 'COIN', kw: 'کوین بیس' },
+      { label: 'PLTR', provider: 'yahoo', symbol: 'PLTR', display: 'PLTR', kw: 'پلانتیر' } ] },
     etf: { label: 'ETF', fa: 'ETF', quotes: [
       { label: 'SPY', provider: 'yahoo', symbol: 'SPY', display: 'SPY', kw: 'اس اند پی' },
       { label: 'QQQ', provider: 'yahoo', symbol: 'QQQ', display: 'QQQ', kw: 'نزدک' },
@@ -153,7 +223,42 @@
       { label: 'XLF', provider: 'yahoo', symbol: 'XLF', display: 'XLF', kw: 'مالی' },
       { label: 'ARKK', provider: 'yahoo', symbol: 'ARKK', display: 'ARKK', kw: 'آرک نوآوری' },
       { label: 'VWO', provider: 'yahoo', symbol: 'VWO', display: 'VWO', kw: 'بازار نوظهور' },
-      { label: 'EEM', provider: 'yahoo', symbol: 'EEM', display: 'EEM', kw: 'بازار نوظهور' } ] },
+      { label: 'EEM', provider: 'yahoo', symbol: 'EEM', display: 'EEM', kw: 'بازار نوظهور' },
+      { label: 'VOO', provider: 'yahoo', symbol: 'VOO', display: 'VOO', kw: 'اس اند پی ونگارد' },
+      { label: 'IVV', provider: 'yahoo', symbol: 'IVV', display: 'IVV', kw: 'اس اند پی' },
+      { label: 'VUG', provider: 'yahoo', symbol: 'VUG', display: 'VUG', kw: 'رشد' },
+      { label: 'VTV', provider: 'yahoo', symbol: 'VTV', display: 'VTV', kw: 'ارزش' },
+      { label: 'SCHG', provider: 'yahoo', symbol: 'SCHG', display: 'SCHG', kw: 'رشد' },
+      { label: 'SCHX', provider: 'yahoo', symbol: 'SCHX', display: 'SCHX', kw: 'کل بازار' },
+      { label: 'IWB', provider: 'yahoo', symbol: 'IWB', display: 'IWB', kw: 'راسل ۱۰۰۰' },
+      { label: 'IJH', provider: 'yahoo', symbol: 'IJH', display: 'IJH', kw: 'مید کپ' },
+      { label: 'IJR', provider: 'yahoo', symbol: 'IJR', display: 'IJR', kw: 'اسمال کپ' },
+      { label: 'VO', provider: 'yahoo', symbol: 'VO', display: 'VO', kw: 'مید کپ' },
+      { label: 'VB', provider: 'yahoo', symbol: 'VB', display: 'VB', kw: 'اسمال کپ' },
+      { label: 'VEA', provider: 'yahoo', symbol: 'VEA', display: 'VEA', kw: 'توسعه یافته' },
+      { label: 'VGK', provider: 'yahoo', symbol: 'VGK', display: 'VGK', kw: 'اروپا' },
+      { label: 'EWJ', provider: 'yahoo', symbol: 'EWJ', display: 'EWJ', kw: 'ژاپن' },
+      { label: 'EWZ', provider: 'yahoo', symbol: 'EWZ', display: 'EWZ', kw: 'برزیل' },
+      { label: 'FXI', provider: 'yahoo', symbol: 'FXI', display: 'FXI', kw: 'چین' },
+      { label: 'INDA', provider: 'yahoo', symbol: 'INDA', display: 'INDA', kw: 'هند' },
+      { label: 'EFA', provider: 'yahoo', symbol: 'EFA', display: 'EFA', kw: 'توسعه یافته' },
+      { label: 'IEFA', provider: 'yahoo', symbol: 'IEFA', display: 'IEFA', kw: 'بین المللی' },
+      { label: 'AGG', provider: 'yahoo', symbol: 'AGG', display: 'AGG', kw: 'اوراق' },
+      { label: 'BND', provider: 'yahoo', symbol: 'BND', display: 'BND', kw: 'اوراق' },
+      { label: 'HYG', provider: 'yahoo', symbol: 'HYG', display: 'HYG', kw: 'پر بازده' },
+      { label: 'LQD', provider: 'yahoo', symbol: 'LQD', display: 'LQD', kw: 'اعتباری' },
+      { label: 'XLE', provider: 'yahoo', symbol: 'XLE', display: 'XLE', kw: 'انرژی' },
+      { label: 'XLV', provider: 'yahoo', symbol: 'XLV', display: 'XLV', kw: 'سلامت' },
+      { label: 'XLI', provider: 'yahoo', symbol: 'XLI', display: 'XLI', kw: 'صنعتی' },
+      { label: 'XLB', provider: 'yahoo', symbol: 'XLB', display: 'XLB', kw: 'مواد' },
+      { label: 'XLP', provider: 'yahoo', symbol: 'XLP', display: 'XLP', kw: 'مصرفی' },
+      { label: 'XLU', provider: 'yahoo', symbol: 'XLU', display: 'XLU', kw: 'آب و برق' },
+      { label: 'XLRE', provider: 'yahoo', symbol: 'XLRE', display: 'XLRE', kw: 'املاک' },
+      { label: 'XLC', provider: 'yahoo', symbol: 'XLC', display: 'XLC', kw: 'ارتباطات' },
+      { label: 'SMH', provider: 'yahoo', symbol: 'SMH', display: 'SMH', kw: 'نیمه هادی' },
+      { label: 'SOXX', provider: 'yahoo', symbol: 'SOXX', display: 'SOXX', kw: 'نیمه هادی' },
+      { label: 'IGV', provider: 'yahoo', symbol: 'IGV', display: 'IGV', kw: 'نرم افزار' },
+      { label: 'GDX', provider: 'yahoo', symbol: 'GDX', display: 'GDX', kw: 'معدن طلا' } ] },
     forex: { label: 'Forex', fa: 'فارکس', quotes: [
       { label: 'EUR/USD', provider: 'yahoo', symbol: 'EURUSD=X', display: 'EUR/USD' },
       { label: 'GBP/USD', provider: 'yahoo', symbol: 'GBPUSD=X', display: 'GBP/USD' },
@@ -169,7 +274,42 @@
       { label: 'AUD/JPY', provider: 'yahoo', symbol: 'AUDJPY=X', display: 'AUD/JPY' },
       { label: 'EUR/AUD', provider: 'yahoo', symbol: 'EURAUD=X', display: 'EUR/AUD' },
       { label: 'GBP/AUD', provider: 'yahoo', symbol: 'GBPAUD=X', display: 'GBP/AUD' },
-      { label: 'USD/MXN', provider: 'yahoo', symbol: 'USDMXN=X', display: 'USD/MXN' } ] },
+      { label: 'USD/MXN', provider: 'yahoo', symbol: 'USDMXN=X', display: 'USD/MXN' },
+      { label: 'USD/SEK', provider: 'yahoo', symbol: 'USDSEK=X', display: 'USD/SEK' },
+      { label: 'USD/NOK', provider: 'yahoo', symbol: 'USDNOK=X', display: 'USD/NOK' },
+      { label: 'USD/DKK', provider: 'yahoo', symbol: 'USDDKK=X', display: 'USD/DKK' },
+      { label: 'USD/PLN', provider: 'yahoo', symbol: 'USDPLN=X', display: 'USD/PLN' },
+      { label: 'USD/CZK', provider: 'yahoo', symbol: 'USDCZK=X', display: 'USD/CZK' },
+      { label: 'USD/HUF', provider: 'yahoo', symbol: 'USDHUF=X', display: 'USD/HUF' },
+      { label: 'USD/TRY', provider: 'yahoo', symbol: 'USDTRY=X', display: 'USD/TRY' },
+      { label: 'USD/ZAR', provider: 'yahoo', symbol: 'USDZAR=X', display: 'USD/ZAR' },
+      { label: 'USD/BRL', provider: 'yahoo', symbol: 'USDBRL=X', display: 'USD/BRL' },
+      { label: 'USD/INR', provider: 'yahoo', symbol: 'USDINR=X', display: 'USD/INR' },
+      { label: 'USD/KRW', provider: 'yahoo', symbol: 'USDKRW=X', display: 'USD/KRW' },
+      { label: 'USD/CNY', provider: 'yahoo', symbol: 'USDCNY=X', display: 'USD/CNY' },
+      { label: 'USD/TWD', provider: 'yahoo', symbol: 'USDTWD=X', display: 'USD/TWD' },
+      { label: 'USD/THB', provider: 'yahoo', symbol: 'USDTHB=X', display: 'USD/THB' },
+      { label: 'USD/MYR', provider: 'yahoo', symbol: 'USDMYR=X', display: 'USD/MYR' },
+      { label: 'USD/IDR', provider: 'yahoo', symbol: 'USDIDR=X', display: 'USD/IDR' },
+      { label: 'USD/PHP', provider: 'yahoo', symbol: 'USDPHP=X', display: 'USD/PHP' },
+      { label: 'USD/SGD', provider: 'yahoo', symbol: 'USDSGD=X', display: 'USD/SGD' },
+      { label: 'USD/HKD', provider: 'yahoo', symbol: 'USDHKD=X', display: 'USD/HKD' },
+      { label: 'NZD/JPY', provider: 'yahoo', symbol: 'NZDJPY=X', display: 'NZD/JPY' },
+      { label: 'CAD/JPY', provider: 'yahoo', symbol: 'CADJPY=X', display: 'CAD/JPY' },
+      { label: 'CHF/JPY', provider: 'yahoo', symbol: 'CHFJPY=X', display: 'CHF/JPY' },
+      { label: 'AUD/CHF', provider: 'yahoo', symbol: 'AUDCHF=X', display: 'AUD/CHF' },
+      { label: 'AUD/CAD', provider: 'yahoo', symbol: 'AUDCAD=X', display: 'AUD/CAD' },
+      { label: 'AUD/NZD', provider: 'yahoo', symbol: 'AUDNZD=X', display: 'AUD/NZD' },
+      { label: 'NZD/CAD', provider: 'yahoo', symbol: 'NZDCAD=X', display: 'NZD/CAD' },
+      { label: 'EUR/SEK', provider: 'yahoo', symbol: 'EURSEK=X', display: 'EUR/SEK' },
+      { label: 'EUR/NOK', provider: 'yahoo', symbol: 'EURNOK=X', display: 'EUR/NOK' },
+      { label: 'EUR/PLN', provider: 'yahoo', symbol: 'EURPLN=X', display: 'EUR/PLN' },
+      { label: 'EUR/TRY', provider: 'yahoo', symbol: 'EURTRY=X', display: 'EUR/TRY' },
+      { label: 'EUR/ZAR', provider: 'yahoo', symbol: 'EURZAR=X', display: 'EUR/ZAR' },
+      { label: 'EUR/MXN', provider: 'yahoo', symbol: 'EURMXN=X', display: 'EUR/MXN' },
+      { label: 'GBP/CHF', provider: 'yahoo', symbol: 'GBPCHF=X', display: 'GBP/CHF' },
+      { label: 'GBP/CAD', provider: 'yahoo', symbol: 'GBPCAD=X', display: 'GBP/CAD' },
+      { label: 'GBP/SEK', provider: 'yahoo', symbol: 'GBPSEK=X', display: 'GBP/SEK' } ] },
     commodities: { label: 'Gold & Commodities', fa: 'طلا و کالا', quotes: [
       /* v1.2.1 — XAU/USD: یاهو XAUUSD=X ندارد (و XAU-USD دادهٔ واقعی ندارد)؛
          PAX Gold روی Binance دقیقاً طلای اونس بر حسب دلار است (1 PAXG = 1 اونس) و
@@ -189,7 +329,22 @@
       { label: 'Coffee', provider: 'yahoo', symbol: 'KC=F', display: 'Coffee (KC=F)', kw: 'قهوه' },
       { label: 'Sugar', provider: 'yahoo', symbol: 'SB=F', display: 'Sugar (SB=F)', kw: 'شکر' },
       { label: 'Cotton', provider: 'yahoo', symbol: 'CT=F', display: 'Cotton (CT=F)', kw: 'پنبه' },
-      { label: 'Cocoa', provider: 'yahoo', symbol: 'CC=F', display: 'Cocoa (CC=F)', kw: 'کاکائو' } ] },
+      { label: 'Cocoa', provider: 'yahoo', symbol: 'CC=F', display: 'Cocoa (CC=F)', kw: 'کاکائو' },
+      { label: 'Soybean Meal', provider: 'yahoo', symbol: 'ZM=F', display: 'Soybean Meal (ZM=F)', kw: 'کنجاله سویا' },
+      { label: 'Soybean Oil', provider: 'yahoo', symbol: 'ZL=F', display: 'Soybean Oil (ZL=F)', kw: 'روغن سویا' },
+      { label: 'Oats', provider: 'yahoo', symbol: 'ZO=F', display: 'Oats (ZO=F)', kw: 'جو' },
+      { label: 'KC Wheat', provider: 'yahoo', symbol: 'KE=F', display: 'KC Wheat (KE=F)', kw: 'گندم کانزاس' },
+      { label: 'Live Cattle', provider: 'yahoo', symbol: 'LE=F', display: 'Live Cattle (LE=F)', kw: 'گاو زنده' },
+      { label: 'Lean Hogs', provider: 'yahoo', symbol: 'HE=F', display: 'Lean Hogs (HE=F)', kw: 'خوک' },
+      { label: 'Feeder Cattle', provider: 'yahoo', symbol: 'GF=F', display: 'Feeder Cattle (GF=F)', kw: 'گاو' },
+      { label: 'Lumber', provider: 'yahoo', symbol: 'LBS=F', display: 'Lumber (LBS=F)', kw: 'چوب' },
+      { label: 'Orange Juice', provider: 'yahoo', symbol: 'OJ=F', display: 'Orange Juice (OJ=F)', kw: 'آب پرتقال' },
+      { label: 'Heating Oil', provider: 'yahoo', symbol: 'HO=F', display: 'Heating Oil (HO=F)', kw: 'نفت گرمایشی' },
+      { label: 'Gasoline', provider: 'yahoo', symbol: 'RB=F', display: 'Gasoline (RB=F)', kw: 'بنزین' },
+      { label: 'Micro Gold', provider: 'yahoo', symbol: 'MGC=F', display: 'Micro Gold (MGC=F)', kw: 'طلای میکرو' },
+      { label: 'Micro Silver', provider: 'yahoo', symbol: 'SIL=F', display: 'Micro Silver (SIL=F)', kw: 'نقره میکرو' },
+      { label: 'Micro Crude', provider: 'yahoo', symbol: 'MCL=F', display: 'Micro Crude (MCL=F)', kw: 'نفت میکرو' },
+      { label: 'Bitcoin Fut.', provider: 'yahoo', symbol: 'BTC=F', display: 'Bitcoin Fut. (BTC=F)', kw: 'بیت کوین آتی' } ] },
     iran: { label: 'Iran', fa: 'ایران', quotes: [
       { label: 'USD', provider: 'iran-rate', symbol: 'usd', display: 'دلار (تومان)', fa: 'دلار' },
       { label: 'EUR', provider: 'iran-rate', symbol: 'eur', display: 'یورو (تومان)', fa: 'یورو' },
@@ -205,7 +360,20 @@
       { label: 'Gram Coin', provider: 'iran-rate', symbol: 'gram', display: 'سکه گرمی (تومان)', fa: 'سکه گرمی' },
       { label: 'Silver', provider: 'iran-rate', symbol: 'silver', display: 'نقره (تومان)', fa: 'نقره' },
       { label: 'AED', provider: 'iran-rate', symbol: 'aed', display: 'درهم (تومان)', fa: 'درهم' },
-      { label: 'GBP', provider: 'iran-rate', symbol: 'gbp', display: 'پوند (تومان)', fa: 'پوند' } ] },
+      { label: 'GBP', provider: 'iran-rate', symbol: 'gbp', display: 'پوند (تومان)', fa: 'پوند' },
+      { label: 'CNY', provider: 'iran-rate', symbol: 'cny', display: 'یوان چین (تومان)', fa: 'یوان' },
+      { label: 'TRY', provider: 'iran-rate', symbol: 'try', display: 'لیر ترکیه (تومان)', fa: 'لیر' },
+      { label: 'CAD', provider: 'iran-rate', symbol: 'cad', display: 'دلار کانادا (تومان)', fa: 'دلار کانادا' },
+      { label: 'AUD', provider: 'iran-rate', symbol: 'aud', display: 'دلار استرالیا (تومان)', fa: 'دلار استرالیا' },
+      { label: 'CHF', provider: 'iran-rate', symbol: 'chf', display: 'فرانک سوئیس (تومان)', fa: 'فرانک' },
+      { label: 'SAR', provider: 'iran-rate', symbol: 'sar', display: 'ریال عربستان (تومان)', fa: 'ریال عربستان' },
+      { label: 'QAR', provider: 'iran-rate', symbol: 'qar', display: 'ریال قطر (تومان)', fa: 'ریال قطر' },
+      { label: 'KWD', provider: 'iran-rate', symbol: 'kwd', display: 'دینار کویت (تومان)', fa: 'دینار کویت' },
+      { label: 'OMR', provider: 'iran-rate', symbol: 'omr', display: 'ریال عمان (تومان)', fa: 'ریال عمان' },
+      { label: 'IQD', provider: 'iran-rate', symbol: 'iqd', display: 'دینار عراق (تومان)', fa: 'دینار عراق' },
+      { label: 'AFN', provider: 'iran-rate', symbol: 'afn', display: 'افغانی (تومان)', fa: 'افغانی' },
+      { label: 'RUB', provider: 'iran-rate', symbol: 'rub', display: 'روبل روسیه (تومان)', fa: 'روبل' },
+      { label: 'INR', provider: 'iran-rate', symbol: 'inr', display: 'روپیه هند (تومان)', fa: 'روپیه' } ] },
     indices: { label: 'Indices', fa: 'شاخص‌ها', quotes: [
       { label: 'S&P 500', provider: 'yahoo', symbol: '^GSPC', display: 'S&P 500' },
       { label: 'Dow', provider: 'yahoo', symbol: '^DJI', display: 'Dow Jones' },
@@ -221,7 +389,38 @@
       { label: 'Bovespa', provider: 'yahoo', symbol: '^BVSP', display: 'Bovespa' },
       { label: 'IPC', provider: 'yahoo', symbol: '^MXX', display: 'IPC' },
       { label: 'KOSPI', provider: 'yahoo', symbol: '^KS11', display: 'KOSPI' },
-      { label: 'TWII', provider: 'yahoo', symbol: '^TWII', display: 'TWII' } ] },
+      { label: 'TWII', provider: 'yahoo', symbol: '^TWII', display: 'TWII' },
+      { label: 'Russell 2000', provider: 'yahoo', symbol: '^RUT', display: 'Russell 2000' },
+      { label: 'VIX', provider: 'yahoo', symbol: '^VIX', display: 'VIX' },
+      { label: 'US 10Y', provider: 'yahoo', symbol: '^TNX', display: 'US 10Y' },
+      { label: 'US 13W', provider: 'yahoo', symbol: '^IRX', display: 'US 13W' },
+      { label: 'US 5Y', provider: 'yahoo', symbol: '^FVX', display: 'US 5Y' },
+      { label: 'US 30Y', provider: 'yahoo', symbol: '^TYX', display: 'US 30Y' },
+      { label: 'Euronext 100', provider: 'yahoo', symbol: '^N100', display: 'Euronext 100' },
+      { label: 'SMI', provider: 'yahoo', symbol: '^SSMI', display: 'SMI' },
+      { label: 'AEX', provider: 'yahoo', symbol: '^AEX', display: 'AEX' },
+      { label: 'IBEX 35', provider: 'yahoo', symbol: '^IBEX', display: 'IBEX 35' },
+      { label: 'ATX', provider: 'yahoo', symbol: '^ATX', display: 'ATX' },
+      { label: 'BEL 20', provider: 'yahoo', symbol: '^BFX', display: 'BEL 20' },
+      { label: 'OMX Stockholm', provider: 'yahoo', symbol: '^OMX', display: 'OMX Stockholm' },
+      { label: 'Oslo Benchmark', provider: 'yahoo', symbol: '^OSEBX', display: 'Oslo Benchmark' },
+      { label: 'Shanghai', provider: 'yahoo', symbol: '^SSEC', display: 'Shanghai' },
+      { label: 'Sensex', provider: 'yahoo', symbol: '^BSESN', display: 'Sensex' },
+      { label: 'Nifty 50', provider: 'yahoo', symbol: '^NSEI', display: 'Nifty 50' },
+      { label: 'Jakarta', provider: 'yahoo', symbol: '^JKSE', display: 'Jakarta' },
+      { label: 'KLCI', provider: 'yahoo', symbol: '^KLSE', display: 'KLCI' },
+      { label: 'STI', provider: 'yahoo', symbol: '^STI', display: 'STI' },
+      { label: 'HSCEI', provider: 'yahoo', symbol: '^HSCE', display: 'HSCEI' },
+      { label: 'TA-125', provider: 'yahoo', symbol: '^TA125.TA', display: 'TA-125' },
+      { label: 'BIST 100', provider: 'yahoo', symbol: '^XU100.IS', display: 'BIST 100' },
+      { label: 'EGX 30', provider: 'yahoo', symbol: '^CASE30', display: 'EGX 30' },
+      { label: 'TASI', provider: 'yahoo', symbol: '^TASI', display: 'TASI' },
+      { label: 'MERVAL', provider: 'yahoo', symbol: '^MERV', display: 'MERVAL' },
+      { label: 'IPSA', provider: 'yahoo', symbol: '^IPSA', display: 'IPSA' },
+      { label: 'S&P Fut.', provider: 'yahoo', symbol: 'ES=F', display: 'S&P Fut.' },
+      { label: 'Nasdaq Fut.', provider: 'yahoo', symbol: 'NQ=F', display: 'Nasdaq Fut.' },
+      { label: 'Dow Fut.', provider: 'yahoo', symbol: 'YM=F', display: 'Dow Fut.' },
+      { label: 'Russell Fut.', provider: 'yahoo', symbol: 'RTY=F', display: 'Russell Fut.' } ] },
     boorse: { label: 'Bourse (TSE)', fa: 'بورس', quotes: [
       { label: 'فولاد', provider: 'mofid', symbol: 'فولاد', display: 'فولاد (ریال)' },
       { label: 'فملی', provider: 'mofid', symbol: 'فملی', display: 'فملی (ریال)' },
@@ -237,7 +436,42 @@
       { label: 'کگل', provider: 'mofid', symbol: 'کگل', display: 'کگل (ریال)' },
       { label: 'کچاد', provider: 'mofid', symbol: 'کچاد', display: 'کچاد (ریال)' },
       { label: 'ومعادن', provider: 'mofid', symbol: 'ومعادن', display: 'ومعادن (ریال)' },
-      { label: 'حکشتی', provider: 'mofid', symbol: 'حکشتی', display: 'حکشتی (ریال)' } ] },
+      { label: 'حکشتی', provider: 'mofid', symbol: 'حکشتی', display: 'حکشتی (ریال)' },
+      { label: 'رمپنا', provider: 'mofid', symbol: 'رمپنا', display: 'رمپنا (ریال)' },
+      { label: 'وپارس', provider: 'mofid', symbol: 'وپارس', display: 'وپارس (ریال)' },
+      { label: 'وپاسار', provider: 'mofid', symbol: 'وپاسار', display: 'وپاسار (ریال)' },
+      { label: 'ونوین', provider: 'mofid', symbol: 'ونوین', display: 'ونوین (ریال)' },
+      { label: 'وبشهر', provider: 'mofid', symbol: 'وبشهر', display: 'وبشهر (ریال)' },
+      { label: 'وغدیر', provider: 'mofid', symbol: 'وغدیر', display: 'وغدیر (ریال)' },
+      { label: 'تاپیکو', provider: 'mofid', symbol: 'تاپیکو', display: 'تاپیکو (ریال)' },
+      { label: 'پارسان', provider: 'mofid', symbol: 'پارسان', display: 'پارسان (ریال)' },
+      { label: 'نوری', provider: 'mofid', symbol: 'نوری', display: 'نوری (ریال)' },
+      { label: 'پارس', provider: 'mofid', symbol: 'پارس', display: 'پارس (ریال)' },
+      { label: 'شیراز', provider: 'mofid', symbol: 'شیراز', display: 'شیراز (ریال)' },
+      { label: 'شفن', provider: 'mofid', symbol: 'شفن', display: 'شفن (ریال)' },
+      { label: 'شبریز', provider: 'mofid', symbol: 'شبریز', display: 'شبریز (ریال)' },
+      { label: 'شتران', provider: 'mofid', symbol: 'شتران', display: 'شتران (ریال)' },
+      { label: 'بوعلی', provider: 'mofid', symbol: 'بوعلی', display: 'بوعلی (ریال)' },
+      { label: 'شپدیس', provider: 'mofid', symbol: 'شپدیس', display: 'شپدیس (ریال)' },
+      { label: 'کرماشا', provider: 'mofid', symbol: 'کرماشا', display: 'کرماشا (ریال)' },
+      { label: 'خراسان', provider: 'mofid', symbol: 'خراسان', display: 'خراسان (ریال)' },
+      { label: 'شاراک', provider: 'mofid', symbol: 'شاراک', display: 'شاراک (ریال)' },
+      { label: 'همراه', provider: 'mofid', symbol: 'همراه', display: 'همراه (ریال)' },
+      { label: 'اخابر', provider: 'mofid', symbol: 'اخابر', display: 'اخابر (ریال)' },
+      { label: 'های‌وب', provider: 'mofid', symbol: 'های‌وب', display: 'های‌وب (ریال)' },
+      { label: 'تیپیکو', provider: 'mofid', symbol: 'تیپیکو', display: 'تیپیکو (ریال)' },
+      { label: 'دفارا', provider: 'mofid', symbol: 'دفارا', display: 'دفارا (ریال)' },
+      { label: 'برکت', provider: 'mofid', symbol: 'برکت', display: 'برکت (ریال)' },
+      { label: 'والبر', provider: 'mofid', symbol: 'والبر', display: 'والبر (ریال)' },
+      { label: 'ذوب', provider: 'mofid', symbol: 'ذوب', display: 'ذوب (ریال)' },
+      { label: 'فخوز', provider: 'mofid', symbol: 'فخوز', display: 'فخوز (ریال)' },
+      { label: 'کاوه', provider: 'mofid', symbol: 'کاوه', display: 'کاوه (ریال)' },
+      { label: 'ارفع', provider: 'mofid', symbol: 'ارفع', display: 'ارفع (ریال)' },
+      { label: 'سفارس', provider: 'mofid', symbol: 'سفارس', display: 'سفارس (ریال)' },
+      { label: 'ستران', provider: 'mofid', symbol: 'ستران', display: 'ستران (ریال)' },
+      { label: 'سصوفی', provider: 'mofid', symbol: 'سصوفی', display: 'سصوفی (ریال)' },
+      { label: 'ساوه', provider: 'mofid', symbol: 'ساوه', display: 'ساوه (ریال)' },
+      { label: 'خگستر', provider: 'mofid', symbol: 'خگستر', display: 'خگستر (ریال)' } ] },
     farabourse: { label: 'Farabourse (OTC)', fa: 'فرابورس', quotes: [
       { label: 'آریا', provider: 'mofid', symbol: 'آریا', display: 'آریا (ریال)' },
       { label: 'زاگرس', provider: 'mofid', symbol: 'زاگرس', display: 'زاگرس (ریال)' },
@@ -253,7 +487,42 @@
       { label: 'سامان', provider: 'mofid', symbol: 'سامان', display: 'سامان (ریال)' },
       { label: 'دی', provider: 'mofid', symbol: 'دی', display: 'دی (ریال)' },
       { label: 'غدیس', provider: 'mofid', symbol: 'غدیس', display: 'غدیس (ریال)' },
-      { label: 'کرمان', provider: 'mofid', symbol: 'کرمان', display: 'کرمان (ریال)' } ] }
+      { label: 'کرمان', provider: 'mofid', symbol: 'کرمان', display: 'کرمان (ریال)' },
+      { label: 'آریاساسول', provider: 'mofid', symbol: 'آریاساسول', display: 'آریاساسول (ریال)' },
+      { label: 'مارون', provider: 'mofid', symbol: 'مارون', display: 'مارون (ریال)' },
+      { label: 'جم', provider: 'mofid', symbol: 'جم', display: 'جم (ریال)' },
+      { label: 'آسیاتک', provider: 'mofid', symbol: 'آسیاتک', display: 'آسیاتک (ریال)' },
+      { label: 'سپ', provider: 'mofid', symbol: 'سپ', display: 'سپ (ریال)' },
+      { label: 'رتاپ', provider: 'mofid', symbol: 'رتاپ', display: 'رتاپ (ریال)' },
+      { label: 'آپ', provider: 'mofid', symbol: 'آپ', display: 'آپ (ریال)' },
+      { label: 'توسن', provider: 'mofid', symbol: 'توسن', display: 'توسن (ریال)' },
+      { label: 'فن‌آوا', provider: 'mofid', symbol: 'فن‌آوا', display: 'فن‌آوا (ریال)' },
+      { label: 'مرقام', provider: 'mofid', symbol: 'مرقام', display: 'مرقام (ریال)' },
+      { label: 'رانفور', provider: 'mofid', symbol: 'رانفور', display: 'رانفور (ریال)' },
+      { label: 'مداران', provider: 'mofid', symbol: 'مداران', display: 'مداران (ریال)' },
+      { label: 'وملل', provider: 'mofid', symbol: 'وملل', display: 'وملل (ریال)' },
+      { label: 'خکرمان', provider: 'mofid', symbol: 'خکرمان', display: 'خکرمان (ریال)' },
+      { label: 'خپویش', provider: 'mofid', symbol: 'خپویش', display: 'خپویش (ریال)' },
+      { label: 'خنصیر', provider: 'mofid', symbol: 'خنصیر', display: 'خنصیر (ریال)' },
+      { label: 'دماوند', provider: 'mofid', symbol: 'دماوند', display: 'دماوند (ریال)' },
+      { label: 'نیان', provider: 'mofid', symbol: 'نیان', display: 'نیان (ریال)' },
+      { label: 'گدنا', provider: 'mofid', symbol: 'گدنا', display: 'گدنا (ریال)' },
+      { label: 'وهور', provider: 'mofid', symbol: 'وهور', display: 'وهور (ریال)' },
+      { label: 'بکهنوج', provider: 'mofid', symbol: 'بکهنوج', display: 'بکهنوج (ریال)' },
+      { label: 'زکوثر', provider: 'mofid', symbol: 'زکوثر', display: 'زکوثر (ریال)' },
+      { label: 'دتولید', provider: 'mofid', symbol: 'دتولید', display: 'دتولید (ریال)' },
+      { label: 'دکپسول', provider: 'mofid', symbol: 'دکپسول', display: 'دکپسول (ریال)' },
+      { label: 'دتماد', provider: 'mofid', symbol: 'دتماد', display: 'دتماد (ریال)' },
+      { label: 'غمارگ', provider: 'mofid', symbol: 'غمارگ', display: 'غمارگ (ریال)' },
+      { label: 'غمینو', provider: 'mofid', symbol: 'غمینو', display: 'غمینو (ریال)' },
+      { label: 'بهپاک', provider: 'mofid', symbol: 'بهپاک', display: 'بهپاک (ریال)' },
+      { label: 'غگل', provider: 'mofid', symbol: 'غگل', display: 'غگل (ریال)' },
+      { label: 'پترول', provider: 'mofid', symbol: 'پترول', display: 'پترول (ریال)' },
+      { label: 'شاروم', provider: 'mofid', symbol: 'شاروم', display: 'شاروم (ریال)' },
+      { label: 'شفارس', provider: 'mofid', symbol: 'شفارس', display: 'شفارس (ریال)' },
+      { label: 'شکربن', provider: 'mofid', symbol: 'شکربن', display: 'شکربن (ریال)' },
+      { label: 'سجام', provider: 'mofid', symbol: 'سجام', display: 'سجام (ریال)' },
+      { label: 'سدور', provider: 'mofid', symbol: 'سدور', display: 'سدور (ریال)' } ] }
   };
   /* تایم‌فریم‌ها — هر provider به‌اندازهٔ توانش (v1.2.0: 1m و 3m اضافه شد؛ 3m برای Yahoo/مفید از تجمیع ۱ دقیقه‌ای ساخته می‌شود). */
   var TF_ALL = ['1s', '1m', '3m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '1M'];
@@ -321,7 +590,7 @@
   }
 
   /* ---- داده: کریپتو (مستقیم Binance) ---- */
-  var CG_IDS = { BTCUSDT: 'bitcoin', ETHUSDT: 'ethereum', SOLUSDT: 'solana', BNBUSDT: 'binancecoin', XRPUSDT: 'ripple', DOGEUSDT: 'dogecoin', ADAUSDT: 'cardano', TRXUSDT: 'tron', AVAXUSDT: 'avalanche-2', LINKUSDT: 'chainlink', DOTUSDT: 'polkadot', LTCUSDT: 'litecoin', BCHUSDT: 'bitcoin-cash', NEARUSDT: 'near', TONUSDT: 'toncoin', PAXGUSDT: 'pax-gold' }; // v1.0.1: برای fallback قیمت/کندل کریپتو از ایران — v1.2.1: PAXG = XAU/USD
+  var CG_IDS = { BTCUSDT: 'bitcoin', ETHUSDT: 'ethereum', SOLUSDT: 'solana', BNBUSDT: 'binancecoin', XRPUSDT: 'ripple', DOGEUSDT: 'dogecoin', ADAUSDT: 'cardano', TRXUSDT: 'tron', AVAXUSDT: 'avalanche-2', LINKUSDT: 'chainlink', DOTUSDT: 'polkadot', LTCUSDT: 'litecoin', BCHUSDT: 'bitcoin-cash', NEARUSDT: 'near', TONUSDT: 'toncoin', PAXGUSDT: 'pax-gold', HYPEUSDT: 'hyperliquid', ZECUSDT: 'zcash', XLMUSDT: 'stellar', UNIUSDT: 'uniswap', SUIUSDT: 'sui', HBARUSDT: 'hedera-hashgraph', SHIBUSDT: 'shiba-inu', TAOUSDT: 'bittensor', QNTUSDT: 'quant-network', PEPEUSDT: 'pepe', ENAUSDT: 'ethena', AAVEUSDT: 'aave', ASTERUSDT: 'aster-2', ONDOUSDT: 'ondo-finance', PUMPUSDT: 'pump-fun', WLFIUSDT: 'world-liberty-financial', MORPHOUSDT: 'morpho', ICPUSDT: 'internet-computer', SKYUSDT: 'sky', JSTUSDT: 'just', WLDUSDT: 'worldcoin-wld', ETCUSDT: 'ethereum-classic', ARBUSDT: 'arbitrum', POLUSDT: 'polygon-ecosystem-token', JUPUSDT: 'jupiter-exchange-solana', RENDERUSDT: 'render-token', INJUSDT: 'injective-protocol', NIGHTUSDT: 'midnight-3', ALGOUSDT: 'algorand', ATOMUSDT: 'cosmos', NEXOUSDT: 'nexo', ZROUSDT: 'layerzero', FILUSDT: 'filecoin', CAKEUSDT: 'pancakeswap-token', APTUSDT: 'aptos' }; // v1.0.1: برای fallback قیمت/کندل کریپتو از ایران — v1.2.1: PAXG = XAU/USD — v1.19.0: ۳۵ شناسهٔ تازه از CoinGecko (top-250 زنده، ۲۰۲۶-۱۱-۱۴)
   function parseCgTicker(g, id) {
     var c = g && g[id];
     if (!c || !(c.usd > 0)) return null;
@@ -488,7 +757,7 @@
   }
   /* ---- داده: ایران (Nerkhsanj — فقط با پروکسی) ---- */
   // کلید واقعی live.json (پروب ۲۰۲۶-۱۱-۰۹، ۲۸ ردیف)؛ مثقال = mesghal (نه mithqal).
-  var IRAN_KEYS = { usd: 'dollar', eur: 'euro', gold18: 'gold', emami: 'coin', bahar: 'bahar', half: 'half', quarter: 'quarter', mithqal: 'mesghal', tether: 'tether', bitcoin: 'bitcoin', gold24: 'gold24', gram: 'gram', silver: 'silver', aed: 'aed', gbp: 'pound' };
+  var IRAN_KEYS = { usd: 'dollar', eur: 'euro', gold18: 'gold', emami: 'coin', bahar: 'bahar', half: 'half', quarter: 'quarter', mithqal: 'mesghal', tether: 'tether', bitcoin: 'bitcoin', gold24: 'gold24', gram: 'gram', silver: 'silver', aed: 'aed', gbp: 'pound', cny: 'yuan', try: 'lira', cad: 'cad', aud: 'aud', chf: 'chf', sar: 'sar', qar: 'qar', kwd: 'kwd', omr: 'omr', iqd: 'iqd', afn: 'afn', rub: 'rub', inr: 'inr' }; /* v1.19.0 — هر ۲۸ کلید واقعی live.json */
   async function iranRate(key) {
     var u = proxyUrl('nerkhsanj', 'https://nerkh.jahankhahan.shop/data/live.json');
     if (!u) return null;
@@ -586,7 +855,7 @@
   }
 
   /* ---- وضعیت ---- */
-  var state = { view: 'catalog', mainTab: 'chart', catalogMarket: 'crypto', market: null, quote: null, tf: '1h', tab: 'chart', candles: null, quoteRes: null, loading: 0, priceUsd: null, priceIran: null, priceMode: 'usd', candlesDone: false, searchQ: '', liveMode: null, mofidAsOf: null };
+  var state = { view: 'catalog', mainTab: 'chart', catalogMarket: 'crypto', watchMarket: 'all', market: null, quote: null, tf: '1h', tab: 'chart', candles: null, quoteRes: null, loading: 0, priceUsd: null, priceIran: null, priceMode: 'usd', candlesDone: false, searchQ: '', liveMode: null, mofidAsOf: null, multiTfKey: null, multiTfState: 'idle' };
 
   /* ---- واچ‌لیست (ستاره) — localStorage؛ کلید provider|symbol ---- */
   var FAV_KEY = 'miniapp_favs';
@@ -681,17 +950,23 @@
     state.view = view;
     stopLive();
     stopDepthPoll();
-    var chartTab = state.mainTab === 'chart';
+    var chartTab = state.mainTab === 'chart', watchTab = state.mainTab === 'watch';
     $('view-catalog').style.display = (chartTab && view === 'catalog') ? '' : 'none';
     $('view-symbol').style.display = (chartTab && view === 'symbol') ? '' : 'none';
-    $('view-dash').style.display = chartTab ? 'none' : '';
+    $('view-dash').style.display = (!chartTab && !watchTab) ? '' : 'none';
+    $('view-watch').style.display = watchTab ? '' : 'none';
     $('backBtn').style.display = (chartTab && view === 'symbol') ? '' : 'none';
     if (chartTab && view === 'catalog') { if (state.searchQ) renderSearch(state.searchQ); else renderCatalog(); }
+    if (watchTab) renderWatch();
+    /* v1.20.0 — برگشت به صفحهٔ نماد، فید زنده را از سر می‌گیرد (قبلاً با عوض‌کردن
+       تب می‌مرد و بج «● زنده» دروغ می‌گفت). */
+    if (chartTab && view === 'symbol' && state.quote && state.quote.provider === 'binance' && state.candles) startLive();
     if (tg) { try { tg.expand(); } catch (e) {} }
   }
   function showMainTab(tab) {
     state.mainTab = tab;
     $('mainTab-chart').classList.toggle('on', tab === 'chart');
+    $('mainTab-watch').classList.toggle('on', tab === 'watch');
     $('mainTab-dash').classList.toggle('on', tab === 'dash');
     if (tab === 'dash') { stopLive(); loadDash(false); }
     show(state.view);
@@ -729,11 +1004,14 @@
     if (!m) { state.catalogMarket = 'crypto'; renderCatalog(); return; }
     html = '<div class="mkt"><div class="mkt-h"><span class="mkt-ic" style="color:' + (MKT_COLOR[state.catalogMarket] || 'var(--acc)') + '">' + (MARKET_SVG[state.catalogMarket] || '') + '</span>' + esc(marketLabel(state.catalogMarket)) + '</div><div class="syms">';
     m.quotes.forEach(function (q) {
-      html += '<button class="sym" data-provider="' + q.provider + '" data-symbol="' + esc(q.symbol) + '"><span class="sym-ic">' + iconHtml(q) + '</span><span class="sym-lb">' + esc(q.label) + '</span></button>';
+      var fav = isFav(q);
+      html += '<button class="sym" data-provider="' + q.provider + '" data-symbol="' + esc(q.symbol) + '" style="position:relative"><span class="sym-ic">' + iconHtml(q) + '</span><span class="sym-lb">' + esc(q.label) + '</span><span class="sym-px">…</span>'
+        + '<span class="sm-star' + (fav ? '' : ' off') + '" data-fav="' + q.provider + '|' + esc(q.symbol) + '" style="position:absolute;top:2px;inset-inline-end:2px" role="button" aria-label="' + esc(T('واچ‌لیست', 'Watchlist')) + '">' + (fav ? ICON.star : ICON.starOff) + '</span></button>';
     });
     html += '</div></div>';
     $('catalog').innerHTML = html;
     $('searchResults').innerHTML = '';
+    fillCatalogPrices(m.quotes, state.catalogMarket);
     bindSymbolButtons($('catalog'));
   }
   function bindSymbolButtons(root) {
@@ -744,6 +1022,218 @@
           MARKETS[k].quotes.forEach(function (x) { if (x.provider === b.dataset.provider && x.symbol === b.dataset.symbol) q = x; });
         });
         if (q) openSymbol(q);
+      });
+    });
+    /* v1.20.0 — ستارهٔ کارت کاتولوگ (همان کلاس sm-star مودال جستجو): ضربه،
+       نماد را باز نمی‌کند (stopPropagation). */
+    root.querySelectorAll('.sm-star').forEach(function (s) {
+      s.addEventListener('click', function (e) {
+        try { if (e && e.stopPropagation) e.stopPropagation(); } catch (e2) {}
+        var parts = (s.dataset.fav || '').split('|');
+        var q = lookupQuote(parts[0], parts[1]);
+        if (!q) return;
+        var now = toggleFav(q);
+        s.innerHTML = now ? ICON.star : ICON.starOff;
+        s.classList.toggle('off', !now);
+        if (state.mainTab === 'watch') renderWatch();
+      });
+    });
+  }
+  /* v1.17.0 — تب واچ‌لیست (یک‌ضربه‌ای): فهرست تخت نمادهای ستاره‌دار، به‌ترتیب
+     ستاره‌زدن، با چیپ فیلتر بازار + قیمت زنده و تغییر روزانهٔ هر ردیف.
+     سبک نگه داشته شده: فقط ردیف‌های ستاره‌دار رندر می‌شوند (معمولاً زیر ۳۰ تا)
+     و قیمت‌ها یک‌بار به‌صورت دسته‌ای (همان پایه‌های داشبورد) گرفته و ۶۰ ثانیه
+     کش می‌شوند؛ ردیفِ بدون داده «—» نشان می‌دهد (نه عدد ساختگی). */
+  var watchCache = { at: 0, byKey: {} };
+  function favMarket(q) {
+    var found = null;
+    Object.keys(MARKETS).forEach(function (k) {
+      if (found) return;
+      MARKETS[k].quotes.forEach(function (x) { if (x.provider === q.provider && x.symbol === q.symbol) found = k; });
+    });
+    if (found) return found;
+    if (q.provider === 'mofid') return 'boorse';
+    if (q.provider === 'iran-rate') return 'iran';
+    if (q.provider === 'binance') return 'crypto';
+    if (q.provider === 'yahoo') return 'stocks';
+    return 'other';
+  }
+  function watchFavs() {
+    return loadFavs().map(function (k) { var p = k.split('|'); return lookupQuote(p[0], p[1]); }).filter(Boolean);
+  }
+  function renderWatch(force) {
+    $('watchTitle').textContent = T('واچ‌لیست', 'Watchlist');
+    var favs = watchFavs();
+    var mkts = [];
+    MARKET_ORDER.forEach(function (k) { if (favs.some(function (q) { return favMarket(q) === k; })) mkts.push(k); });
+    if (state.watchMarket !== 'all' && mkts.indexOf(state.watchMarket) === -1) state.watchMarket = 'all';
+    var chips = '<button type="button" data-mkt="all"' + (state.watchMarket === 'all' ? ' class="on"' : '') + '>' + esc(T('همه', 'All')) + '</button>';
+    mkts.forEach(function (k) {
+      chips += '<button type="button" data-mkt="' + k + '"' + (state.watchMarket === k ? ' class="on"' : '') + '><span class="mkt-dot" style="background:' + (MKT_COLOR[k] || 'var(--mut)') + '"></span>' + esc(marketLabel(k)) + '</button>';
+    });
+    $('watchChips').innerHTML = chips;
+    $('watchChips').querySelectorAll('button').forEach(function (b) {
+      b.addEventListener('click', function () { state.watchMarket = b.dataset.mkt; renderWatch(); });
+    });
+    var list = state.watchMarket === 'all' ? favs : favs.filter(function (q) { return favMarket(q) === state.watchMarket; });
+    if (!list.length) {
+      $('watchList').innerHTML = favs.length
+        ? '<div class="na">' + esc(T('در این بازار نماد ستاره‌داری نیست.', 'No starred symbols in this market.')) + '</div>'
+        : '<div class="na">' + esc(T('هنوز نمادی ستاره‌دار نکردی — روی ستارهٔ هر نماد بزن.', 'No starred symbols yet — tap the star on any symbol.')) + '</div>';
+      return;
+    }
+    var html = '<div class="srows">';
+    list.forEach(function (q) {
+      html += '<div class="srow wrow" data-provider="' + q.provider + '" data-symbol="' + esc(q.symbol) + '"><span class="sym-ic">' + iconHtml(q) + '</span>'
+        + '<span class="wrow-tx"><span class="srow-lb">' + esc(q.label) + '</span><span class="srow-ds">' + esc(q.display) + '</span></span>'
+        + '<span class="wrow-px"><span class="wrow-p">…</span><span class="wrow-c"></span></span>'
+        + '<button class="wrow-star" type="button" data-provider="' + q.provider + '" data-symbol="' + esc(q.symbol) + '" aria-label="' + esc(T('حذف از واچ‌لیست', 'Remove from watchlist')) + '">' + ICON.star + '</button></div>';
+    });
+    html += '</div>';
+    $('watchList').innerHTML = html;
+    $('watchList').querySelectorAll('.wrow').forEach(function (row) {
+      row.addEventListener('click', function () {
+        var q = lookupQuote(row.dataset.provider, row.dataset.symbol);
+        if (!q) return;
+        if (state.mainTab !== 'chart') showMainTab('chart');
+        openSymbol(q);
+      });
+    });
+    $('watchList').querySelectorAll('.wrow-star').forEach(function (s) {
+      s.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var q = lookupQuote(s.dataset.provider, s.dataset.symbol);
+        if (!q) return;
+        toggleFav(q);
+        renderWatch();
+      });
+    });
+    fillWatchPrices(list, force);
+  }
+  function fillWatchPrices(list, force) {
+    var now = Date.now();
+    var cached = !force && watchCache.at && now - watchCache.at < 60000;
+    function paint() {
+      $('watchList').querySelectorAll('.wrow').forEach(function (row) {
+        var key = row.dataset.provider + '|' + row.dataset.symbol;
+        var v = watchCache.byKey[key];
+        var px = row.querySelectorAll('.wrow-p')[0];
+        var ch = row.querySelectorAll('.wrow-c')[0];
+        if (px) px.textContent = v ? fmt(v.price) + (v.currency ? ' ' + v.currency : '') : '—';
+        if (ch) {
+          ch.textContent = v && typeof v.changePct === 'number' ? fmtPct(v.changePct) : '';
+          ch.className = 'wrow-c ' + (v && typeof v.changePct === 'number' ? (v.changePct >= 0 ? 'up' : 'dn') : '');
+        }
+      });
+    }
+    if (cached) { paint(); return; }
+    paint();
+    var byKey = watchCache.byKey;
+    var cryptoSyms = [], yahooSyms = [], mofidSyms = [];
+    list.forEach(function (q) {
+      if (q.provider === 'binance') cryptoSyms.push(q);
+      else if (q.provider === 'yahoo') yahooSyms.push(q.symbol);
+      else if (q.provider === 'mofid') mofidSyms.push(q.symbol);
+    });
+    var done = 0;
+    function legDone() { done++; if (done >= 4) { watchCache = { at: Date.now(), byKey: byKey }; paint(); } }
+    cgMarkets().then(function (cg) {
+      var byId = {}; cg.forEach(function (c) { byId[c.id] = c; });
+      cryptoSyms.forEach(function (q) {
+        var c = byId[CG_IDS[q.symbol]];
+        if (c && typeof c.price === 'number') byKey[favKey(q)] = { price: c.price, changePct: c.changePct, currency: 'USD' };
+      });
+    }).catch(function () {}).then(legDone);
+    yahooMulti(yahooSyms).then(function (yq) {
+      yq.forEach(function (r) {
+        if (r && r.symbol && typeof r.price === 'number') byKey['yahoo|' + r.symbol] = { price: r.price, changePct: (typeof r.changePct === 'number' ? r.changePct : null), currency: r.currency || 'USD' };
+      });
+    }).catch(function () {}).then(legDone);
+    mofidBulk(mofidSyms).then(function (mq) {
+      mq.forEach(function (r) {
+        if (r && r.symbol && typeof r.price === 'number') byKey['mofid|' + r.symbol] = { price: r.price, changePct: (typeof r.changePct === 'number' ? r.changePct : null), currency: 'Rial' };
+      });
+    }).catch(function () {}).then(legDone);
+    iranRatesBulk().then(function (rows) {
+      rows.forEach(function (r) {
+        if (r && r.quote) byKey[favKey(r.quote)] = { price: r.price, changePct: r.changePct, currency: r.currency || 'Toman' };
+      });
+    }).catch(function () {}).then(legDone);
+  }
+  /* v1.20.0 — قیمت کارت‌های کاتولوگ (P0-2): صفحهٔ اول دیگر قیمت ندارد و هر
+     بررسی قیمت یک ضربه + یک لود هزینه نمی‌کند. فقط نمادهای بازارِ دیده‌شده
+     قیمت می‌گیرند (نه همهٔ نمادها)؛ همان پایه‌های دسته‌ای داشبورد با همان
+     کش ۶۰ ثانیه‌ای؛ نمادِ بدون داده «—» نشان می‌دهد (نه عدد ساختگی). */
+  var catalogCache = { at: 0, byKey: {}, markets: {} };
+  var catalogFetching = null;
+  function fillCatalogPrices(quotes, mkt) {
+    var now = Date.now();
+    /* تازگی به‌ازای هر بازار جداست: کشِ سراسری باعث می‌شد با عوض‌کردن بازار
+       در ۶۰ ثانیه، بازارِ تازه «—» نشان بدهد چون کلیدهایش در byKey نبود. */
+    var fresh = catalogCache.markets[mkt] && now - catalogCache.markets[mkt] < 60000;
+    function paint() {
+      if (state.catalogMarket !== mkt) return; // بازار عوض شده — کارت‌های روی صفحه مال بازار دیگری‌اند.
+      var root = $('catalog');
+      if (!root) return;
+      root.querySelectorAll('.sym').forEach(function (card) {
+        var key = card.dataset.provider + '|' + card.dataset.symbol;
+        var v = catalogCache.byKey[key];
+        var px = card.querySelector('.sym-px');
+        if (!px) return;
+        if (v) {
+          px.innerHTML = esc(fmt(v.price)) + (typeof v.changePct === 'number' ? ' <span class="' + (v.changePct >= 0 ? 'up' : 'dn') + '">' + esc(fmtPct(v.changePct)) + '</span>' : '');
+        } else {
+          px.textContent = (catalogFetching && catalogFetching.market === mkt) ? '…' : '—';
+        }
+      });
+    }
+    if (fresh) { paint(); return; }
+    paint();
+    if (catalogFetching && catalogFetching.market === mkt) return;
+    catalogFetching = { market: mkt, done: 0, total: 0 };
+    var byKey = catalogCache.byKey;
+    var cryptoSyms = [], yahooSyms = [], mofidSyms = [], needIran = false;
+    quotes.forEach(function (q) {
+      if (q.provider === 'binance') cryptoSyms.push(q);
+      else if (q.provider === 'yahoo') yahooSyms.push(q.symbol);
+      else if (q.provider === 'mofid') mofidSyms.push(q.symbol);
+      else if (q.provider === 'iran-rate') needIran = true;
+    });
+    var legs = [];
+    if (cryptoSyms.length) legs.push(cgMarkets().then(function (cg) {
+      var byId = {}; cg.forEach(function (c) { byId[c.id] = c; });
+      cryptoSyms.forEach(function (q) {
+        var c = byId[CG_IDS[q.symbol]];
+        if (c && typeof c.price === 'number') byKey[favKey(q)] = { price: c.price, changePct: c.changePct, currency: 'USD' };
+      });
+    }).catch(function () {}));
+    if (yahooSyms.length) legs.push(yahooMulti(yahooSyms).then(function (yq) {
+      yq.forEach(function (r) {
+        if (r && r.symbol && typeof r.price === 'number') byKey['yahoo|' + r.symbol] = { price: r.price, changePct: (typeof r.changePct === 'number' ? r.changePct : null), currency: r.currency || 'USD' };
+      });
+    }).catch(function () {}));
+    if (mofidSyms.length) legs.push(mofidBulk(mofidSyms).then(function (mq) {
+      mq.forEach(function (r) {
+        if (r && r.symbol && typeof r.price === 'number') byKey['mofid|' + r.symbol] = { price: r.price, changePct: (typeof r.changePct === 'number' ? r.changePct : null), currency: 'Rial' };
+      });
+    }).catch(function () {}));
+    if (needIran) legs.push(iranRatesBulk().then(function (rows) {
+      rows.forEach(function (r) {
+        if (r && r.quote) byKey[favKey(r.quote)] = { price: r.price, changePct: r.changePct, currency: r.currency || 'Toman' };
+      });
+    }).catch(function () {}));
+    if (!legs.length) { catalogFetching = null; paint(); return; }
+    catalogFetching.total = legs.length;
+    legs.forEach(function (p) {
+      p.then(function () {
+        if (!catalogFetching || catalogFetching.market !== mkt) return;
+        catalogFetching.done++;
+        if (catalogFetching.done >= catalogFetching.total) {
+          catalogCache.markets[mkt] = Date.now();
+          catalogCache.at = Date.now();
+          catalogFetching = null;
+        }
+        paint();
       });
     });
   }
@@ -915,6 +1405,7 @@
         s.innerHTML = now ? ICON.star : ICON.starOff;
         s.classList.toggle('off', !now);
         if (sm.market === 'wl') renderSmBody();
+        if (state.mainTab === 'watch') renderWatch();
       });
     });
     $('smBody').querySelectorAll('.sm-row').forEach(function (b) {
@@ -962,6 +1453,19 @@
   function row(label, value) {
     return '<div class="row"><span>' + esc(label) + '</span><b>' + value + '</b></div>';
   }
+  /* v1.20.0 — ستارهٔ صفحهٔ نماد (P0-3): کنار نوار جستجو؛ همان SVG ستارهٔ
+     مودال جستجو (پر/توخالی)، بدون ایموجی. */
+  function refreshSymStar() {
+    var b = $('symStar');
+    if (!b) return;
+    var q = state.quote;
+    if (!q) { b.style.display = 'none'; return; }
+    b.style.display = '';
+    var fav = isFav(q);
+    b.innerHTML = fav ? ICON.star : ICON.starOff;
+    b.classList.toggle('off', !fav);
+    b.setAttribute('aria-label', fav ? T('حذف از واچ‌لیست', 'Remove from watchlist') : T('افزودن به واچ‌لیست', 'Add to watchlist'));
+  }
   function openSymbol(q) {
     stopLive();
     stopDepthPoll();
@@ -981,6 +1485,7 @@
     $('symTitle').innerHTML = '<span class="sym-title-ic">' + iconHtml(q) + '</span>' + esc(q.display);
     $('symBarIc').innerHTML = iconHtml(q);
     $('symBarTx').textContent = '▼ ' + q.display;
+    refreshSymStar();
     $('gaugeBox').innerHTML = '';
     $('priceBox').innerHTML = '<div class="muted">' + esc(T('در حال بارگذاری…', 'Loading…')) + '</div>';
     $('tab-chart').innerHTML = '';
@@ -1107,16 +1612,36 @@
   }
   function naTabs(msgKey) {
     // v1.0.2: وقتی قیمت/کندل نیامد، تب‌ها روی «در حال بارگذاری» گیر نکنند.
+    // v1.20.0: تبی که همین حالا محتوای واقعی دارد (بنیادی/خبرِ موازی رسیده)
+    // دست نخورده می‌ماند — فقط تب‌های خالی یا در حال بارگذاری «نیست» می‌شوند.
     var m = '<div class="na">' + esc(T('فعلاً در دسترس نیست.', 'Not available right now.')) + '</div>';
-    $('tab-analysis').innerHTML = m;
-    $('tab-fund').innerHTML = m;
-    $('tab-news').innerHTML = m;
-    $('tab-depth').innerHTML = m;
+    ['tab-analysis', 'tab-fund', 'tab-news', 'tab-depth'].forEach(function (id) {
+      var el = $(id);
+      if (!el) return;
+      var h = el.innerHTML || '';
+      if (h && h.indexOf('در حال بارگذاری') === -1 && h.indexOf('Loading') === -1) return;
+      el.innerHTML = m;
+    });
   }
 
   async function loadSymbol() {
     var q = state.quote;
     var my = ++state.loading;
+    // v1.20.0 — قیمت و کندل موازی گرفته می‌شوند: چارت منتظر قیمت نمی‌ماند
+    // (قبلاً برای سهام Yahoo ~۲–۴ ثانیه طول می‌کشید تا اولین کندل).
+    // خبر و بنیادیِ مستقل از قیمت هم همان لحظه شروع می‌شوند؛ بنیادیِ Yahoo
+    // به quoteRes وابسته است و بعد از آمدن قیمت تازه می‌شود.
+    var candlesP = loadCandles();
+    if (candlesP && candlesP.catch) candlesP.catch(function () {
+      // اگر کندل‌ها با خطا مردند، تب تحلیل روی «در حال بارگذاری» نماند.
+      if (my !== state.loading) return;
+      state.candlesDone = true;
+      if (!state.candles && state.tab === 'analysis') renderAnalysis();
+      var tc = $('tab-chart');
+      if (tc && !state.candles) tc.innerHTML = '<div class="na">' + esc(T('برای این نماد کندل نیست.', 'No candles for this symbol.')) + '</div>';
+    });
+    renderNews();
+    if (q.provider !== 'yahoo') renderFund();
     // قیمت — دلاری و ایرانی موازی گرفته می‌شوند؛ دلاری پیش‌فرض است، ایرانی انتخاب دوم.
     var price = null, needProxy = false, iranBlocked = false;
     if (q.provider === 'binance') {
@@ -1141,16 +1666,12 @@
     }
     if (my !== state.loading) return;
     if (!price) {
-      state.candlesDone = true; // کندلی در راه نیست — تب تحلیل «در حال بارگذاری» نماند.
       renderPriceBox(needProxy, iranBlocked);
-      $('tab-chart').innerHTML = '<div class="na">' + esc(T('برای این نماد کندل نیست.', 'No candles for this symbol.')) + '</div>';
       naTabs();
       return;
     }
     renderPriceBox(needProxy, iranBlocked);
-    loadCandles();
-    renderFund();
-    renderNews();
+    if (q.provider === 'yahoo') renderFund();
   }
 
   async function loadCandles(prevTf) {
@@ -2000,6 +2521,7 @@
     live.ws = null;
     if (live.timer) { clearInterval(live.timer); live.timer = null; }
     if (live.mode) { live.mode = null; state.liveMode = null; }
+    refreshLiveBadge(); // v1.20.0 — بج «● زنده» با مردنِ فید برداشته می‌شود، نه اینکه دروغ بگوید.
     live.sym = null; live.tf = null;
     stopAlertPoll(); // v1.9.0
   }
@@ -2075,7 +2597,10 @@
 
   function startLive() {
     stopLive();
-    if (!state.quote || state.quote.provider !== 'binance' || !state.candles || state.view !== 'symbol') return;
+    /* v1.20.0 — فید فقط وقتی شروع می‌شود که صفحهٔ نماد واقعاً دیده می‌شود
+       (تب چارت)؛ وگرنه loadCandles یا visibilitychange در حالی که کاربر روی
+       داشبورد/واچ‌لیست است، بی‌صدا WS را باز می‌کرد. */
+    if (!state.quote || state.quote.provider !== 'binance' || !state.candles || state.view !== 'symbol' || state.mainTab !== 'chart') return;
     live.sym = state.quote.symbol; live.tf = state.tf;
     if (typeof WebSocket === 'undefined') { startPollLive(); return; }
     try {
@@ -2497,13 +3022,17 @@
     for (var di = 0; di < dayEls.length; di++) dayEls[di].checked = s.m !== 'custom' || !(s.days && s.days.length) || s.days.indexOf(+dayEls[di].value) >= 0;
     /* تلگرام: از مسیر سرور (اگر همگام‌سازی برقرار است) یا مسیر قدیمی ورکر/sendData (فقط شرط‌های ساده) */
     var provider = ex ? (ex.provider || (ex.kind === 'crypto' ? 'binance' : 'yahoo')) : q.provider;
-    var okSync = A.syncOk() && (ex ? !ex.local : A.syncable(q.symbol, q.provider, state.priceMode));
+    var isIranQ = q.provider === 'mofid' || q.provider === 'iran-rate';
+    var iranSt = (A.iranStatus ? A.iranStatus().state : 'off');
+    var okSync = A.syncOk() && (ex ? (!ex.local && !ex.iranUnsupported) : A.syncable(q.symbol, q.provider, state.priceMode));
     var canTg = okSync || (!!(tg && typeof tg.sendData === 'function') && (provider === 'binance' || provider === 'yahoo'));
     var cb = $('alTelegram'), nt = $('alTgNote');
     cb.checked = !!(ex && ((ex.n && ex.n.tg) || ex.shared)) || (!ex && canTg);
     cb.disabled = !canTg || !!(ex && ex.shared);
     nt.textContent = ex && ex.shared ? T('این هشدار از مسیر ورکر به تلگرام وصل است؛ از دکمهٔ 📵 در فهرست قطعش کن.', 'This alert is wired to Telegram via the worker; use 📵 in the list to disconnect.')
-      : !canTg ? T('پیام تلگرام: مینی‌اپ را از دکمهٔ ربات باز کن و (برای همگام‌سازی) سرور اپ اصلی را وصل کن؛ نمادهای ایران فقط داخل مینی‌اپ.', 'Telegram messages: open the mini app from the bot button and connect the main-app server; Iran symbols are in-app only.')
+      : (isIranQ && iranSt === 'local') ? T('هشدار ایران فعلاً فقط داخل مینی‌اپ کار می‌کند — برای پیام تلگرام، پچ سرور لازم است.', 'This Iran alert works in-app only for now — the server patch is needed for Telegram messages.')
+      : !canTg ? (isIranQ ? T('پیام تلگرام: مینی‌اپ را از دکمهٔ ربات باز کن و سرور اپ اصلی را وصل کن؛ تا آن موقع هشدارهای ایران فقط داخل مینی‌اپ کار می‌کنند.', 'Telegram messages: open the mini app from the bot button and connect the main-app server; until then, Iran alerts work in-app only.')
+        : T('پیام تلگرام: مینی‌اپ را از دکمهٔ ربات باز کن و (برای همگام‌سازی) سرور اپ اصلی را وصل کن.', 'Telegram messages: open the mini app from the bot button and connect the main-app server.'))
       : okSync ? T('سرور اپ اصلی پیام را می‌فرستد — حتی وقتی مینی‌اپ بسته است.', 'The main-app server sends it — even when the mini app is closed.')
       : T('فقط شرط‌های ساده (عبور/بالا/پایین/بزرگ‌تر/کوچک‌تر) از مسیر ورکر.', 'Simple conditions only (crossing/greater/less) via the worker.');
     var hk = $('alNHook'), hu = $('alHookUrl');
@@ -2613,7 +3142,13 @@
     else if (st.st === 'net') tx = T('سرور اپ اصلی در دسترس نیست؛ هشدارها فعلاً فقط محلی‌اند.', 'Main-app server unreachable; alerts are local for now.');
     else if (st.st === 'server') tx = T('خطای سرور: ', 'Server error: ') + esc(st.msg || '');
     else tx = T('در حال اتصال…', 'Connecting…');
-    box.innerHTML = esc(tx) + (st.url && st.tg ? ' <button class="tbtn" id="alSyncNow" type="button">' + esc(T('همگام‌سازی الان', 'Sync now')) + '</button>' : '');
+    var iranTx = '';
+    try {
+      var ist = A.iranStatus ? A.iranStatus() : { state: 'off' };
+      if (ist.state === 'local') iranTx = T('هشدارهای ایران فعلاً فقط محلی‌اند — برای پیام تلگرام، پچ سرور لازم است.', 'Iran alerts are local for now — the server patch is needed for Telegram messages.');
+      else if (ist.state === 'bridge') iranTx = T('هشدارهای ایران از مسیر پل همگام می‌شوند — پیام تلگرام بعد از پچ سرور می‌رسد.', 'Iran alerts sync via the bridge — Telegram messages will arrive after the server patch.');
+    } catch (e) {}
+    box.innerHTML = esc(tx) + (iranTx ? '<br>' + esc(iranTx) : '') + (st.url && st.tg ? ' <button class="tbtn" id="alSyncNow" type="button">' + esc(T('همگام‌سازی الان', 'Sync now')) + '</button>' : '');
     var b = $('alSyncNow');
     if (b) b.addEventListener('click', function () { b.disabled = true; A.sync().then(function () { renderAlertList(); }); });
   }
@@ -2639,7 +3174,7 @@
       for (var i = 0; i < dEls.length; i++) if (dEls[i].checked) ds.push(+dEls[i].value);
       sch = { m: 'custom', from: $('alSchFrom').value || '09:00', to: $('alSchTo').value || '22:00', days: ds.length === 7 ? [] : ds, off: -new Date().getTimezoneOffset() };
     }
-    var okSync = A.syncOk() && (ex ? !ex.local : A.syncable(q.symbol, q.provider, state.priceMode));
+    var okSync = A.syncOk() && (ex ? (!ex.local && !ex.iranUnsupported) : A.syncable(q.symbol, q.provider, state.priceMode));
     var wantTg = !!$('alTelegram').checked && !$('alTelegram').disabled, wantHook = !!$('alNHook').checked && !$('alNHook').disabled, hookUrl = $('alHookUrl').value.trim();
     if (wantHook && !/^https:\/\/\S{4,300}$/.test(hookUrl)) return bad(T('آدرس Webhook باید https باشد.', 'Webhook URL must be https.'));
     var legacyTg = wantTg && !okSync && ['cross', 'up', 'down', 'gt', 'lt'].indexOf(op) >= 0;   /* مسیر ورکر فقط شرط ساده */
@@ -2851,7 +3386,13 @@
       return;
     }
     var A = window.OnellaAnalysis;
-    var a = A.analyze(state.candles, A.marketOf(state.quote));
+    /* v1.18.0 — tfMap چندتایم‌فریمی (از کش جلسه‌ای؛ null تا وقتی کامل نشده).
+       عوض شدن نماد، وضعیت را برمی‌گرداند و بارگذاری تازه را می‌خواهد. */
+    var mk = multiTfKey();
+    if (!mk || state.multiTfKey !== mk) { state.multiTfKey = mk; state.multiTfState = 'idle'; }
+    var tfMap = currentTfMap();
+    if (!tfMap && mk && state.multiTfState !== 'loading') { state.multiTfState = 'loading'; loadMultiTf(); }
+    var a = A.analyze(state.candles, A.marketOf(state.quote), tfMap);
     var closes = state.candles.map(function (c) { return c.c; });
     var back = { '1s': [60, 3600], '5m': [12, 288], '15m': [96, 672], '30m': [48, 336], '1h': [24, 168], '4h': [6, 42], '1d': [1, 7], '1w': [1, 4], '1M': [1, 3] }[state.tf] || [24, 168];
     var chgS = A.changeBack(closes, back[0]), chgL = A.changeBack(closes, back[1]);
@@ -2886,7 +3427,7 @@
        با دلیل‌ها و شرط تغییر جهت + آیکون سبز/قرمز/زرد. کنار کارت‌های نمایشی
        اطلاعات می‌نشیند — جای آن‌ها را نمی‌گیرد. توصیفی است، نه سیگنال. */
     var adv = null;
-    try { adv = window.OnellaAnalysis.analyzeAdvanced ? window.OnellaAnalysis.analyzeAdvanced(state.candles, state.tf) : null; } catch (e) {}
+    try { adv = window.OnellaAnalysis.analyzeAdvanced ? window.OnellaAnalysis.analyzeAdvanced(state.candles, state.tf, tfMap) : null; } catch (e) {}
     var verdictHtml = '';
     if (adv) {
       var sDir = adv.short.dir, lDir = adv.long.dir;
@@ -2914,6 +3455,66 @@
       + '<br>' + esc(T('همگرایی شاخص‌ها', 'Indicator agreement')) + ': ' + (vTot ? vLead + ' ' + esc(T('از', 'of')) + ' ' + vTot + ' ' + esc(T('موافق', 'agree on')) + ' ' + esc(vDir) : '—')
       + (structW ? '<br>' + esc(T('ساختار', 'Structure')) + ': ' + esc(structW) : '')
       + '<br>' + esc(T('نزدیک‌ترین سطح', 'Nearest level')) + ': ' + esc(T('مقاومت', 'Resistance')) + ' ' + fmt(cs2 ? cs2.R1 : a.hi20) + ' · ' + esc(T('حمایت', 'Support')) + ' ' + fmt(cs2 ? cs2.S1 : a.lo20);
+    /* v1.18.0 — کارت‌های تحلیل پیشرفته (از همان کندل‌ها؛ توصیفی، نه سیگنال).
+       سطوح پیوت + فیبوناچی، واگرایی + الگوها، VWAP/CCI/Williams/MFI،
+       هم‌جهتی چند تایم‌فریم. کارت‌های قبلی دست‌نخورده‌اند. */
+    var advCards = '';
+    var PAT_LABEL = {
+      'bullish-engulfing': T('انگالفینگ صعودی', 'Bullish engulfing'),
+      'bearish-engulfing': T('انگالفینگ نزولی', 'Bearish engulfing'),
+      'morning-star': T('ستارهٔ صبح', 'Morning star'),
+      'evening-star': T('ستارهٔ عصر', 'Evening star'),
+      'three-white-soldiers': T('سه سرباز سفید', 'Three white soldiers'),
+      'three-black-crows': T('سه کلاغ سیاه', 'Three black crows')
+    };
+    if (a.levels && (a.levels.resistance.length || a.levels.support.length)) {
+      var lvRows = '';
+      a.levels.resistance.forEach(function (l, i) { lvRows += row(T('مقاومت ', 'Resistance ') + (i + 1), fmt(l.price) + (l.strength > 1 ? ' <span style="color:var(--mut)">(×' + l.strength + ')</span>' : '')); });
+      a.levels.support.forEach(function (l, i) { lvRows += row(T('حمایت ', 'Support ') + (i + 1), fmt(l.price) + (l.strength > 1 ? ' <span style="color:var(--mut)">(×' + l.strength + ')</span>' : '')); });
+      advCards += '<div class="an-card wide an-lvl2"><h4>' + ICON.levels + esc(T('سطوح پیوت', 'Pivot levels')) + '</h4>' + lvRows + '</div>';
+    }
+    if (a.fib) {
+      var fibRows = '';
+      a.fib.levels.forEach(function (lv) {
+        if (lv.ratio <= 0 || lv.ratio >= 1) return;
+        fibRows += row((Math.round(lv.ratio * 1000) / 10) + '%', fmt(lv.price));
+      });
+      advCards += '<div class="an-card wide an-fib"><h4>' + ICON.levels + esc(T('فیبوناچی', 'Fibonacci')) + '</h4><div class="an-sub">' + esc(T('سقف ', 'High ')) + fmt(a.fib.high) + ' ← ' + esc(T('کف ', 'Low ')) + fmt(a.fib.low) + '</div>' + fibRows + '</div>';
+    }
+    var divRows = '';
+    (a.divergence || []).forEach(function (d) {
+      var dv = d.indicator === 'RSI' ? 'RSI ' + fmt(d.ind1, 1) + ' → ' + fmt(d.ind2, 1) : 'MACD ' + fmt(d.ind1, 4) + ' → ' + fmt(d.ind2, 4);
+      divRows += row((d.type === 'bullish' ? T('واگرایی صعودی', 'Bullish divergence') : T('واگرایی نزولی', 'Bearish divergence')) + ' · ' + d.indicator, esc(dv));
+    });
+    advCards += '<div class="an-card wide an-div"><h4>' + ICON.activity + esc(T('واگرایی', 'Divergence')) + '</h4>' + (divRows || '<div class="an-sub">' + esc(T('واگرایی تازه‌ای نیست.', 'No recent divergence.')) + '</div>') + '</div>';
+    var patRows = '';
+    (a.patterns || []).forEach(function (p) {
+      var pl = PAT_LABEL[p.name] || p.name;
+      patRows += row(pl, esc(p.dir === 'bull' ? T('صعودی', 'Bullish') : T('نزولی', 'Bearish')) + ' <span style="color:var(--mut)">(' + (p.barsAgo === 0 ? esc(T('کندل آخر', 'last candle')) : p.barsAgo + ' ' + esc(T('کندل پیش', 'bars ago'))) + ')</span>');
+    });
+    advCards += '<div class="an-card wide an-pat"><h4>' + ICON.chart + esc(T('الگوها', 'Patterns')) + '</h4>' + (patRows || '<div class="an-sub">' + esc(T('الگوی تازه‌ای نیست.', 'No recent pattern.')) + '</div>') + '</div>';
+    var momRows = '';
+    if (a.vwap != null) momRows += row('VWAP', fmt(a.vwap) + ' <span style="color:var(--mut)">(' + esc(a.last.c > a.vwap ? T('قیمت بالا', 'price above') : a.last.c < a.vwap ? T('قیمت پایین', 'price below') : T('روی VWAP', 'at VWAP')) + ')</span>');
+    if (a.cci != null) momRows += row('CCI (20)', a.cci.toFixed(1) + (a.cci > 100 ? ' <span style="color:var(--mut)">(' + esc(T('قوی', 'strong')) + ')</span>' : a.cci < -100 ? ' <span style="color:var(--mut)">(' + esc(T('ضعیف', 'weak')) + ')</span>' : ''));
+    if (a.williamsR != null) momRows += row('Williams %R (14)', a.williamsR.toFixed(1) + (a.williamsR > -20 ? ' <span style="color:var(--mut)">(' + esc(T('اشباع خرید', 'overbought')) + ')</span>' : a.williamsR < -80 ? ' <span style="color:var(--mut)">(' + esc(T('اشباع فروش', 'oversold')) + ')</span>' : ''));
+    if (a.mfi != null) momRows += row('MFI (14)', a.mfi.toFixed(1) + (a.mfi >= 80 ? ' <span style="color:var(--mut)">(' + esc(T('اشباع خرید', 'overbought')) + ')</span>' : a.mfi <= 20 ? ' <span style="color:var(--mut)">(' + esc(T('اشباع فروش', 'oversold')) + ')</span>' : ''));
+    if (momRows) advCards += '<div class="an-card wide an-mom2"><h4>' + ICON.activity + 'VWAP / CCI / Williams / MFI</h4>' + momRows + '</div>';
+    var mtHtml = '';
+    if (a.multiTf) {
+      var mt = a.multiTf;
+      Object.keys(mt.perTf).forEach(function (k) {
+        var d = mt.perTf[k];
+        var dw = d.dir === 'bull' ? T('صعودی', 'Bullish') : d.dir === 'bear' ? T('نزولی', 'Bearish') : d.dir === 'flat' ? T('خنثی', 'Flat') : '—';
+        mtHtml += row(k, esc(dw) + ' <span style="color:var(--mut)">(' + d.bull + '/' + d.bear + ')</span>');
+      });
+      var agreeW = mt.agreeDir === 'bull' ? T('صعودی', 'Bullish') : mt.agreeDir === 'bear' ? T('نزولی', 'Bearish') : mt.agreeDir === 'flat' ? T('خنثی', 'Flat') : T('مختلط', 'Mixed');
+      mtHtml += row(T('توافق', 'Agreement'), mt.agreeCount + '/' + mt.total + ' · ' + esc(agreeW));
+    } else if (state.multiTfState === 'loading') {
+      mtHtml = '<div class="an-sub">' + esc(T('در حال بارگذاری هم‌جهتی تایم‌فریم‌ها…', 'Loading multi-timeframe agreement…')) + '</div>';
+    } else if (state.multiTfState === 'done') {
+      mtHtml = '<div class="an-sub">' + esc(T('برای این نماد در دسترس نیست.', 'Not available for this symbol.')) + '</div>';
+    }
+    if (mtHtml) advCards += '<div class="an-card wide an-mtf"><h4>' + ICON.activity + esc(T('هم‌جهتی تایم‌فریم‌ها', 'Multi-timeframe agreement')) + '</h4>' + mtHtml + '</div>';
     var html = '<div class="an-grid">'
       + verdictHtml
       + '<div class="an-card wide an-sum"><h4>' + ICON.book + esc(T('خلاصهٔ تحلیل', 'Analysis summary')) + '</h4>'
@@ -2954,7 +3555,7 @@
       + row(T('حمایت ۲', 'Support 2'), fmt(cs2 ? cs2.S2 : a.lo20))
       + row(T('جای قیمت در بازهٔ ۲۰ کندل', 'Position in 20-range'), (a.pos == null ? '—' : Math.round(a.pos) + '%'))
       + (ind.w52 && state.quoteRes && state.quoteRes.week52High ? row('52W', fmt(state.quoteRes.week52Low) + ' – ' + fmt(state.quoteRes.week52High)) : '')
-      + '</div></div><div class="warn">' + esc(T('فقط تحلیل است — نه سیگنال، نه پیش‌بینی، نه توصیهٔ معامله.', 'Analysis only — not a signal, not a prediction, not trading advice.')) + '</div>';
+      + '</div>' + advCards + '</div><div class="warn">' + esc(T('فقط تحلیل است — نه سیگنال، نه پیش‌بینی، نه توصیهٔ معامله.', 'Analysis only — not a signal, not a prediction, not trading advice.')) + '</div>';
     el.innerHTML = html;
   }
 
@@ -2984,6 +3585,76 @@
     }
     if (q.provider === 'mofid') return mofidCandles(q.symbol, '1d');
     return null; // نرخ ایران کندل ندارد (فقط قیمت لحظه‌ای).
+  }
+
+  /* ---- v1.18.0 — هم‌جهتی چند تایم‌فریم (تب تحلیل): کندل‌های 15m/1h/4h
+     همان نماد، فقط وقتی تب تحلیل باز می‌شود؛ کش جلسه‌ای به‌ازای نماد+تایم‌فریم.
+     بدون دست زدن به state.candles/چارت (مثل dailyCandlesFor). تایم‌فریمی که
+     نرسد [] می‌گیرد (در multiTf ‏'na' و شمرده نمی‌شود) — تب هرگز روی
+     بارگذاری چندتایم‌فریمی قفل نمی‌کند. */
+  var multiTfCache = {}; /* provider|symbol|tf -> candles (یا [] برای ناموفق) */
+  var multiTfPending = null; /* { key, p } در حال بارگذاری */
+  async function candlesForQuoteTf(q, tf) {
+    if (!q || !tf) return null;
+    try {
+      if (q.provider === 'binance') return await binanceKlines(q.symbol, tf, 200);
+      if (q.provider === 'yahoo') {
+        var ytf = YAHOO_TF[tf] || null;
+        if (!ytf) return null;
+        var r = await yahooChart(q.symbol, ytf[0], ytf[1]);
+        var cs = (r && r.candles) ? r.candles : null;
+        if (cs && tf === '4h') cs = aggregateCandles(cs, 4); // Yahoo 4h ندارد — از ۴×۱h
+        return cs;
+      }
+      if (q.provider === 'mofid') return await mofidCandles(q.symbol, tf);
+    } catch (e) { return null; }
+    return null; /* نرخ ایران و بقیه کندل ندارند. */
+  }
+  function multiTfKey() {
+    var q = state.quote;
+    return q ? (q.provider + '|' + q.symbol) : null;
+  }
+  function currentTfMap() {
+    /* tfMap برای analyze(): تایم‌فریم پایه همان state.candles است (=== reuse)؛
+       دو تایم‌فریم دیگر از کش جلسه‌ای. null تا وقتی همهٔ سه‌تایی کش نشده‌اند. */
+    var mk = multiTfKey();
+    if (!mk || !state.candles || state.candles.length < 35) return null;
+    var tfs = ['15m', '1h', '4h'], map = {};
+    for (var i = 0; i < tfs.length; i++) {
+      var tf = tfs[i];
+      if (tf === state.tf) { map[tf] = state.candles; continue; }
+      var cs = multiTfCache[mk + '|' + tf];
+      if (!cs) return null; /* هنوز کش نشده — [] (ناموفق) هم معتبر است */
+      map[tf] = cs;
+    }
+    return map;
+  }
+  async function loadMultiTf() {
+    var key = multiTfKey();
+    if (!key || !state.candles || state.candles.length < 35) return null;
+    if (state.multiTfKey === key && currentTfMap()) return currentTfMap();
+    if (multiTfPending && multiTfPending.key === key) return multiTfPending.p;
+    var tfs = ['15m', '1h', '4h'];
+    var p = (async function () {
+      for (var i = 0; i < tfs.length; i++) {
+        var tf = tfs[i];
+        if (tf === state.tf) continue; /* پایه همان state.candles است */
+        var ck = key + '|' + tf;
+        if (multiTfCache[ck]) continue;
+        var cs = await candlesForQuoteTf(state.quote, tf);
+        multiTfCache[ck] = (Array.isArray(cs) && cs.length) ? cs : [];
+        if (multiTfKey() !== key) return null; /* نماد عوض شده — نتیجهٔ کهنه */
+      }
+      if (multiTfKey() !== key) return null;
+      state.multiTfKey = key;
+      state.multiTfState = 'done';
+      if (state.tab === 'analysis') renderAnalysis();
+      return currentTfMap();
+    })();
+    multiTfPending = { key: key, p: p };
+    try { await p; } catch (e) {}
+    if (multiTfPending && multiTfPending.key === key) multiTfPending = null;
+    return p;
   }
   function ymd(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
   async function frankfurterWeek(sym) {
@@ -3376,7 +4047,23 @@
      نماد در تیتر باشد (سقف ۹۵٪) — تخمین است، نه اندازه‌گیری واقعی. */
   var dashCache = { at: 0, data: null };
   var dashSeq = 0;
-  var CG_MARKET_IDS = ['bitcoin', 'ethereum', 'solana', 'binancecoin', 'ripple', 'dogecoin', 'cardano', 'tron', 'avalanche-2', 'chainlink', 'polkadot', 'litecoin', 'bitcoin-cash', 'near', 'toncoin'];
+  /* v1.20.0 — اسنپ‌شات داشبورد (P0-5): آخرین داشبورد در localStorage می‌ماند تا
+     بازشدنِ تازه از صفر شروع نشود — فوری با تاریخ کهنه‌اش نشان داده می‌شود،
+     بعد در پس‌زمینه تازه می‌شود. */
+  var DASH_SNAP_KEY = 'onella_dash_v1';
+  function readDashSnapshot() {
+    try {
+      var raw = localStorage.getItem(DASH_SNAP_KEY);
+      if (!raw) return null;
+      var snap = JSON.parse(raw);
+      if (!snap || !snap.data || !Array.isArray(snap.data.rows)) return null;
+      return snap;
+    } catch (e) { return null; }
+  }
+  function saveDashSnapshot(at, data) {
+    try { localStorage.setItem(DASH_SNAP_KEY, JSON.stringify({ at: at, data: data })); } catch (e) {}
+  }
+  var CG_MARKET_IDS = ['bitcoin', 'ethereum', 'solana', 'binancecoin', 'ripple', 'dogecoin', 'cardano', 'tron', 'avalanche-2', 'chainlink', 'polkadot', 'litecoin', 'bitcoin-cash', 'near', 'toncoin', 'hyperliquid', 'zcash', 'stellar', 'uniswap', 'sui', 'hedera-hashgraph', 'shiba-inu', 'bittensor', 'quant-network', 'pepe', 'ethena', 'aave', 'aster-2', 'ondo-finance', 'pump-fun', 'world-liberty-financial', 'morpho', 'internet-computer', 'sky', 'just', 'worldcoin-wld', 'ethereum-classic', 'arbitrum', 'polygon-ecosystem-token', 'jupiter-exchange-solana', 'render-token', 'injective-protocol', 'midnight-3', 'algorand', 'cosmos', 'nexo', 'layerzero', 'filecoin', 'pancakeswap-token', 'aptos']; // v1.19.0: ۱۵ → ۵۰ شناسه (CoinGecko تا ۲۵۰ شناسه در یک تماس می‌گیرد)
   async function cgMarkets() {
     var u = 'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=' + CG_MARKET_IDS.join(',') + '&price_change_percentage=24h';
     var j = await fetchJSON(u, 10000);
@@ -3386,15 +4073,34 @@
       return { id: c.id, price: c.current_price, changePct: (typeof c.price_change_percentage_24h === 'number' ? c.price_change_percentage_24h : null), volume: c.total_volume || null, marketCap: c.market_cap || null };
     });
   }
+  /* v1.19.0 — ورکر /yahoo-multi بیشتر از ۱۰۰ نماد را نمی‌گیرد (getQuotes در
+     worker.js به ۱۰۰ برش می‌زند)؛ پس فهرست را به بسته‌های ۵۰تایی تقسیم و موازی
+     می‌فرستیم تا هیچ نمادی بی‌صدا جا نماند (کاتولوگ تازه ۲۲۶ نماد یاهو دارد).
+     اگر یک بسته خطا داد، بقیه برمی‌گردند (قبلاً کل تماس می‌پرید). */
   async function yahooMulti(symbols) {
     if (!PROXY_URL || !symbols.length) return [];
-    var j = await fetchJSON(PROXY_URL.replace(/\/$/, '') + '/yahoo-multi?symbols=' + encodeURIComponent(symbols.join(',')), 15000);
-    return (j && Array.isArray(j.quotes)) ? j.quotes : [];
+    var chunks = [];
+    for (var i = 0; i < symbols.length; i += 50) chunks.push(symbols.slice(i, i + 50));
+    var parts = await Promise.all(chunks.map(function (c) {
+      return fetchJSON(PROXY_URL.replace(/\/$/, '') + '/yahoo-multi?symbols=' + encodeURIComponent(c.join(',')), 15000).catch(function () { return null; });
+    }));
+    var out = [];
+    parts.forEach(function (j) { if (j && Array.isArray(j.quotes)) out = out.concat(j.quotes); });
+    return out;
   }
+  /* v1.19.0 — ورکر /mofid?kind=bulk بیشتر از ۴۰ نماد را نمی‌گیرد (.slice(0, 40)
+     در worker.js)؛ پس به بسته‌های ۴۰تایی تقسیم می‌کنیم (بورس+فرابورس تازه ۱۰۰ نماد).
+     اگر یک بسته خطا داد، بقیه برمی‌گردند. */
   async function mofidBulk(symbols) {
     if (!PROXY_URL || !symbols.length) return [];
-    var j = await fetchJSON(PROXY_URL.replace(/\/$/, '') + '/mofid?kind=bulk&symbols=' + encodeURIComponent(symbols.join(',')), 20000);
-    return (j && Array.isArray(j.quotes)) ? j.quotes : [];
+    var chunks = [];
+    for (var i = 0; i < symbols.length; i += 40) chunks.push(symbols.slice(i, i + 40));
+    var parts = await Promise.all(chunks.map(function (c) {
+      return fetchJSON(PROXY_URL.replace(/\/$/, '') + '/mofid?kind=bulk&symbols=' + encodeURIComponent(c.join(',')), 20000).catch(function () { return null; });
+    }));
+    var out = [];
+    parts.forEach(function (j) { if (j && Array.isArray(j.quotes)) out = out.concat(j.quotes); });
+    return out;
   }
   /* v1.8.0 — نرخ‌های ایران، یک تماس: live.json نر‌خسنج قیمت + تغییر روزانهٔ همهٔ
      نرخ‌ها را با هم می‌دهد (همان فایل iranRate)؛ پس داشبورد حالا هر ۹ بازار را دارد. */
@@ -3424,11 +4130,18 @@
   async function loadDash(force) {
     var now = Date.now();
     if (!force && dashCache.data && now - dashCache.at < 60000) { renderDash(dashCache.data); return; }
+    // v1.20.0 — اسنپ‌شاتِ آخرین داشبورد را فوری نشان بده (با تاریخ کهنه‌اش)،
+    // بعد در پس‌زمینه تازه کن — بازشدنِ تازه دیگر صفحهٔ خالی ندارد.
+    var snap = readDashSnapshot();
     var seq = ++dashSeq;
-    $('dashDigest').innerHTML = '';
-    $('dashHeat').innerHTML = '<div class="dash-sec"><div class="muted">' + esc(T('در حال بارگذاری…', 'Loading…')) + '</div></div>';
-    $('dashMovers').innerHTML = '';
-    $('dashNews').innerHTML = '';
+    if (snap) {
+      renderDash(snap.data);
+    } else {
+      $('dashDigest').innerHTML = '';
+      $('dashHeat').innerHTML = '<div class="dash-sec"><div class="muted">' + esc(T('در حال بارگذاری…', 'Loading…')) + '</div></div>';
+      $('dashMovers').innerHTML = '';
+      $('dashNews').innerHTML = '';
+    }
     $('dashNote').textContent = '';
     var yahooSyms = [];
     ['stocks', 'etf', 'forex', 'commodities', 'indices'].forEach(function (k) {
@@ -3441,6 +4154,7 @@
     var live = { rows: [], news: null, newsDone: false, fearGreed: null, mktDone: 0, done: 0, total: 7, at: now };
     function partial() {
       if (seq !== dashSeq) return;
+      if (!live.rows.length && snap) return; // هنوز ردیفی نیامده — اسنپ‌شات بماند، نه «در حال بارگذاری».
       renderDash({ rows: live.rows, news: live.news || [], newsLoading: !live.newsDone, fearGreed: live.fearGreed,
         rowsLoading: live.mktDone < 5, yahooOk: true, mofidOk: true, cgOk: true, at: now });
     }
@@ -3449,7 +4163,9 @@
       if (live.done >= live.total && seq === dashSeq) {
         var data = { rows: live.rows, news: live.news || [], newsLoading: false, fearGreed: live.fearGreed,
           rowsLoading: false, yahooOk: true, mofidOk: true, cgOk: true, at: now };
+        if (!live.rows.length && snap) return; // تازه‌کردن هیچ ردیفی نیاورد (آفلاین/خطا) — اسنپ‌شات کهنه بماند، نه صفحهٔ خالی.
         dashCache = { at: now, data: data };
+        saveDashSnapshot(now, data);
         renderDash(data);
       }
     }
@@ -3675,7 +4391,7 @@
   function init() {
     if (tg) {
       try { tg.ready(); tg.expand(); } catch (e) {}
-      try { tg.BackButton.onClick(function () { if (state.mainTab === 'dash') showMainTab('chart'); else show('catalog'); }); } catch (e) {}
+      try { tg.BackButton.onClick(function () { if (state.mainTab !== 'chart') showMainTab('chart'); else show('catalog'); }); } catch (e) {}
     }
     $('backBtn').addEventListener('click', function () { show('catalog'); });
     ['chart', 'analysis', 'fund', 'news', 'depth'].forEach(function (t) {
@@ -3689,10 +4405,14 @@
     $('tabBtn-depth').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"></path><path d="M3 13l9 5 9-5"></path></svg><span>' + esc(T('عمق', 'Depth')) + '</span>';
     $('backBtn').setAttribute('aria-label', T('بازگشت', 'Back')); $('backBtn').title = T('بازگشت', 'Back'); // v1.15.0 — دکمهٔ بازگشت آیکون است؛ متن نمی‌نویسیم.
     $('mainTab-chart').innerHTML = ICON.chart + esc(T('چارت', 'Chart'));
+    $('mainTab-watch').innerHTML = ICON.star + esc(T('واچ‌لیست', 'Watchlist'));
     $('mainTab-dash').innerHTML = ICON.dash + esc(T('داشبورد', 'Dashboard'));
     wrapHeadOnce();
     $('mainTab-chart').addEventListener('click', function () { showMainTab('chart'); });
+    $('mainTab-watch').addEventListener('click', function () { showMainTab('watch'); });
     $('mainTab-dash').addEventListener('click', function () { showMainTab('dash'); });
+    $('watchTitle').textContent = T('واچ‌لیست', 'Watchlist');
+    $('watchRefresh').addEventListener('click', function () { renderWatch(true); });
     $('dashTitle').textContent = T('داشبورد', 'Dashboard');
     $('dashRefresh').addEventListener('click', function () { loadDash(true); });
     var si = $('searchInput');
@@ -3701,6 +4421,15 @@
     }
     $('searchTrigger').addEventListener('click', function () { openSearchModal(state.catalogMarket); });
     $('symBar').addEventListener('click', function () { openSearchModal(); });
+    /* v1.20.0 — ستارهٔ صفحهٔ نماد: ستاره‌دار/حذف با یک ضربه. */
+    var symStarBtn = $('symStar');
+    if (symStarBtn) symStarBtn.addEventListener('click', function () {
+      var q = state.quote;
+      if (!q) return;
+      toggleFav(q);
+      refreshSymStar();
+      if (state.mainTab === 'watch') renderWatch();
+    });
     $('smClose').addEventListener('click', function () { closeSearchModal(); });
     $('smInput').addEventListener('input', function () { sm.q = $('smInput').value; renderSmBody(); });
     window.addEventListener('beforeunload', function () { stopLive(); });
@@ -3721,11 +4450,12 @@
     loadDash: loadDash, renderDash: renderDash, confluence: confluence, renderGauge: renderGauge, renderDepth: renderDepth, renderDepthData: renderDepthData, fetchDepth: fetchDepth, stopDepthPoll: stopDepthPoll, applyDepthDiff: applyDepthDiff, tradesRowsHtml: tradesRowsHtml, getDepthData: function () { return depthData; }, getLiveTrades: function () { return liveTrades; }, setLiveTrades: function (t) { liveTrades = t || []; }, positionLastPxTag: positionLastPxTag,
     yahooSearch: yahooSearch, mofidResolve: mofidResolve, rememberQuote: rememberQuote,
     iranRate: iranRate, perfFromDaily: perfFromDaily, frankfurterWeek: frankfurterWeek, iranRatesBulk: iranRatesBulk, dailyCandlesFor: dailyCandlesFor,
+    loadMultiTf: loadMultiTf, candlesForQuoteTf: candlesForQuoteTf,
     openAlertModal: openAlertModal, showPriceAxisMenu: showPriceAxisMenu, axisPriceAtY: axisPriceAtY, checkAlertsNow: checkAlertsNow, refreshAlertBadge: refreshAlertBadge, renderAlertList: renderAlertList, refreshAlertLivePrices: refreshAlertLivePrices, stopAlertLivePrices: stopAlertLivePrices, openTZPicker: openTZPicker, applyTimezone: applyTimezone, updateClock: updateClock, exchangeZoneFor: exchangeZoneFor,
     getLastPxTagPrice: function () { return lastPxTagPrice; }, snapXhPrice: snapXhPrice, updateStripMore: updateStripMore, dismissCrosshair: dismissCrosshair, isXhPinned: function () { return xhPinned; }, pinCrosshairAt: pinCrosshairAt,
     toggleFocus: toggleFocusMode, isFocusMode: function () { return focusOn; }, isFullscreen: function () { return fsMode !== 'none'; }, getFsMode: function () { return fsMode; },
     pmScale: pmScale, pmPan: pmPan, autoScale: autoScale, toLatest: toLatest, refreshAxisBtns: refreshAxisBtns,
-    toggleFav: toggleFav, isFav: isFav, lookupQuote: lookupQuote, yahooMulti: yahooMulti, mofidBulk: mofidBulk, cgMarkets: cgMarkets };
+    toggleFav: toggleFav, isFav: isFav, lookupQuote: lookupQuote, yahooMulti: yahooMulti, mofidBulk: mofidBulk, cgMarkets: cgMarkets, CG_IDS: CG_IDS, CG_MARKET_IDS: CG_MARKET_IDS, renderWatch: renderWatch, refreshSymStar: refreshSymStar, fillCatalogPrices: fillCatalogPrices };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 })();

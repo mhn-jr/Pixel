@@ -5,7 +5,9 @@
    - همگام‌سازی: با سرور اپ اصلی (/api/alerts) و هویت تلگرام (هدر X-Tg-Init = initData). آدرس سرور: ONELLA_SYNC_URL (پایین) یا localStorage
      onella_sync_url یا ?api=https://... در آدرس مینی‌اپ. سرور فقط وقتی جواب می‌دهد که در اپ اصلی «اعمال در مینی‌اپ تلگرام» روشن باشد (۴۰۳ = خاموش).
      ادغام: آخرین u برنده؛ حذف = del:1 (tombstone)؛ اطلاعات شلیک (fa/fp/cnt) هرگز عقب نمی‌رود.
-   - هشدارهایی که نمی‌شود به سرور داد (ایران، آتی «=F») فقط محلی می‌مانند (local:true) و همگام نمی‌شوند.
+   - هشدارهایی که نمی‌شود به سرور داد (آتی «=F») فقط محلی می‌مانند (local:true) و همگام نمی‌شوند.
+     v1.17.0 — هشدارهای ایران همگام می‌شوند (kind ‏«iran» برای سهام بورس/فرابورس، «iranrate» برای
+     نرخ‌ها)؛ اگر سرورِ هنوز پچ‌نشده آن‌ها را نپذیرد، مینی‌اپ هشدار را محلی نگه می‌دارد و وضعیت را نشان می‌دهد.
    - ذخیرهٔ محلی مثل قبل: CloudStorage تلگرام (هر هشدار یک کلید onella_al_<id> + فهرست onella_alerts_idx) و آینهٔ localStorage با userId.
    - هشدارهای قدیمی مینی‌اپ (cond/price/repeat/expiresAt/active) هنگام بارگذاری یک‌بار به مدل تازه تبدیل می‌شوند.
    - API قدیمی (add/remove/setActive/setShared/list/listActive/check/…) حفظ شده؛ list/listActive «نمای سازگار» (price/cond/active/firedAt/…) برمی‌گردانند. */
@@ -34,10 +36,22 @@
   var listeners = [];
   function emit() { listeners.slice().forEach(function (f) { try { f(); } catch (_) {} }); }
 
-  /* ---------- نگاشت نماد: مینی‌اپ ⇄ اپ اصلی ---------- */
+  /* ---------- نگاشت نماد: مینی‌اپ ⇄ اپ اصلی ----------
+     قرارداد همگام‌سازی ایران (v1.17.0 — در README و server-alerts-iran-patch.js هم مستند است):
+     - سهام بورس/فرابورس (provider ‏«mofid»، نماد فارسی مثل «فولاد»): { sym, qs: sym, kind: 'iran' }.
+       سرور قیمت را از مفید (یا TSETMC) می‌گیرد؛ قیمت به ریال است.
+     - نرخ‌های ایران (provider ‏«iran-rate»، کلید نرخ مثل 'usd'/'gold18'/'emami'): { sym, qs: sym, kind: 'iranrate' }.
+       سرور قیمت را از نر‌خسنج می‌گیرد؛ قیمت به تومان است.
+     - kind ‏«iranrate» بدون خط تیره است، چون normalize هستهٔ مشترک (alerts-core.js) خط تیره را
+       حذف می‌کند («iran-rate» در هر دو طرف به «iranrate» تبدیل می‌شد و ناهماهنگ می‌شد).
+     - آتی «=F» هنوز نگاشت ندارد و محلی می‌ماند (مثل قبل). */
+  var IRAN_KINDS = ['iran', 'iranrate'];
+  function isIranKind(k) { return IRAN_KINDS.indexOf(k) !== -1; }
   function toMain(sym, provider, mode) {
     sym = String(sym || '');
-    if (mode === 'iran' || provider === 'iran-rate') return null;
+    if (mode === 'iran') return { sym: sym, qs: sym, kind: 'iran' };
+    if (provider === 'mofid') return { sym: sym, qs: sym, kind: 'iran' };
+    if (provider === 'iran-rate') return { sym: sym, qs: sym, kind: 'iranrate' };
     if (provider === 'binance' && /USDT$/.test(sym) && /^[A-Z0-9]{2,20}USDT$/.test(sym)) return { sym: sym, qs: sym.replace(/USDT$/, '') + '/USDT', kind: 'crypto' };
     if (provider === 'yahoo') {
       if (/^[A-Z]{6}=X$/.test(sym)) { var fx = sym.slice(0, 6); return { sym: fx, qs: fx, kind: 'forex' }; }
@@ -55,6 +69,8 @@
   function providerOf(a) {
     if (a.provider) return a.provider;
     if (a.kind === 'crypto') return 'binance';
+    if (a.kind === 'iran') return 'mofid';
+    if (a.kind === 'iranrate') return 'iran-rate';
     if (a.kind === 'forex' || a.kind === 'stock' || a.kind === 'etf') return 'yahoo';
     return null;
   }
@@ -125,6 +141,20 @@
       var cutoff = Date.now() - 7 * 864e5;
       src = src.filter(function (a) { if (a.del && a.u < cutoff) { if (tgCS) csRemoveItem(ITEM_PREFIX + a.id); return false; } return true; });
       store = src;
+      /* v1.17.0 — هشدارهای ایرانِ قدیمی (local) حالا همگام می‌شوند: local فقط برای
+         «مدل قابل همگام‌سازی نیست» (=F) می‌ماند. نماد فارسی (= سهام مفید) یا
+         provider ‏«iran-rate» یعنی ایران؛ =F لاتین با provider ‏«yahoo» دست نمی‌خورد. */
+      var iranUpgraded = false;
+      store.forEach(function (a) {
+        if (!a.local || a.iranUnsupported) return;
+        if (a.provider === 'iran-rate' || (a.ms && /[^\x00-\x7F]/.test(String(a.ms)))) {
+          a.local = false;
+          a.kind = a.provider === 'iran-rate' ? 'iranrate' : 'iran';
+          a.sym = a.ms; a.qs = a.ms;
+          stamp(a); iranUpgraded = true;
+        }
+      });
+      if (iranUpgraded) save();
       readyResolve(true);
       emit();
       setTimeout(function () { sync(false); }, 300);
@@ -163,6 +193,16 @@
 
   /* ---------- همگام‌سازی با سرور اپ اصلی ---------- */
   var SY = { st: 'off', at: 0, msg: '' };   // off | idle | ok | disabled | auth | net | server
+  var iranConfirmed = false;   // v1.17.0 — سرور در مسیر مستقیم تأیید کرده هشدارهای ایران را نگه می‌دارد
+  function iranStatus() {
+    var ir = store.filter(function (a) { return !a.del && isIranKind(a.kind); });
+    if (!ir.length) return { state: 'off', count: 0 };
+    var rejected = ir.filter(function (a) { return a.iranUnsupported; }).length;
+    if (rejected) return { state: 'local', count: ir.length, rejected: rejected };
+    if (iranConfirmed && SY.st === 'ok') return { state: 'ok', count: ir.length };
+    if (SY.mode === 'bridge') return { state: 'bridge', count: ir.length };
+    return { state: 'unknown', count: ir.length };
+  }
   var syncDirty = false, syncT = null, syncing = false, pollTimer = null;
   var BRIDGE_URL = 'https://pixelminiapp.mahanjafari039.workers.dev';   // ورکر کلادفلر مینی‌اپ = پل به سرور اصلی (بدون آدرس/تونل)
   var AUTO_URL = '';   // v1.16.4: اگر مینی‌اپ از خود سرور اصلی باز شده باشد (همان origin)، بدون هیچ تنظیمی همان سرور است
@@ -201,6 +241,7 @@
     if (syncing) { if (force) scheduleSync(); return Promise.resolve(false); }
     syncing = true;
     var push = syncDirty || force, direct = !!syncUrl(), mine = store.filter(function (a) { return !a.local; });
+    var pushedIran = push ? mine.filter(function (a) { return isIranKind(a.kind); }) : [];
     SY.mode = direct ? 'direct' : 'bridge';
     var p = direct ? (push ? req('PUT', '/sync', { items: mine }) : req('GET', '/list'))
       : fetch(BRIDGE_URL + '/mini-sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ initData: initData(), items: mine }) })
@@ -215,6 +256,29 @@
       if (r.mini === false) { setSy('disabled'); return false; }
       if (push) syncDirty = false;
       mergeIn(r.items || []);
+      /* v1.17.0 — تشخیص رد ایران توسط سرور (فقط مسیر مستقیم: پاسخ سرور فهرست
+         معتبر است؛ در مسیر پل ورکر همه‌چیز را برمی‌گرداند و نمی‌شود فهمید).
+         سرورِ هنوز پچ‌نشده یا آیتم ایران را از items حذف می‌کند یا در rejected
+         می‌آورد — در هر دو حالت هشدار محلی می‌ماند و داخل مینی‌اپ کار می‌کند؛
+         با اعمال پچ، در push بعدی دوباره می‌رود و پذیرفته می‌شود. */
+      if (direct && push && pushedIran.length) {
+        var srvIds = {};
+        (r.items || []).forEach(function (x) { if (x && x.id) srvIds[x.id] = 1; });
+        var rejectedIds = (r.rejected || []).filter(function (id) { return typeof id === 'string'; });
+        var anyRejected = false, anyAccepted = false, anyChanged = false;
+        pushedIran.forEach(function (a) {
+          if (rejectedIds.indexOf(a.id) !== -1 || !srvIds[a.id]) {
+            if (!a.iranUnsupported) { a.iranUnsupported = true; stamp(a); anyChanged = true; }
+            anyRejected = true;
+          } else {
+            if (a.iranUnsupported) { delete a.iranUnsupported; stamp(a); anyChanged = true; }
+            anyAccepted = true;
+          }
+        });
+        if (anyChanged) save();
+        iranConfirmed = anyAccepted && !anyRejected;
+        if (anyRejected) emit();
+      }
       setSy('ok');
       return true;
     });
@@ -266,7 +330,7 @@
     var it;
     if (m) { it = C.normalize(raw, now); if (!it) return null; }
     else { if (!(+c.v > 0) || !C.OPS[c.op]) return null; it = raw; it.local = true; }
-    it.label = a.label || a.sym; it.mode = a.mode || 'usd'; it.provider = (a.provider === 'yahoo' || a.provider === 'binance' || a.provider === 'iran-rate') ? a.provider : null; it.ms = a.sym;
+    it.label = a.label || a.sym; it.mode = a.mode || 'usd'; it.provider = (a.provider === 'yahoo' || a.provider === 'binance' || a.provider === 'iran-rate' || a.provider === 'mofid') ? a.provider : null; it.ms = a.sym;
     it.shared = false; it.sharedVia = null;
     if (!it.msg && !(a.c && a.c.op)) it.msg = defaultMsg({ label: it.label, cond: OP2COND[c.op] || 'cross', price: linePrice(it) }, 'fa');
     store.push(it); stamp(it); save(); if (!it.local) scheduleSync(); emit();
@@ -320,14 +384,14 @@
     var dirty = false;
     store.forEach(function (a) {
       if (a.del || a.st !== 'active' || msymOf(a) !== sym) return;
-      if (a.n && a.n.tg && !a.local && SY.st === 'ok' && SY.mode === 'bridge') return;   /* پل: هشدار تلگرام‌دار را سرور می‌سنجد و می‌فرستد (جلوگیری از پیام دوبل) */
+      if (a.n && a.n.tg && !a.local && SY.st === 'ok' && SY.mode === 'bridge' && !isIranKind(a.kind)) return;   /* پل: هشدار تلگرام‌دار را سرور می‌سنجد و می‌فرستد (جلوگیری از پیام دوبل) — به‌جز ایران که سرورِ بدون پچ نمی‌سنجد و همیشه محلی هم بررسی می‌شود */
       var prev = a.lp, hit = C.evalCond(a.c, prev, price);
       if (prev !== price) { a.lp = price; dirty = true; }
       if (!hit || !C.canFire(a, now, 0)) return;
       a.fa = now; a.fp = price; a.cnt = (a.cnt || 0) + 1; a.fb = C.barId(now, C.intervalMs(a.iv, 0)); if (a.tr === 'once') a.st = 'triggered';
       a.u = now; stamp(a); dirty = true;
       var v = view(a); v.quiet = !C.inSchedule(a.sch, now); out.push(v);
-      if (a.n && a.n.tg && !a.local && !a.shared && syncOn() && SY.st === 'ok') postFired(a, price, now); else if (!a.local) scheduleSync();
+      if (a.n && a.n.tg && !a.local && !a.iranUnsupported && !a.shared && syncOn() && SY.st === 'ok') postFired(a, price, now); else if (!a.local) scheduleSync();
     });
     if (dirty) save();
     return out;
@@ -339,7 +403,8 @@
     trLabel: function (a, lang) { var t = C.TRIGGERS[a.tr]; return t ? t[lang === 'en' ? 1 : 0] : ''; },
     onChange: function (f) { if (typeof f === 'function') listeners.push(f); },
     sync: function () { return sync(true); },
-    syncState: function () { return { url: true, mode: SY.mode || (syncUrl() ? 'direct' : 'bridge'), tg: !!initData(), st: SY.st, at: SY.at, msg: SY.msg }; },
+    syncState: function () { return { url: true, mode: SY.mode || (syncUrl() ? 'direct' : 'bridge'), tg: !!initData(), st: SY.st, at: SY.at, msg: SY.msg, iran: iranStatus().state }; },
+    iranStatus: iranStatus,
     /* v1.16.3 — آدرس سرور اپ اصلی را از داخل مینی‌اپ بگذار/پاک کن (در localStorage) و فوراً همگام کن. */
     setSyncUrl: function (v) {
       v = String(v || '').trim().replace(/\/+$/, '');

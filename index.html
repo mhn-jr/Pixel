@@ -101,6 +101,14 @@
   .srow:active { border-color: var(--acc); }
   .srow-lb { font-weight: 700; }
   .srow-ds { color: var(--mut); font-size: 12px; }
+  /* v1.17.0 — تب واچ‌لیست: ردیف نمادِ ستاره‌دار با قیمت زنده + تغییر روزانه + دکمهٔ ستاره.
+     ردیف div است (نه button) تا دکمهٔ ستاره داخلش معتبر باشد. */
+  .wrow-tx { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+  .wrow-px { margin-inline-start: auto; text-align: end; display: flex; flex-direction: column; gap: 2px; flex: none; }
+  .wrow-p { font-weight: 700; font-size: 14px; }
+  .wrow-c { font-size: 12px; }
+  .wrow-star { background: none; border: 0; color: var(--acc); padding: 8px 2px; cursor: pointer; flex: none; display: inline-flex; }
+  .wrow-star svg { width: 20px; height: 20px; }
   .tbtn { background: var(--card); border: 1px solid var(--line); color: var(--txt); border-radius: 8px; padding: 6px 11px; font-size: 12px; cursor: pointer; transition: background .15s, border-color .15s, box-shadow .15s; }
   .tbtn.on { border-color: transparent; color: #fff; background: linear-gradient(135deg, #f06a15, #ff8a1f); box-shadow: 0 3px 10px rgba(240,106,21,.3); }
   .tbtn:active { border-color: var(--acc); }
@@ -467,6 +475,7 @@
   body.focus-mode #mainTabs,
   body.focus-mode #view-symbol .tabs,
   body.focus-mode #symBar,
+  body.focus-mode #symBarRow,
   body.focus-mode #priceBox,
   body.focus-mode #gaugeBox,
   body.focus-mode .tf-wrap,
@@ -564,7 +573,7 @@
   </div>
   <div id="view-symbol" style="display:none">
     <div id="gaugeBox"></div>
-    <button id="symBar" type="button"><span class="sym-bar-ic" id="symBarIc"></span><span id="symBarTx">▼</span><span class="sym-bar-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.8-3.8"/></svg></span></button>
+    <div id="symBarRow" style="display:flex;gap:8px;align-items:center;margin-top:10px"><button id="symBar" type="button" style="flex:1;min-width:0;margin-top:0"><span class="sym-bar-ic" id="symBarIc"></span><span id="symBarTx">▼</span><span class="sym-bar-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.8-3.8"/></svg></span></button><button id="symStar" type="button" class="sm-star off" aria-label="واچ‌لیست"></button></div>
     <h2 id="symTitle" style="display:none"></h2>
     <div id="priceBox"></div>
     <div class="tabs">
@@ -588,9 +597,15 @@
     <div id="dashNews"></div>
     <div id="dashNote" class="warn"></div>
   </div>
+  <div id="view-watch" style="display:none">
+    <div class="dash-h"><span id="watchTitle">واچ‌لیست</span><button id="watchRefresh" type="button">↻</button></div>
+    <div class="sm-tabs" id="watchChips" style="padding:6px 0"></div>
+    <div id="watchList"></div>
+  </div>
 </main>
 <nav id="mainTabs">
   <button id="mainTab-chart" type="button" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 21h18"/><path d="M7 17v-6"/><path d="M12 17V7"/><path d="M17 17v-3"/></svg> چارت</button>
+  <button id="mainTab-watch" type="button"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z"/></svg> واچ‌لیست</button>
   <button id="mainTab-dash" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="10" rx="1.5"/><rect x="13" y="3" width="8" height="6" rx="1.5"/><rect x="13" y="11" width="8" height="10" rx="1.5"/><rect x="3" y="15" width="8" height="6" rx="1.5"/></svg> داشبورد</button>
 </nav>
 <div id="searchModal" role="dialog" aria-modal="true" aria-label="search">

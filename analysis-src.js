@@ -208,17 +208,253 @@ function candleRead(c) {
 
 // ساختار سقف/کف‌های پیوت: HH/HL = صعودی، LH/LL = نزولی، بقیه مختلط.
 function structure(candles) {
-  if (!Array.isArray(candles) || candles.length < 10) return null;
-  var ph = [], pl = [];
-  for (var i = 1; i < candles.length - 1; i++) {
-    if (candles[i].h >= candles[i - 1].h && candles[i].h >= candles[i + 1].h) ph.push(candles[i].h);
-    if (candles[i].l <= candles[i - 1].l && candles[i].l <= candles[i + 1].l) pl.push(candles[i].l);
-  }
-  if (ph.length < 2 || pl.length < 2) return null;
-  var h1 = ph[ph.length - 1], h0 = ph[ph.length - 2], l1 = pl[pl.length - 1], l0 = pl[pl.length - 2];
+  var pp = pivotPoints(candles);
+  if (!pp || pp.highs.length < 2 || pp.lows.length < 2) return null;
+  var h1 = pp.highs[pp.highs.length - 1].price, h0 = pp.highs[pp.highs.length - 2].price;
+  var l1 = pp.lows[pp.lows.length - 1].price, l0 = pp.lows[pp.lows.length - 2].price;
   var ht = h1 > h0 ? 'HH' : h1 < h0 ? 'LH' : 'EQ';
   var lt = l1 > l0 ? 'HL' : l1 < l0 ? 'LL' : 'EQ';
   return (ht === 'HH' && lt === 'HL') ? 'bull' : (ht === 'LH' && lt === 'LL') ? 'bear' : 'mixed';
+}
+
+// v1.18.0 — تحلیل پیشرفته (دستور مالک ۲۰۲۶-۱۱-۱۴: «همه‌ش رو بساز»):
+// ۱) سطوح حمایت/مقاومت از پیوت‌ها + فیبوناچی؛ ۲) واگرایی RSI/MACD + الگوهای
+// چندکندلی؛ ۳) هم‌جهتی چند تایم‌فریم (آرگومان اختیاری analyze)؛ ۴) VWAP +
+// CCI + Williams %R + MFI. همه از روی همان کندل‌ها حساب می‌شوند؛ عدد جدیدی
+// ساخته نمی‌شود. توصیفی‌اند — نه سیگنال، نه پیش‌بینی، نه هدف، نه توصیه.
+// رأی‌های ۱۱تایی analyze() دست‌نخورده‌اند — سیگنال‌های تازه رأی نمی‌دهند،
+// فقط به‌عنوان سیگنال اضافه نمایش داده می‌شوند.
+/* v1.18.0 — پیوت‌ها با شمارهٔ کندل (پایهٔ سطوح و واگرایی). همان شرط structure():
+   سقف پیوت h[i] >= h[i-1] و h[i] >= h[i+1]؛ کف پیوت l[i] <= l[i-1] و l[i] <= l[i+1]. */
+function pivotPoints(candles) {
+  if (!Array.isArray(candles) || candles.length < 10) return null;
+  var highs = [], lows = [];
+  for (var i = 1; i < candles.length - 1; i++) {
+    if (candles[i].h >= candles[i - 1].h && candles[i].h >= candles[i + 1].h) highs.push({ price: candles[i].h, bar: i });
+    if (candles[i].l <= candles[i - 1].l && candles[i].l <= candles[i + 1].l) lows.push({ price: candles[i].l, bar: i });
+  }
+  return { highs: highs, lows: lows };
+}
+
+// سطوح حمایت/مقاومت: پیوت‌های هم‌قیمت (در ۰٫۵٪ هم) یک سطح‌اند؛ قدرت = تعداد
+// پیوت‌های آن سطح (چند بار تست شده). بالای آخرین قیمت = مقاومت، پایین = حمایت.
+// نزدیک‌ترین ۳ سطح هر طرف، مرتب از نزدیک به دور.
+function supportResistance(candles) {
+  if (!Array.isArray(candles) || candles.length < 10) return null;
+  var pp = pivotPoints(candles);
+  if (!pp) return null;
+  var last = candles[candles.length - 1].c;
+  function cluster(points, isHigh) {
+    var pts = points.slice().sort(function (a, b) { return a.price - b.price; });
+    var out = [];
+    pts.forEach(function (p) {
+      var cl = out[out.length - 1];
+      if (cl && Math.abs(p.price - cl.price) / cl.price <= 0.005) {
+        cl.price = isHigh ? Math.max(cl.price, p.price) : Math.min(cl.price, p.price);
+        cl.strength++;
+        cl.bars.push(p.bar);
+      } else {
+        out.push({ price: p.price, strength: 1, bars: [p.bar] });
+      }
+    });
+    return out;
+  }
+  var res = cluster(pp.highs, true).filter(function (l) { return l.price > last; })
+    .sort(function (a, b) { return a.price - b.price; }).slice(0, 3);
+  var sup = cluster(pp.lows, false).filter(function (l) { return l.price < last; })
+    .sort(function (a, b) { return b.price - a.price; }).slice(0, 3);
+  return { resistance: res, support: sup };
+}
+
+// فیبوناچی اصلاحی روی کل بازهٔ کندل‌های داده‌شده: سقف = بیشترین high،
+// کف = کمترین low. سطوح ۰ / ۲۳٫۶ / ۳۸٫۲ / ۵۰ / ۶۱٫۸ / ۷۸٫۶ / ۱۰۰٪.
+function fibonacci(candles) {
+  if (!Array.isArray(candles) || candles.length < 2) return null;
+  var hi = -Infinity, lo = Infinity, hiBar = -1, loBar = -1;
+  for (var i = 0; i < candles.length; i++) {
+    if (candles[i].h > hi) { hi = candles[i].h; hiBar = i; }
+    if (candles[i].l < lo) { lo = candles[i].l; loBar = i; }
+  }
+  if (!(hi > lo)) return null;
+  var ratios = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
+  return {
+    high: hi, low: lo, highBar: hiBar, lowBar: loBar,
+    levels: ratios.map(function (r) { return { ratio: r, price: hi - r * (hi - lo) }; })
+  };
+}
+
+// سری RSI وایلدر (۱۴) — دقیقاً همان فرمول rsi()، ولی برای هر کندل (null تا
+// کندل n). آخرین مقدارش با rsi(closes, n) برابر است (تست قفلش می‌کند).
+function rsiSeries(closes, n) {
+  n = n || 14;
+  if (!Array.isArray(closes) || closes.length < n + 1) return null;
+  var avgG = 0, avgL = 0, i;
+  for (i = 1; i <= n; i++) { var d0 = closes[i] - closes[i - 1]; if (d0 > 0) avgG += d0; else avgL -= d0; }
+  avgG /= n; avgL /= n;
+  function val(g, l) { if (l === 0) return g === 0 ? 50 : 100; return 100 - 100 / (1 + g / l); }
+  var out = [];
+  for (i = 0; i < n; i++) out.push(null);
+  out.push(val(avgG, avgL));
+  for (i = n + 1; i < closes.length; i++) {
+    var dd = closes[i] - closes[i - 1];
+    var g = dd > 0 ? dd : 0, l = dd < 0 ? -dd : 0;
+    avgG = (avgG * (n - 1) + g) / n;
+    avgL = (avgL * (n - 1) + l) / n;
+    out.push(val(avgG, avgL));
+  }
+  return out;
+}
+
+// سری هیستوگرام MACD — همان فرمول macd() برای هر کندل. قبل از کندل ۳۴
+// (۲۶+۹−۱) مقدارها گرم‌کردن EMA هستند و برای واگرایی استفاده نمی‌شوند.
+function macdHistSeries(closes) {
+  if (!Array.isArray(closes) || closes.length < 35) return null;
+  var e12 = emaSeries(closes, 12), e26 = emaSeries(closes, 26);
+  if (!e12 || !e26) return null;
+  var line = e12.map(function (v, i) { return v - e26[i]; });
+  var sig = emaSeries(line, 9);
+  if (!sig) return null;
+  return line.map(function (v, i) { return v - sig[i]; });
+}
+
+// واگرایی معمولی (regular) — فقط جدیدترین جفت سقف/کف:
+// صعودی: قیمت کف پایین‌تر + اندیکاتور کف بالاتر (روی کف‌ها)؛
+// نزولی: قیمت سقف بالاتر + اندیکاتور سقف پایین‌تر (روی سقف‌ها).
+// RSI دست‌کم ۱ واحد اختلاف می‌خواهد؛ MACD هر بهبودِ صریح. سقف/کفِ دوم باید
+// در ۲۵ کندل اخیر باشد و مقدار اندیکاتور در هر دو سقف گرم‌شده باشد
+// (RSI از کندل ۱۴، MACD از کندل ۳۴). سقف‌های هم‌قیمتِ پی‌درپی یک لمس‌اند.
+function findDivergence(candles) {
+  if (!Array.isArray(candles) || candles.length < 15) return [];
+  var closes = candles.map(function (c) { return c.c; });
+  var rs = rsiSeries(closes, 14);
+  var mh = candles.length >= 35 ? macdHistSeries(closes) : null;
+  if (!rs && !mh) return [];
+  var out = [];
+  function swings(kind) {
+    var raw = [];
+    for (var i = 1; i < candles.length - 1; i++) {
+      if (kind === 'low' && candles[i].l <= candles[i - 1].l && candles[i].l <= candles[i + 1].l) raw.push({ bar: i, price: candles[i].l });
+      if (kind === 'high' && candles[i].h >= candles[i - 1].h && candles[i].h >= candles[i + 1].h) raw.push({ bar: i, price: candles[i].h });
+    }
+    var ded = [];
+    raw.forEach(function (s) {
+      var last = ded[ded.length - 1];
+      if (last && last.price === s.price) last.bar = s.bar;
+      else ded.push({ bar: s.bar, price: s.price });
+    });
+    return ded;
+  }
+  function check(sw, series, minBar, indicator, minDiff, want) {
+    if (sw.length < 2) return;
+    var s1 = sw[sw.length - 2], s2 = sw[sw.length - 1];
+    if (s1.bar < minBar || s2.bar < minBar) return;
+    if (s2.bar < candles.length - 25) return;
+    var v1 = series[s1.bar], v2 = series[s2.bar];
+    if (v1 == null || v2 == null) return;
+    if (want === 'bullish' && s2.price < s1.price && v2 > v1 + minDiff)
+      out.push({ type: 'bullish', indicator: indicator, bars: [s1.bar, s2.bar], price1: s1.price, price2: s2.price, ind1: v1, ind2: v2 });
+    if (want === 'bearish' && s2.price > s1.price && v2 < v1 - minDiff)
+      out.push({ type: 'bearish', indicator: indicator, bars: [s1.bar, s2.bar], price1: s1.price, price2: s2.price, ind1: v1, ind2: v2 });
+  }
+  var lows = swings('low'), highs = swings('high');
+  if (rs) { check(lows, rs, 14, 'RSI', 1, 'bullish'); check(highs, rs, 14, 'RSI', 1, 'bearish'); }
+  if (mh) { check(lows, mh, 34, 'MACD', 0, 'bullish'); check(highs, mh, 34, 'MACD', 0, 'bearish'); }
+  return out;
+}
+
+// الگوهای چندکندلی — جدیدترین وقوع هر الگو (با شمارهٔ کندل و چند کندل پیش).
+// انگالفینگ (۲ کندل)، ستارهٔ صبح/عصر (۳ کندل: بدنهٔ بلند، بدنهٔ کوچک، بدنهٔ
+// بلندِ برگشتی که بالای/پایینِ میانهٔ بدنهٔ اول بسته شود)، سه سرباز سفید /
+// سه کلاغ سیاه (۳ کندل هم‌جهت با بدنهٔ بالای ۶۰٪ بازه). شکل‌های تک‌کندلی
+// (دوجی/چکش/شهاب/ماروبوزو) در candleRead مانده‌اند.
+function detectPatterns(candles) {
+  if (!Array.isArray(candles) || candles.length < 2) return [];
+  function body(c) { return Math.abs(c.c - c.o); }
+  function range(c) { return c.h - c.l; }
+  function isUp(c) { return c.c > c.o; }
+  function isDown(c) { return c.c < c.o; }
+  var last = {};
+  function put(name, dir, bar) { last[name] = { name: name, dir: dir, bar: bar, barsAgo: candles.length - 1 - bar }; }
+  var n = candles.length, i;
+  for (i = 1; i < n; i++) {
+    var p = candles[i - 1], c = candles[i];
+    if (isDown(p) && isUp(c) && c.c >= p.o && c.o <= p.c) put('bullish-engulfing', 'bull', i);
+    if (isUp(p) && isDown(c) && c.o >= p.c && c.c <= p.o) put('bearish-engulfing', 'bear', i);
+  }
+  for (i = 2; i < n; i++) {
+    var a = candles[i - 2], b = candles[i - 1], c2 = candles[i];
+    if (isDown(a) && body(a) > 0.6 * range(a) && body(b) < 0.3 * range(b) && isUp(c2) && body(c2) > 0.6 * range(c2) && c2.c > (a.o + a.c) / 2)
+      put('morning-star', 'bull', i);
+    if (isUp(a) && body(a) > 0.6 * range(a) && body(b) < 0.3 * range(b) && isDown(c2) && body(c2) > 0.6 * range(c2) && c2.c < (a.o + a.c) / 2)
+      put('evening-star', 'bear', i);
+    var t = [a, b, c2];
+    var soldiers = t.every(isUp) && t.every(function (x) { return body(x) > 0.6 * range(x); })
+      && t[1].c > t[0].c && t[2].c > t[1].c
+      && t[1].o >= t[0].o && t[1].o <= t[0].c && t[2].o >= t[1].o && t[2].o <= t[1].c;
+    var crows = t.every(isDown) && t.every(function (x) { return body(x) > 0.6 * range(x); })
+      && t[1].c < t[0].c && t[2].c < t[1].c
+      && t[1].o <= t[0].o && t[1].o >= t[0].c && t[2].o <= t[1].o && t[2].o >= t[1].c;
+    if (soldiers) put('three-white-soldiers', 'bull', i);
+    if (crows) put('three-black-crows', 'bear', i);
+  }
+  return Object.keys(last).map(function (k) { return last[k]; });
+}
+
+// VWAP — میانگین قیمت تیپیک وزنی با حجم، از اولین کندل داده‌شده (لنگر جلسه).
+// کندلِ بدون حجم معتبر نادیده گرفته می‌شود؛ اگر هیچ حجمی نباشد null
+// (فارکس/شاخص حجم ندارند — آنجا VWAP معنا ندارد).
+function vwap(candles) {
+  if (!Array.isArray(candles) || !candles.length) return null;
+  var num = 0, den = 0;
+  for (var i = 0; i < candles.length; i++) {
+    var c = candles[i];
+    if (typeof c.v !== 'number' || !(c.v > 0)) continue;
+    num += ((c.h + c.l + c.c) / 3) * c.v;
+    den += c.v;
+  }
+  return den > 0 ? num / den : null;
+}
+
+// CCI(20) — (تیپیک − SMA20 تیپیک) / (۰٫۰۱۵ × میانگین انحراف). انحراف صفر → null.
+function cci(candles, n) {
+  n = n || 20;
+  if (!Array.isArray(candles) || candles.length < n) return null;
+  var tp = candles.slice(-n).map(function (c) { return (c.h + c.l + c.c) / 3; });
+  var sma = tp.reduce(function (a, v) { return a + v; }, 0) / n;
+  var md = tp.reduce(function (a, v) { return a + Math.abs(v - sma); }, 0) / n;
+  if (md === 0) return null;
+  return (tp[n - 1] - sma) / (0.015 * md);
+}
+
+// Williams %R(14) — ‎−۱۰۰ تا ۰. بالای ۲۰٪- = اشباع خرید، زیر ۸۰٪- = اشباع فروش.
+function williams(candles, n) {
+  n = n || 14;
+  if (!Array.isArray(candles) || candles.length < n) return null;
+  var w = candles.slice(-n);
+  var hh = Math.max.apply(null, w.map(function (c) { return c.h; }));
+  var ll = Math.min.apply(null, w.map(function (c) { return c.l; }));
+  if (hh === ll) return null;
+  return (hh - candles[candles.length - 1].c) / (hh - ll) * -100;
+}
+
+// MFI(14) — جریان پول مثبت/منفی روی قیمت تیپیک × حجم. همه مثبت → ۱۰۰،
+// همه منفی → ۰، بدون حرکت → null. حجم نامعتبر در بازه → null.
+function mfi(candles, n) {
+  n = n || 14;
+  if (!Array.isArray(candles) || candles.length < n + 1) return null;
+  var pos = 0, neg = 0;
+  for (var i = candles.length - n; i < candles.length; i++) {
+    var c = candles[i], p = candles[i - 1];
+    if (typeof c.v !== 'number' || !(c.v > 0)) return null;
+    var t = (c.h + c.l + c.c) / 3, pt = (p.h + p.l + p.c) / 3;
+    var f = t * c.v;
+    if (t > pt) pos += f;
+    else if (t < pt) neg += f;
+  }
+  if (pos === 0 && neg === 0) return null;
+  if (neg === 0) return 100;
+  if (pos === 0) return 0;
+  return 100 - 100 / (1 + pos / neg);
 }
 
 // سری ATR وایلدر (۱۴) — برای رژیم نوسان (ATR فعلی در برابر میانگین ۲۰تایی‌اش).
@@ -277,7 +513,35 @@ const MARKET_INDICATORS = {
   index: { volume: false, atr: true, macd: true, w52: false }
 };
 
-function analyze(candles, market) {
+// هم‌جهتی چند تایم‌فریم — tfMap: { برچسب تایم‌فریم: کندل‌ها }، مثلاً
+// { '15m': [...], '1h': [...], '4h': [...] }. جهت هر تایم‌فریم از رأی‌های
+// همان analyze() می‌آید (verdictFromVotes). ورودیِ برابرِ (===) کندل‌های
+// پایه نتیجهٔ پایه را دوباره استفاده می‌کند (محاسبهٔ دوباره نیست). تایم‌فریمی
+// با کمتر از ۲۰ کندل 'na' می‌گیرد و شمرده نمی‌شود. agreeDir: 'bull' وقتی
+// همهٔ غیر-na صعودی‌اند، 'bear' وقتی همه نزولی‌اند، 'flat' وقتی همه خنثی‌اند،
+// و 'mixed' در غیر این صورت.
+function multiTfConfluence(candles, market, baseVotes, tfMap) {
+  if (!tfMap || typeof tfMap !== 'object') return null;
+  var perTf = {}, bull = 0, bear = 0, flat = 0, total = 0;
+  Object.keys(tfMap).forEach(function (label) {
+    var arr = tfMap[label];
+    if (!Array.isArray(arr) || arr.length < 20) { perTf[label] = { dir: 'na', bull: 0, bear: 0, net: 0 }; return; }
+    var v = (arr === candles) ? baseVotes : analyze(arr, market).votes;
+    var d = verdictFromVotes(v);
+    perTf[label] = { dir: d.dir, bull: d.bull, bear: d.bear, net: d.net };
+    total++;
+    if (d.dir === 'bull') bull++;
+    else if (d.dir === 'bear') bear++;
+    else flat++;
+  });
+  if (!total) return null;
+  var agreeDir = (bear === 0 && bull > 0) ? 'bull' : (bull === 0 && bear > 0) ? 'bear' : (bull === 0 && bear === 0) ? 'flat' : 'mixed';
+  return { perTf: perTf, bull: bull, bear: bear, flat: flat, total: total, agreeDir: agreeDir, agreeCount: Math.max(bull, bear) };
+}
+
+function analyze(candles, market, tfMap) {
+  // tfMap اختیاری است: { برچسب تایم‌فریم: کندل‌ها } برای هم‌جهتی چند
+  // تایم‌فریم. بدون آن multiTf برابر null است و بقیه دقیقاً مثل قبل‌اند.
   const closes = candles.map(c => c.c);
   const last = candles[candles.length - 1];
   const e20 = ema(closes, 20), e50 = ema(closes, 50);
@@ -366,6 +630,17 @@ function analyze(candles, market) {
   vote(volRatio !== null && volRatio > 1.2 ? (last.c > closes[closes.length - 2] ? 1 : -1) : 0, 'Volume');
   vote(bb && bb.mid !== null ? (last.c > bb.mid ? 1 : -1) : 0, 'BB-mid');
   vote(cndl ? (cndl.dir === 'up' ? 1 : cndl.dir === 'down' ? -1 : 0) : 0, 'Candle');
+  // v1.18.0 — سیگنال‌های اضافه (رأی نمی‌دهند؛ رأی‌های ۱۱تایی بالا دست‌نخورده‌اند).
+  var lvls = supportResistance(candles);
+  var fib = fibonacci(candles);
+  var divs = findDivergence(candles);
+  var pats = detectPatterns(candles);
+  var vw = vwap(candles);
+  var cc = cci(candles, 20);
+  var wr = williams(candles, 14);
+  var mf = mfi(candles, 14);
+  var multiTf = null;
+  if (tfMap && typeof tfMap === 'object') multiTf = multiTfConfluence(candles, market, votes, tfMap);
   return {
     market, last, e20, e50, e200, macd: m, rsi: r, bb,
     atrPct: (a !== null && last.c) ? (a / last.c) * 100 : null,
@@ -376,7 +651,9 @@ function analyze(candles, market) {
     obvDir: obvD, volTrend: volT, candle: cndl, structure: struct,
     atrRegime: atrRegime, bbSqueeze: bbSq,
     macdHistRising: macdHistRising, macdAboveZero: macdAboveZero,
-    votes: votes
+    votes: votes,
+    levels: lvls, fib: fib, divergence: divs, patterns: pats,
+    vwap: vw, cci: cc, williamsR: wr, mfi: mf, multiTf: multiTf
   };
 }
 
@@ -403,6 +680,19 @@ function rsiWord(r, lang) {
   if (r >= 55) return fa ? 'متمایل به مثبت' : 'leaning positive';
   if (r <= 45) return fa ? 'متمایل به منفی' : 'leaning negative';
   return fa ? 'خنثی' : 'neutral';
+}
+
+function patternLabel(name, lang) {
+  const fa = lang === 'fa';
+  const map = {
+    'bullish-engulfing': fa ? 'انگالفینگ صعودی' : 'Bullish engulfing',
+    'bearish-engulfing': fa ? 'انگالفینگ نزولی' : 'Bearish engulfing',
+    'morning-star': fa ? 'ستارهٔ صبح' : 'Morning star',
+    'evening-star': fa ? 'ستارهٔ عصر' : 'Evening star',
+    'three-white-soldiers': fa ? 'سه سرباز سفید' : 'Three white soldiers',
+    'three-black-crows': fa ? 'سه کلاغ سیاه' : 'Three black crows'
+  };
+  return map[name] || name;
 }
 
 // متن پیام تحلیل — توصیفی؛ بدون سیگنال/هدف/توصیه.
@@ -443,6 +733,57 @@ function formatAnalysis(quote, candles, tf, lang, quoteRes) {
   L.push('🚧 ' + (fa ? 'مقاومت: ' : 'Resistance: ') + code(fmt(a.hi20)) + (fa ? ' (سقف ۲۰ کندل اخیر)' : ' (high of last 20 candles)'));
   if (a.pos !== null) L.push((fa ? 'جای قیمت در بازهٔ ۲۰ کندل اخیر: ' : 'Price position in last-20 range: ') + code(fmt(a.pos, 0) + '%'));
   if (a.rangePct !== null) L.push((fa ? 'دامنهٔ نوسان ۲۰ کندل اخیر: ' : 'Last-20 range: ') + code(fmt(a.rangePct, 2) + '%'));
+  // v1.18.0 — سطوح پیوت + فیبوناچی.
+  if (a.levels && (a.levels.resistance.length || a.levels.support.length)) {
+    var lvlTxt = [];
+    a.levels.resistance.forEach(function (l) {
+      lvlTxt.push((fa ? 'مقاومت ' : 'R ') + code(fmt(l.price)) + (l.strength > 1 ? ' (' + l.strength + (fa ? ' بار' : '×') + ')' : ''));
+    });
+    a.levels.support.forEach(function (l) {
+      lvlTxt.push((fa ? 'حمایت ' : 'S ') + code(fmt(l.price)) + (l.strength > 1 ? ' (' + l.strength + (fa ? ' بار' : '×') + ')' : ''));
+    });
+    L.push('🎯 ' + (fa ? 'سطوح پیوت: ' : 'Pivot levels: ') + lvlTxt.join(' · '));
+  }
+  if (a.fib) {
+    var fibTxt = a.fib.levels.filter(function (lv) { return lv.ratio > 0 && lv.ratio < 1; })
+      .map(function (lv) { return (Math.round(lv.ratio * 1000) / 10) + '% ' + code(fmt(lv.price)); });
+    L.push('📐 ' + (fa ? 'فیبوناچی (' : 'Fibonacci (') + (fa ? 'سقف ' : 'high ') + code(fmt(a.fib.high)) + (fa ? ' ← کف ' : ' → low ') + code(fmt(a.fib.low)) + '): ' + fibTxt.join(' · '));
+  }
+  // v1.18.0 — واگرایی + الگوها.
+  (a.divergence || []).forEach(function (d) {
+    var indVal = d.indicator === 'RSI'
+      ? 'RSI ' + fmt(d.ind1, 1) + ' → ' + fmt(d.ind2, 1)
+      : 'MACD ' + fmt(d.ind1, 4) + ' → ' + fmt(d.ind2, 4);
+    L.push('⚠️ ' + (d.type === 'bullish' ? (fa ? 'واگرایی صعودی ' : 'Bullish divergence ') : (fa ? 'واگرایی نزولی ' : 'Bearish divergence '))
+      + d.indicator + ' (' + (fa ? 'کندل ' : 'bars ') + d.bars[0] + '→' + d.bars[1] + '): ' + indVal);
+  });
+  (a.patterns || []).forEach(function (p) {
+    L.push('🕯️ ' + (fa ? 'الگو: ' : 'Pattern: ') + esc(patternLabel(p.name, lang))
+      + (p.barsAgo === 0 ? (fa ? ' (کندل آخر)' : ' (last candle)') : ' (' + p.barsAgo + (fa ? ' کندل پیش' : ' bars ago') + ')'));
+  });
+  // v1.18.0 — VWAP + مومنتوم اضافه.
+  if (a.vwap !== null && a.vwap !== undefined) {
+    L.push('VWAP: ' + code(fmt(a.vwap)) + ' — ' + (a.last.c > a.vwap ? (fa ? 'قیمت بالای VWAP' : 'price above VWAP') : a.last.c < a.vwap ? (fa ? 'قیمت زیر VWAP' : 'price below VWAP') : (fa ? 'روی VWAP' : 'at VWAP')));
+  }
+  if (a.cci !== null && a.cci !== undefined) {
+    L.push('CCI (20): <b>' + esc(fmt(a.cci, 1)) + '</b>' + (a.cci > 100 ? (fa ? ' — قوی (بالای ۱۰۰)' : ' — strong (above 100)') : a.cci < -100 ? (fa ? ' — ضعیف (زیر −۱۰۰)' : ' — weak (below −100)') : ''));
+  }
+  if (a.williamsR !== null && a.williamsR !== undefined) {
+    L.push('Williams %R (14): <b>' + esc(fmt(a.williamsR, 1)) + '</b>' + (a.williamsR > -20 ? (fa ? ' — اشباع خرید' : ' — overbought') : a.williamsR < -80 ? (fa ? ' — اشباع فروش' : ' — oversold') : ''));
+  }
+  if (a.mfi !== null && a.mfi !== undefined) {
+    L.push('MFI (14): <b>' + esc(fmt(a.mfi, 1)) + '</b>' + (a.mfi >= 80 ? (fa ? ' — اشباع خرید' : ' — overbought') : a.mfi <= 20 ? (fa ? ' — اشباع فروش' : ' — oversold') : ''));
+  }
+  // v1.18.0 — هم‌جهتی چند تایم‌فریم (فقط وقتی analyze با tfMap صدا شده باشد).
+  if (a.multiTf) {
+    var mt = a.multiTf;
+    var perTxt = Object.keys(mt.perTf).map(function (k) {
+      var d = mt.perTf[k];
+      return k + ': ' + (d.dir === 'bull' ? (fa ? 'صعودی' : 'bull') : d.dir === 'bear' ? (fa ? 'نزولی' : 'bear') : d.dir === 'flat' ? (fa ? 'خنثی' : 'flat') : '—');
+    }).join(' · ');
+    L.push('⏱️ ' + (fa ? 'هم‌جهتی تایم‌فریم‌ها: ' : 'Multi-timeframe: ') + perTxt
+      + ' — ' + mt.agreeCount + '/' + mt.total + ' ' + (mt.agreeDir === 'bull' ? (fa ? 'صعودی' : 'bullish') : mt.agreeDir === 'bear' ? (fa ? 'نزولی' : 'bearish') : mt.agreeDir === 'flat' ? (fa ? 'خنثی' : 'flat') : (fa ? 'مختلط' : 'mixed')));
+  }
   if (ind.w52 && quoteRes && typeof quoteRes.week52High === 'number' && typeof quoteRes.week52Low === 'number' && quoteRes.week52High > quoteRes.week52Low) {
     const pos52 = ((quoteRes.price - quoteRes.week52Low) / (quoteRes.week52High - quoteRes.week52Low)) * 100;
     L.push('📅 ' + (fa ? 'بازهٔ ۵۲ هفته: ' : '52-week range: ') + code(fmt(quoteRes.week52Low) + ' — ' + fmt(quoteRes.week52High)) + (fa ? ' — قیمت در ' : ' — price at ') + code(fmt(pos52, 0) + '%'));
@@ -498,8 +839,9 @@ function longVerdict(candles) {
     candles: candles.length
   };
 }
-function analyzeAdvanced(candles, tf) {
-  var a = analyze(candles, null);
+function analyzeAdvanced(candles, tf, tfMap) {
+  // tfMap اختیاری است (مثل analyze): { برچسب تایم‌فریم: کندل‌ها }.
+  var a = analyze(candles, null, tfMap);
   var short = verdictFromVotes(a.votes);
   var forShort = a.votes.items.filter(function (it) { return short.dir === 'bull' ? it.v > 0 : short.dir === 'bear' ? it.v < 0 : it.v === 0; }).map(function (it) { return it.label; });
   var againstShort = a.votes.items.filter(function (it) { return short.dir === 'bull' ? it.v < 0 : short.dir === 'bear' ? it.v > 0 : it.v !== 0; }).map(function (it) { return it.label; });
@@ -512,10 +854,10 @@ function analyzeAdvanced(candles, tf) {
   return {
     tf: tf || '1h', candles: candles.length,
     short: short, shortFor: forShort, shortAgainst: againstShort,
-    long: long, flip: flip, base: a
+    long: long, flip: flip, base: a, multiTf: a.multiTf
   };
 }
 
-window.OnellaAnalysis = { sma, ema, emaSeries, rsi, macd, atr, stdev, bollinger, changeBack, analyze, formatAnalysis, marketOf, MARKET_INDICATORS, adx, stoch, emaCross, obvDir, volTrend, candleRead, structure, atrSeries, analyzeAdvanced, verdictFromVotes, longVerdict };
+window.OnellaAnalysis = { sma, ema, emaSeries, rsi, macd, atr, stdev, bollinger, changeBack, analyze, formatAnalysis, marketOf, MARKET_INDICATORS, adx, stoch, emaCross, obvDir, volTrend, candleRead, structure, atrSeries, analyzeAdvanced, verdictFromVotes, longVerdict, pivotPoints, supportResistance, fibonacci, rsiSeries, macdHistSeries, findDivergence, detectPatterns, vwap, cci, williams, mfi, multiTfConfluence };
 
 })();

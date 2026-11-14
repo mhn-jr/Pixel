@@ -99,14 +99,14 @@ function defaultMessage(a, lang) { return '{{ticker}}, ' + '{{interval}}' + ', '
 function normalize(x, now) {
   if (!x || typeof x !== 'object') return null;
   var id = String(x.id || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40); if (!id) return null;
-  var sym = String(x.sym || '').toUpperCase().replace(/[^A-Z0-9:._\/-]/g, '').slice(0, 30); if (!sym) return null;
+  var sym = String(x.sym || '').toUpperCase().replace(/[^\p{L}\p{N}:._\/-]/gu, '').slice(0, 30); if (!sym) return null;   /* v1.17.0: \p{L}\p{N} به‌جای A-Z0-9 تا نماد فارسی سهام ایران (مثل «فولاد») حذف نشود */
   var c = x.c || {}, op = OPS[c.op] ? c.op : null; if (!op) return null;
   var out = { id: id, sym: sym, kind: String(x.kind || 'crypto').replace(/[^a-z_]/g, '').slice(0, 12) || 'crypto', c: { op: op } };
   var need = OPS[op][2];
   out.c.v = num(c.v); if (!isFinite(out.c.v) || (need !== 'p' && out.c.v <= 0) || (need === 'p' && (out.c.v <= 0 || out.c.v > 1000))) return null;
   if (need === 2) { out.c.v2 = num(c.v2); if (!isFinite(out.c.v2) || out.c.v2 <= 0) return null; }
   if (need === 'p') { out.c.ref = num(c.ref); if (!(out.c.ref > 0)) return null; }
-  out.qs = String(x.qs || sym).toUpperCase().replace(/[^A-Z0-9:._\/-]/g, '').slice(0, 30) || sym;   /* نمادِ درگاه قیمت (مثلاً BTC/USDT) */
+  out.qs = String(x.qs || sym).toUpperCase().replace(/[^\p{L}\p{N}:._\/-]/gu, '').slice(0, 30) || sym;   /* نمادِ درگاه قیمت (مثلاً BTC/USDT) — v1.17.0: مثل sym، فارسی را نگه می‌دارد */
   out.iv = INTERVALS.hasOwnProperty(x.iv) ? x.iv : 'chart';
   out.tfl = String(x.tfl || '').replace(/[^0-9a-zA-Z]/g, '').slice(0, 5);
   out.tr = TRIGGERS[x.tr] ? x.tr : 'once';
